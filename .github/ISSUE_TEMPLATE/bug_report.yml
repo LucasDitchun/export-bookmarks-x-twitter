@@ -1,0 +1,85 @@
+name: Bug report
+description: Report a reproducible problem with Bookmark X.
+title: "fix: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Bookmark X. Please remove personal information from screenshots, logs, and exported bookmark data.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I reproduced the problem with the latest release.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem
+      description: Describe what happened and what you expected instead.
+      placeholder: A clear and concise description of the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the smallest sequence that consistently reproduces the problem.
+      placeholder: |
+        1. Open…
+        2. Click…
+        3. Observe…
+    validations:
+      required: true
+
+  - type: input
+    id: extension-version
+    attributes:
+      label: Bookmark X version
+      placeholder: For example, 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: chrome-version
+    attributes:
+      label: Chrome version
+      description: Open chrome://version to find the complete version.
+      placeholder: For example, 126.0.6478.127
+    validations:
+      required: true
+
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - ChromeOS
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Additional context
+      description: Add sanitized screenshots, console errors, or other relevant details.
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I removed private bookmark content, account details, and other sensitive data.
+          required: true
