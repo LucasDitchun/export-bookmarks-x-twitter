@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+release/
+chrome-smoke-profile-*/
+.env
+.env.local
+.env.*.local
+*.pem
+*.crx
+.DS_Store

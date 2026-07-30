@@ -1,0 +1,77 @@
+{
+  "extensionName": { "message": "Bookmark X" },
+  "extensionDescription": {
+    "message": "Capture seus bookmarks do X pela página aberta e exporte um arquivo TXT local e privado."
+  },
+  "eyebrow": { "message": "Arquivo local do X" },
+  "loading": { "message": "Carregando" },
+  "loadingArchive": { "message": "Abrindo seu arquivo local…" },
+  "captureSource": { "message": "Fonte da captura" },
+  "openBookmarksButton": { "message": "Abrir bookmarks" },
+  "bookmarksPageReady": { "message": "Página pronta" },
+  "bookmarksPageMissing": { "message": "Abra o X" },
+  "pageReadyGuidance": {
+    "message": "Esta aba de bookmarks do X está pronta para captura."
+  },
+  "pageMissingGuidance": {
+    "message": "Abra x.com/i/bookmarks e volte aqui para capturar."
+  },
+  "archiveTitle": { "message": "Seus bookmarks" },
+  "totalLabel": { "message": "Total salvo" },
+  "currentLabel": { "message": "No X agora" },
+  "archivedLabel": { "message": "Arquivados" },
+  "emptyArchive": { "message": "Nenhum bookmark capturado ainda." },
+  "lastCaptureAt": {
+    "message": "Capturado em $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "neverCaptured": { "message": "Nunca capturado" },
+  "unknownDate": { "message": "Data desconhecida" },
+  "captureTitle": { "message": "Capturar bookmarks" },
+  "captureDescription": {
+    "message": "O Bookmark X rola a página aberta de bookmarks e salva localmente cada post visível."
+  },
+  "captureIdle": { "message": "Pronto" },
+  "captureRunning": { "message": "Capturando" },
+  "captureComplete": { "message": "Concluído" },
+  "captureCancelled": { "message": "Cancelado" },
+  "captureError": { "message": "Requer atenção" },
+  "captureProgress": {
+    "message": "$COUNT$ bookmarks encontrados",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "duplicatesSkipped": {
+    "message": "$COUNT$ duplicados ignorados",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "captureButton": { "message": "Capturar bookmarks" },
+  "cancelCaptureButton": { "message": "Parar captura" },
+  "exportTitle": { "message": "Baixar em TXT" },
+  "exportFullButton": { "message": "Baixar arquivo completo" },
+  "exportUrlsButton": { "message": "Somente URLs" },
+  "moreOptions": { "message": "Mais opções" },
+  "languageLabel": { "message": "Idioma" },
+  "localOnlyNote": {
+    "message": "Salvo localmente · Nada é enviado pelo Bookmark X"
+  },
+  "clearArchiveButton": { "message": "Limpar arquivo" },
+  "clearDialogTitle": { "message": "Limpar o arquivo local?" },
+  "clearDialogDescription": {
+    "message": "Isso remove permanentemente todos os bookmarks salvos neste navegador. Seus bookmarks no X não serão alterados."
+  },
+  "cancelButton": { "message": "Cancelar" },
+  "confirmClearButton": { "message": "Limpar arquivo" },
+  "errorBookmarksPage": {
+    "message": "Abra primeiro a página de bookmarks do X."
+  },
+  "errorReloadPage": {
+    "message": "Recarregue a página de bookmarks do X e tente novamente."
+  },
+  "errorCapture": {
+    "message": "A captura parou inesperadamente. Seu arquivo salvo está seguro."
+  },
+  "errorCaptureRunning": { "message": "Já existe uma captura em andamento." },
+  "errorGeneric": {
+    "message": "O Bookmark X não concluiu essa ação. Tente novamente."
+  }
+}

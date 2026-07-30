@@ -1,0 +1,155 @@
+{
+  "extensionName": {
+    "message": "Bookmark X"
+  },
+  "extensionDescription": {
+    "message": "Captura tus marcadores de X desde la página abierta y expórtalos a un archivo TXT local y privado."
+  },
+  "eyebrow": {
+    "message": "Archivo local de X"
+  },
+  "loading": {
+    "message": "Cargando"
+  },
+  "loadingArchive": {
+    "message": "Abriendo tu archivo local…"
+  },
+  "languageLabel": {
+    "message": "Idioma"
+  },
+  "captureSource": {
+    "message": "Fuente de captura"
+  },
+  "openBookmarksButton": {
+    "message": "Abrir marcadores"
+  },
+  "bookmarksPageReady": {
+    "message": "Página lista"
+  },
+  "bookmarksPageMissing": {
+    "message": "Abrir X"
+  },
+  "pageReadyGuidance": {
+    "message": "Esta pestaña de marcadores de X está lista para capturar."
+  },
+  "pageMissingGuidance": {
+    "message": "Abre x.com/i/bookmarks y vuelve aquí para capturar."
+  },
+  "archiveTitle": {
+    "message": "Tus marcadores"
+  },
+  "totalLabel": {
+    "message": "Total guardado"
+  },
+  "currentLabel": {
+    "message": "Ahora en X"
+  },
+  "archivedLabel": {
+    "message": "Archivados"
+  },
+  "emptyArchive": {
+    "message": "Aún no has capturado ningún marcador."
+  },
+  "lastCaptureAt": {
+    "message": "Capturado el $DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "neverCaptured": {
+    "message": "Nunca capturado"
+  },
+  "unknownDate": {
+    "message": "Fecha desconocida"
+  },
+  "captureTitle": {
+    "message": "Capturar marcadores"
+  },
+  "captureDescription": {
+    "message": "Bookmark X desplaza la página abierta de marcadores y guarda localmente cada publicación visible."
+  },
+  "captureIdle": {
+    "message": "Listo"
+  },
+  "captureRunning": {
+    "message": "Capturando"
+  },
+  "captureComplete": {
+    "message": "Completado"
+  },
+  "captureCancelled": {
+    "message": "Cancelado"
+  },
+  "captureError": {
+    "message": "Requiere atención"
+  },
+  "captureProgress": {
+    "message": "$COUNT$ marcadores encontrados",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "duplicatesSkipped": {
+    "message": "$COUNT$ duplicados omitidos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "captureButton": {
+    "message": "Capturar marcadores"
+  },
+  "cancelCaptureButton": {
+    "message": "Detener captura"
+  },
+  "exportTitle": {
+    "message": "Descargar TXT"
+  },
+  "exportFullButton": {
+    "message": "Descargar archivo completo"
+  },
+  "exportUrlsButton": {
+    "message": "Solo URL"
+  },
+  "moreOptions": {
+    "message": "Más opciones"
+  },
+  "localOnlyNote": {
+    "message": "Guardado localmente · Bookmark X no sube ningún dato"
+  },
+  "clearArchiveButton": {
+    "message": "Borrar archivo"
+  },
+  "clearDialogTitle": {
+    "message": "¿Borrar el archivo local?"
+  },
+  "clearDialogDescription": {
+    "message": "Esto elimina permanentemente todos los marcadores guardados en este navegador. No modifica tus marcadores en X."
+  },
+  "cancelButton": {
+    "message": "Cancelar"
+  },
+  "confirmClearButton": {
+    "message": "Borrar archivo"
+  },
+  "errorBookmarksPage": {
+    "message": "Abre primero la página de marcadores de X."
+  },
+  "errorReloadPage": {
+    "message": "Recarga la página de marcadores de X e inténtalo de nuevo."
+  },
+  "errorCapture": {
+    "message": "La captura se detuvo inesperadamente. Tu archivo guardado está seguro."
+  },
+  "errorCaptureRunning": {
+    "message": "Ya hay una captura en curso."
+  },
+  "errorGeneric": {
+    "message": "Bookmark X no pudo completar esa acción. Inténtalo de nuevo."
+  }
+}

@@ -1,0 +1,155 @@
+{
+  "extensionName": {
+    "message": "Bookmark X"
+  },
+  "extensionDescription": {
+    "message": "Erfasse deine X-Lesezeichen von der geöffneten Seite und exportiere sie als privates lokales TXT-Archiv."
+  },
+  "eyebrow": {
+    "message": "Lokales X-Archiv"
+  },
+  "loading": {
+    "message": "Wird geladen"
+  },
+  "loadingArchive": {
+    "message": "Dein lokales Archiv wird geöffnet…"
+  },
+  "languageLabel": {
+    "message": "Sprache"
+  },
+  "captureSource": {
+    "message": "Erfassungsquelle"
+  },
+  "openBookmarksButton": {
+    "message": "Lesezeichen öffnen"
+  },
+  "bookmarksPageReady": {
+    "message": "Seite bereit"
+  },
+  "bookmarksPageMissing": {
+    "message": "X öffnen"
+  },
+  "pageReadyGuidance": {
+    "message": "Dieser X-Lesezeichen-Tab ist zur Erfassung bereit."
+  },
+  "pageMissingGuidance": {
+    "message": "Öffne x.com/i/bookmarks und kehre dann zur Erfassung hierher zurück."
+  },
+  "archiveTitle": {
+    "message": "Deine Lesezeichen"
+  },
+  "totalLabel": {
+    "message": "Gespeichert"
+  },
+  "currentLabel": {
+    "message": "Jetzt auf X"
+  },
+  "archivedLabel": {
+    "message": "Archiviert"
+  },
+  "emptyArchive": {
+    "message": "Noch keine Lesezeichen erfasst."
+  },
+  "lastCaptureAt": {
+    "message": "Erfasst am $DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "neverCaptured": {
+    "message": "Noch nie erfasst"
+  },
+  "unknownDate": {
+    "message": "Unbekanntes Datum"
+  },
+  "captureTitle": {
+    "message": "Lesezeichen erfassen"
+  },
+  "captureDescription": {
+    "message": "Bookmark X scrollt durch deine geöffnete Lesezeichenseite und speichert jeden sichtbaren Beitrag lokal."
+  },
+  "captureIdle": {
+    "message": "Bereit"
+  },
+  "captureRunning": {
+    "message": "Wird erfasst"
+  },
+  "captureComplete": {
+    "message": "Abgeschlossen"
+  },
+  "captureCancelled": {
+    "message": "Abgebrochen"
+  },
+  "captureError": {
+    "message": "Prüfung erforderlich"
+  },
+  "captureProgress": {
+    "message": "$COUNT$ Lesezeichen gefunden",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "duplicatesSkipped": {
+    "message": "$COUNT$ Duplikate übersprungen",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "captureButton": {
+    "message": "Lesezeichen erfassen"
+  },
+  "cancelCaptureButton": {
+    "message": "Erfassung stoppen"
+  },
+  "exportTitle": {
+    "message": "TXT herunterladen"
+  },
+  "exportFullButton": {
+    "message": "Vollständiges Archiv herunterladen"
+  },
+  "exportUrlsButton": {
+    "message": "Nur URLs"
+  },
+  "moreOptions": {
+    "message": "Weitere Optionen"
+  },
+  "localOnlyNote": {
+    "message": "Lokal gespeichert · Bookmark X lädt keine Daten hoch"
+  },
+  "clearArchiveButton": {
+    "message": "Archiv löschen"
+  },
+  "clearDialogTitle": {
+    "message": "Lokales Archiv löschen?"
+  },
+  "clearDialogDescription": {
+    "message": "Dadurch werden alle in diesem Browser gespeicherten Lesezeichen dauerhaft gelöscht. Deine Lesezeichen auf X bleiben unverändert."
+  },
+  "cancelButton": {
+    "message": "Abbrechen"
+  },
+  "confirmClearButton": {
+    "message": "Archiv löschen"
+  },
+  "errorBookmarksPage": {
+    "message": "Öffne zuerst die X-Lesezeichenseite."
+  },
+  "errorReloadPage": {
+    "message": "Lade die X-Lesezeichenseite neu und versuche es erneut."
+  },
+  "errorCapture": {
+    "message": "Die Erfassung wurde unerwartet beendet. Dein gespeichertes Archiv ist sicher."
+  },
+  "errorCaptureRunning": {
+    "message": "Eine Erfassung läuft bereits."
+  },
+  "errorGeneric": {
+    "message": "Bookmark X konnte diese Aktion nicht abschließen. Versuche es erneut."
+  }
+}

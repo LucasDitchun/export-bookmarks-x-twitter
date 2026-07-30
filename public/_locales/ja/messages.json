@@ -1,0 +1,155 @@
+{
+  "extensionName": {
+    "message": "Bookmark X"
+  },
+  "extensionDescription": {
+    "message": "開いているページからXのブックマークを取得し、非公開のローカルTXTアーカイブとして書き出します。"
+  },
+  "eyebrow": {
+    "message": "Xのローカルアーカイブ"
+  },
+  "loading": {
+    "message": "読み込み中"
+  },
+  "loadingArchive": {
+    "message": "ローカルアーカイブを開いています…"
+  },
+  "languageLabel": {
+    "message": "言語"
+  },
+  "captureSource": {
+    "message": "取得元"
+  },
+  "openBookmarksButton": {
+    "message": "ブックマークを開く"
+  },
+  "bookmarksPageReady": {
+    "message": "準備完了"
+  },
+  "bookmarksPageMissing": {
+    "message": "Xを開く"
+  },
+  "pageReadyGuidance": {
+    "message": "このXブックマークタブから取得できます。"
+  },
+  "pageMissingGuidance": {
+    "message": "x.com/i/bookmarks を開き、ここに戻って取得してください。"
+  },
+  "archiveTitle": {
+    "message": "ブックマーク"
+  },
+  "totalLabel": {
+    "message": "保存済み"
+  },
+  "currentLabel": {
+    "message": "Xに存在"
+  },
+  "archivedLabel": {
+    "message": "アーカイブ済み"
+  },
+  "emptyArchive": {
+    "message": "まだブックマークを取得していません。"
+  },
+  "lastCaptureAt": {
+    "message": "$DATE$ に取得",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "neverCaptured": {
+    "message": "未取得"
+  },
+  "unknownDate": {
+    "message": "日付不明"
+  },
+  "captureTitle": {
+    "message": "ブックマークを取得"
+  },
+  "captureDescription": {
+    "message": "Bookmark Xが開いているブックマークページをスクロールし、表示された各ポストをローカルに保存します。"
+  },
+  "captureIdle": {
+    "message": "準備完了"
+  },
+  "captureRunning": {
+    "message": "取得中"
+  },
+  "captureComplete": {
+    "message": "完了"
+  },
+  "captureCancelled": {
+    "message": "キャンセル済み"
+  },
+  "captureError": {
+    "message": "確認が必要です"
+  },
+  "captureProgress": {
+    "message": "$COUNT$ 件のブックマークを検出",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "duplicatesSkipped": {
+    "message": "重複 $COUNT$ 件をスキップ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "captureButton": {
+    "message": "ブックマークを取得"
+  },
+  "cancelCaptureButton": {
+    "message": "取得を停止"
+  },
+  "exportTitle": {
+    "message": "TXTをダウンロード"
+  },
+  "exportFullButton": {
+    "message": "完全なアーカイブをダウンロード"
+  },
+  "exportUrlsButton": {
+    "message": "URLのみ"
+  },
+  "moreOptions": {
+    "message": "その他のオプション"
+  },
+  "localOnlyNote": {
+    "message": "ローカルに保存 · Bookmark Xがデータをアップロードすることはありません"
+  },
+  "clearArchiveButton": {
+    "message": "アーカイブを消去"
+  },
+  "clearDialogTitle": {
+    "message": "ローカルアーカイブを消去しますか？"
+  },
+  "clearDialogDescription": {
+    "message": "このブラウザに保存されたすべてのブックマークが完全に削除されます。X上のブックマークは変更されません。"
+  },
+  "cancelButton": {
+    "message": "キャンセル"
+  },
+  "confirmClearButton": {
+    "message": "アーカイブを消去"
+  },
+  "errorBookmarksPage": {
+    "message": "先にXのブックマークページを開いてください。"
+  },
+  "errorReloadPage": {
+    "message": "Xのブックマークページを再読み込みして、もう一度お試しください。"
+  },
+  "errorCapture": {
+    "message": "取得が予期せず停止しました。保存済みのアーカイブは安全です。"
+  },
+  "errorCaptureRunning": {
+    "message": "すでに取得を実行中です。"
+  },
+  "errorGeneric": {
+    "message": "Bookmark Xで操作を完了できませんでした。もう一度お試しください。"
+  }
+}

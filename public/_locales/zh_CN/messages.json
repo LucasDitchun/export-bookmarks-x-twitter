@@ -1,0 +1,155 @@
+{
+  "extensionName": {
+    "message": "Bookmark X"
+  },
+  "extensionDescription": {
+    "message": "从已打开的页面获取 X 书签，并导出为本地私密 TXT 存档。"
+  },
+  "eyebrow": {
+    "message": "X 本地存档"
+  },
+  "loading": {
+    "message": "正在加载"
+  },
+  "loadingArchive": {
+    "message": "正在打开本地存档…"
+  },
+  "languageLabel": {
+    "message": "语言"
+  },
+  "captureSource": {
+    "message": "获取来源"
+  },
+  "openBookmarksButton": {
+    "message": "打开书签"
+  },
+  "bookmarksPageReady": {
+    "message": "页面已就绪"
+  },
+  "bookmarksPageMissing": {
+    "message": "打开 X"
+  },
+  "pageReadyGuidance": {
+    "message": "此 X 书签标签页已准备好获取。"
+  },
+  "pageMissingGuidance": {
+    "message": "请打开 x.com/i/bookmarks，然后返回此处获取。"
+  },
+  "archiveTitle": {
+    "message": "你的书签"
+  },
+  "totalLabel": {
+    "message": "已保存总数"
+  },
+  "currentLabel": {
+    "message": "X 中现有"
+  },
+  "archivedLabel": {
+    "message": "已归档"
+  },
+  "emptyArchive": {
+    "message": "尚未获取任何书签。"
+  },
+  "lastCaptureAt": {
+    "message": "获取于 $DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "neverCaptured": {
+    "message": "从未获取"
+  },
+  "unknownDate": {
+    "message": "未知日期"
+  },
+  "captureTitle": {
+    "message": "获取书签"
+  },
+  "captureDescription": {
+    "message": "Bookmark X 会滚动已打开的书签页面，并将每条可见帖子保存到本地。"
+  },
+  "captureIdle": {
+    "message": "已就绪"
+  },
+  "captureRunning": {
+    "message": "正在获取"
+  },
+  "captureComplete": {
+    "message": "已完成"
+  },
+  "captureCancelled": {
+    "message": "已取消"
+  },
+  "captureError": {
+    "message": "需要处理"
+  },
+  "captureProgress": {
+    "message": "已找到 $COUNT$ 个书签",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "duplicatesSkipped": {
+    "message": "已跳过 $COUNT$ 个重复项",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "captureButton": {
+    "message": "获取书签"
+  },
+  "cancelCaptureButton": {
+    "message": "停止获取"
+  },
+  "exportTitle": {
+    "message": "下载 TXT"
+  },
+  "exportFullButton": {
+    "message": "下载完整存档"
+  },
+  "exportUrlsButton": {
+    "message": "仅 URL"
+  },
+  "moreOptions": {
+    "message": "更多选项"
+  },
+  "localOnlyNote": {
+    "message": "仅保存在本地 · Bookmark X 不会上传任何数据"
+  },
+  "clearArchiveButton": {
+    "message": "清除存档"
+  },
+  "clearDialogTitle": {
+    "message": "清除本地存档？"
+  },
+  "clearDialogDescription": {
+    "message": "这会永久删除此浏览器中存储的所有书签，但不会更改你在 X 上的书签。"
+  },
+  "cancelButton": {
+    "message": "取消"
+  },
+  "confirmClearButton": {
+    "message": "清除存档"
+  },
+  "errorBookmarksPage": {
+    "message": "请先打开 X 书签页面。"
+  },
+  "errorReloadPage": {
+    "message": "请重新加载 X 书签页面，然后重试。"
+  },
+  "errorCapture": {
+    "message": "获取意外停止。已保存的存档仍然安全。"
+  },
+  "errorCaptureRunning": {
+    "message": "已有获取任务正在运行。"
+  },
+  "errorGeneric": {
+    "message": "Bookmark X 无法完成该操作，请重试。"
+  }
+}

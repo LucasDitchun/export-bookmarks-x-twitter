@@ -1,0 +1,73 @@
+{
+  "extensionName": { "message": "Bookmark X" },
+  "extensionDescription": {
+    "message": "Capture your X bookmarks from the open page and export a private local TXT archive."
+  },
+  "eyebrow": { "message": "Local X archive" },
+  "loading": { "message": "Loading" },
+  "loadingArchive": { "message": "Opening your local archive…" },
+  "captureSource": { "message": "Capture source" },
+  "openBookmarksButton": { "message": "Open bookmarks" },
+  "bookmarksPageReady": { "message": "Page ready" },
+  "bookmarksPageMissing": { "message": "Open X" },
+  "pageReadyGuidance": { "message": "This X bookmarks tab is ready to capture." },
+  "pageMissingGuidance": {
+    "message": "Open x.com/i/bookmarks, then return here to capture."
+  },
+  "archiveTitle": { "message": "Your bookmarks" },
+  "totalLabel": { "message": "Total saved" },
+  "currentLabel": { "message": "On X now" },
+  "archivedLabel": { "message": "Archived" },
+  "emptyArchive": { "message": "No bookmarks captured yet." },
+  "lastCaptureAt": {
+    "message": "Captured $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "neverCaptured": { "message": "Never captured" },
+  "unknownDate": { "message": "Unknown date" },
+  "captureTitle": { "message": "Capture bookmarks" },
+  "captureDescription": {
+    "message": "Bookmark X scrolls your open bookmarks page and saves each visible post locally."
+  },
+  "captureIdle": { "message": "Ready" },
+  "captureRunning": { "message": "Capturing" },
+  "captureComplete": { "message": "Complete" },
+  "captureCancelled": { "message": "Cancelled" },
+  "captureError": { "message": "Needs attention" },
+  "captureProgress": {
+    "message": "$COUNT$ bookmarks found",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "duplicatesSkipped": {
+    "message": "$COUNT$ duplicates skipped",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "captureButton": { "message": "Capture bookmarks" },
+  "cancelCaptureButton": { "message": "Stop capture" },
+  "exportTitle": { "message": "Download TXT" },
+  "exportFullButton": { "message": "Download full archive" },
+  "exportUrlsButton": { "message": "URLs only" },
+  "moreOptions": { "message": "More options" },
+  "languageLabel": { "message": "Language" },
+  "localOnlyNote": {
+    "message": "Stored locally · Nothing is uploaded by Bookmark X"
+  },
+  "clearArchiveButton": { "message": "Clear archive" },
+  "clearDialogTitle": { "message": "Clear the local archive?" },
+  "clearDialogDescription": {
+    "message": "This permanently removes every stored bookmark from this browser. It does not change your bookmarks on X."
+  },
+  "cancelButton": { "message": "Cancel" },
+  "confirmClearButton": { "message": "Clear archive" },
+  "errorBookmarksPage": { "message": "Open the X bookmarks page first." },
+  "errorReloadPage": {
+    "message": "Reload the X bookmarks page and try again."
+  },
+  "errorCapture": {
+    "message": "The capture stopped unexpectedly. Your saved archive is safe."
+  },
+  "errorCaptureRunning": { "message": "A capture is already running." },
+  "errorGeneric": {
+    "message": "Bookmark X could not complete that action. Try again."
+  }
+}

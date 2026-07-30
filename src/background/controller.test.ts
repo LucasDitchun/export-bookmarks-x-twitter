@@ -1,0 +1,236 @@
+import { describe, expect, it, vi } from "vitest";
+
+import type { ArchiveStats, BookmarkSnapshot, ScrapeRun } from "../domain/types";
+import { BackgroundController, isBookmarksUrl } from "./controller";
+
+const EXTENSION_ID = "bookmark-x-extension";
+const POPUP_SENDER = { id: EXTENSION_ID };
+const CONTENT_SENDER = {
+  id: EXTENSION_ID,
+  tab: { id: 7, url: "https://x.com/i/bookmarks" },
+};
+
+const stats: ArchiveStats = {
+  total: 2,
+  current: 1,
+  archived: 1,
+  lastSuccessfulSyncAt: "2026-07-29T12:00:00.000Z",
+};
+
+const bookmark: BookmarkSnapshot = {
+  id: "123",
+  text: "Captured from the page",
+  url: "https://x.com/person/status/123",
+  author: { id: "person", username: "person", name: "Person" },
+  postCreatedAt: "2026-07-29T11:00:00.000Z",
+};
+
+function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
+  let currentRun: ScrapeRun | null = null;
+  return {
+    archive: {
+      mergeBookmarks: vi.fn(async () => ({ added: 1, updated: 0 })),
+      finalizeCapture: vi.fn(async () => undefined),
+      getStats: vi.fn(async () => stats),
+      getAll: vi.fn(async () => []),
+      clear: vi.fn(async () => undefined),
+    },
+    state: {
+      getScrapeRun: vi.fn(async () => currentRun),
+      setScrapeRun: vi.fn(async (run: ScrapeRun) => {
+        currentRun = run;
+      }),
+      clearScrapeRun: vi.fn(async () => {
+        currentRun = null;
+      }),
+    },
+    browser: {
+      getActiveTab: vi.fn(async () => ({ id: 7, url: activeUrl })),
+      openBookmarks: vi.fn(async () => undefined),
+      sendToTab: vi.fn(async () => ({ accepted: true })),
+    },
+    extensionId: EXTENSION_ID,
+    now: () => new Date("2026-07-29T13:14:15.123Z"),
+    createId: () => "run-1",
+  };
+}
+
+describe("isBookmarksUrl", () => {
+  it("accepts only X bookmark routes", () => {
+    expect(isBookmarksUrl("https://x.com/i/bookmarks")).toBe(true);
+    expect(isBookmarksUrl("https://www.x.com/i/bookmarks/folder/1")).toBe(true);
+    expect(isBookmarksUrl("https://x.com/home")).toBe(false);
+    expect(isBookmarksUrl("not a URL")).toBe(false);
+  });
+});
+
+describe("BackgroundController", () => {
+  it("reports whether the active page is ready for capture", async () => {
+    const controller = new BackgroundController(createDependencies());
+
+    await expect(
+      controller.handle({ type: "GET_STATUS" }, POPUP_SENDER),
+    ).resolves.toEqual({
+      ok: true,
+      data: { pageReady: true, stats, scrape: null },
+    });
+  });
+
+  it("starts capture only on the X bookmarks page", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { id: "run-1", tabId: 7, status: "running" },
+    });
+    expect(dependencies.browser.sendToTab).toHaveBeenCalledWith(7, {
+      type: "START_SCRAPE",
+      runId: "run-1",
+    });
+
+    const wrongPage = new BackgroundController(
+      createDependencies("https://x.com/home"),
+    );
+    await expect(
+      wrongPage.handle({ type: "START_SCRAPE" }, POPUP_SENDER),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "bookmarks_page_required" },
+    });
+  });
+
+  it("archives validated content-script batches and finalizes complete captures", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    await controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER);
+
+    await expect(
+      controller.handle(
+        { type: "SCRAPE_BATCH", runId: "run-1", bookmarks: [bookmark] },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { fetched: 1, added: 1, updated: 0 },
+    });
+    await expect(
+      controller.handle(
+        {
+          type: "SCRAPE_COMPLETE",
+          runId: "run-1",
+          status: "completed",
+          fetched: 1,
+        },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { status: "completed", fetched: 1 },
+    });
+
+    expect(dependencies.archive.mergeBookmarks).toHaveBeenCalledWith(
+      [bookmark],
+      "run-1",
+      "2026-07-29T13:14:15.123Z",
+    );
+    expect(dependencies.archive.finalizeCapture).toHaveBeenCalledWith(
+      "run-1",
+      "2026-07-29T13:14:15.123Z",
+    );
+  });
+
+  it("rejects malformed or untrusted capture messages", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    await controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER);
+
+    await expect(
+      controller.handle(
+        {
+          type: "SCRAPE_BATCH",
+          runId: "run-1",
+          bookmarks: [{ ...bookmark, url: "javascript:alert(1)" }],
+        },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_request" },
+    });
+    await expect(
+      controller.handle(
+        { type: "SCRAPE_PROGRESS", runId: "run-1", fetched: 10 },
+        { ...CONTENT_SENDER, id: "another-extension" },
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_sender" },
+    });
+  });
+
+  it("cancels the active page capture without finalizing missing bookmarks", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    await controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER);
+
+    await expect(
+      controller.handle({ type: "CANCEL_SCRAPE" }, POPUP_SENDER),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { status: "cancelled" },
+    });
+    expect(dependencies.browser.sendToTab).toHaveBeenLastCalledWith(7, {
+      type: "CANCEL_SCRAPE",
+      runId: "run-1",
+    });
+    expect(dependencies.archive.finalizeCapture).not.toHaveBeenCalled();
+  });
+
+  it("routes open, export, and clear actions", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await controller.handle({ type: "OPEN_BOOKMARKS" }, POPUP_SENDER);
+    await expect(
+      controller.handle(
+        {
+          type: "EXPORT_BOOKMARKS",
+          payload: { format: "urls", locale: "ja" },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      data: {
+        content: "\uFEFF",
+        filename: "bookmark-x-2026-07-29T13-14-15Z-urls.txt",
+      },
+    });
+    await controller.handle({ type: "CLEAR_ARCHIVE" }, POPUP_SENDER);
+
+    expect(dependencies.browser.openBookmarks).toHaveBeenCalledOnce();
+    expect(dependencies.archive.clear).toHaveBeenCalledOnce();
+    expect(dependencies.state.clearScrapeRun).toHaveBeenCalledOnce();
+  });
+
+  it("requires extension-owned popup messages and handles unavailable content scripts", async () => {
+    const dependencies = createDependencies();
+    dependencies.browser.sendToTab.mockRejectedValueOnce(new Error("no receiver"));
+    const controller = new BackgroundController(dependencies);
+
+    await expect(controller.handle({ type: "GET_STATUS" })).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_request" },
+    });
+    await expect(
+      controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "content_script_unavailable" },
+    });
+    expect(dependencies.state.setScrapeRun).toHaveBeenCalledTimes(2);
+  });
+});

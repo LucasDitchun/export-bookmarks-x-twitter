@@ -1,0 +1,155 @@
+{
+  "extensionName": {
+    "message": "Bookmark X"
+  },
+  "extensionDescription": {
+    "message": "Capturez vos signets X depuis la page ouverte et exportez-les dans une archive TXT locale et privée."
+  },
+  "eyebrow": {
+    "message": "Archive X locale"
+  },
+  "loading": {
+    "message": "Chargement"
+  },
+  "loadingArchive": {
+    "message": "Ouverture de votre archive locale…"
+  },
+  "languageLabel": {
+    "message": "Langue"
+  },
+  "captureSource": {
+    "message": "Source de capture"
+  },
+  "openBookmarksButton": {
+    "message": "Ouvrir les signets"
+  },
+  "bookmarksPageReady": {
+    "message": "Page prête"
+  },
+  "bookmarksPageMissing": {
+    "message": "Ouvrir X"
+  },
+  "pageReadyGuidance": {
+    "message": "Cet onglet de signets X est prêt pour la capture."
+  },
+  "pageMissingGuidance": {
+    "message": "Ouvrez x.com/i/bookmarks, puis revenez ici pour lancer la capture."
+  },
+  "archiveTitle": {
+    "message": "Vos signets"
+  },
+  "totalLabel": {
+    "message": "Total enregistré"
+  },
+  "currentLabel": {
+    "message": "Sur X"
+  },
+  "archivedLabel": {
+    "message": "Archivés"
+  },
+  "emptyArchive": {
+    "message": "Aucun signet capturé pour le moment."
+  },
+  "lastCaptureAt": {
+    "message": "Capturé le $DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "neverCaptured": {
+    "message": "Jamais capturé"
+  },
+  "unknownDate": {
+    "message": "Date inconnue"
+  },
+  "captureTitle": {
+    "message": "Capturer les signets"
+  },
+  "captureDescription": {
+    "message": "Bookmark X fait défiler votre page de signets ouverte et enregistre localement chaque publication visible."
+  },
+  "captureIdle": {
+    "message": "Prêt"
+  },
+  "captureRunning": {
+    "message": "Capture en cours"
+  },
+  "captureComplete": {
+    "message": "Terminé"
+  },
+  "captureCancelled": {
+    "message": "Annulé"
+  },
+  "captureError": {
+    "message": "Attention requise"
+  },
+  "captureProgress": {
+    "message": "$COUNT$ signets trouvés",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "duplicatesSkipped": {
+    "message": "$COUNT$ doublons ignorés",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "captureButton": {
+    "message": "Capturer les signets"
+  },
+  "cancelCaptureButton": {
+    "message": "Arrêter la capture"
+  },
+  "exportTitle": {
+    "message": "Télécharger le TXT"
+  },
+  "exportFullButton": {
+    "message": "Télécharger l’archive complète"
+  },
+  "exportUrlsButton": {
+    "message": "URL uniquement"
+  },
+  "moreOptions": {
+    "message": "Plus d’options"
+  },
+  "localOnlyNote": {
+    "message": "Stocké localement · Bookmark X ne téléverse aucune donnée"
+  },
+  "clearArchiveButton": {
+    "message": "Effacer l’archive"
+  },
+  "clearDialogTitle": {
+    "message": "Effacer l’archive locale ?"
+  },
+  "clearDialogDescription": {
+    "message": "Cette action supprime définitivement tous les signets stockés dans ce navigateur. Elle ne modifie pas vos signets sur X."
+  },
+  "cancelButton": {
+    "message": "Annuler"
+  },
+  "confirmClearButton": {
+    "message": "Effacer l’archive"
+  },
+  "errorBookmarksPage": {
+    "message": "Ouvrez d’abord la page des signets X."
+  },
+  "errorReloadPage": {
+    "message": "Rechargez la page des signets X et réessayez."
+  },
+  "errorCapture": {
+    "message": "La capture s’est arrêtée de manière inattendue. Votre archive enregistrée est intacte."
+  },
+  "errorCaptureRunning": {
+    "message": "Une capture est déjà en cours."
+  },
+  "errorGeneric": {
+    "message": "Bookmark X n’a pas pu terminer cette action. Réessayez."
+  }
+}

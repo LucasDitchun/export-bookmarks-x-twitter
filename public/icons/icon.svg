@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 587 800" role="img" aria-labelledby="title">
+  <title id="title">Bookmark X</title>
+  <path
+    fill="#DCFB5F"
+    fill-rule="evenodd"
+    d="M480 0H106.667C47.76 0 0 47.76 0 106.667V693.333C0 752.24 47.76 800 106.667 800L293.333 613.333L480 800C538.907 800 586.667 752.24 586.667 693.333V106.667C586.667 47.76 538.907 0 480 0Z"
+    clip-rule="evenodd"
+  />
+  <path
+    fill="black"
+    fill-rule="evenodd"
+    d="M519 529L342.239 271.977L342.541 272.218L501.917 88H448.658L318.826 237.94L215.723 88H76.0439L241.067 327.965L241.047 327.944L67 529H120.259L264.602 362.182L379.32 529H519ZM194.621 128.091L442.628 488.909H400.423L152.215 128.091H194.621Z"
+    clip-rule="evenodd"
+  />
+</svg>
