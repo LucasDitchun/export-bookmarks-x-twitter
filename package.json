@@ -40,7 +40,8 @@
     "smoke:chrome": "node scripts/chrome-smoke.mjs",
     "package": "node scripts/package.mjs",
     "verify:archive": "node scripts/archive-integrity.mjs compare",
-    "verify:release-preparation": "node scripts/release-preparation-policy.mjs"
+    "verify:local": "node scripts/verification-plan.mjs local",
+    "verify:staging": "node scripts/verification-plan.mjs staging"
   },
   "engines": {
     "node": ">=22"

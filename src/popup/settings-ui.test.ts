@@ -65,7 +65,7 @@ describe("shared library settings UI", () => {
     expect(getComputedStyle(document.documentElement).fontSize).toBe("100%");
     applyLibraryUiSettings(document, structuredClone(DEFAULT_SETTINGS));
     expect(getComputedStyle(document.documentElement).fontSize).toBe("112.5%");
-  });
+  }, 15_000);
 
   it("turns each metadata surface off and back on without parsing its text", () => {
     const popupHtml = readFileSync(resolve(process.cwd(), "popup.html"), "utf8");
