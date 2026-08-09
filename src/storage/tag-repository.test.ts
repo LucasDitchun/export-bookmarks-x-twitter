@@ -12,6 +12,7 @@ function record(id: string): BookmarkRecord {
     url: `https://x.com/author/status/${id}`,
     author: { id: "author-1", username: "author", name: "Author" },
     postCreatedAt: "2025-01-01T00:00:00.000Z",
+    media: { images: [], videos: [] },
     note: "",
     folderId: null,
     tagIds: [],

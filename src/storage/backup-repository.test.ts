@@ -84,6 +84,15 @@ const bookmark: BookmarkRecord = {
   url: "https://x.com/person/status/123",
   author: { id: "456", username: "person", name: "Person" },
   postCreatedAt: "2026-07-01T10:00:00.000Z",
+  media: {
+    images: ["https://pbs.twimg.com/media/backup?format=jpg&name=large"],
+    videos: [
+      {
+        thumbnailUrl: "https://pbs.twimg.com/ext_tw_video_thumb/123/pu/img/thumb.jpg",
+        postUrl: "https://x.com/person/status/123",
+      },
+    ],
+  },
   note: "Important",
   folderId: "folder-ai",
   tagIds: ["tag-research"],
@@ -223,6 +232,7 @@ describe("BackupRepository", () => {
       url: "https://x.com/person/status/999",
       folderId: null,
       tagIds: [],
+      media: { images: [], videos: [] },
     };
     await seed(targetName, { bookmark: oldBookmark, ephemeral: true });
     const targetStorage = new MemoryStorage();
@@ -289,6 +299,7 @@ describe("BackupRepository", () => {
       note: "Local only",
       folderId: null,
       tagIds: [],
+      media: { images: [], videos: [] },
     });
     await transactionDone(transaction);
     database.close();
@@ -314,6 +325,7 @@ describe("BackupRepository", () => {
         url: "https://x.com/person/status/777",
         folderId: null,
         tagIds: ["tag-local"],
+        media: { images: [], videos: [] },
       },
     });
     const database = await new BookmarkDatabase(targetName).open();

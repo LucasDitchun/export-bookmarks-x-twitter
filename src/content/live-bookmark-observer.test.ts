@@ -13,6 +13,7 @@ function renderTweet(action: "bookmark" | "removeBookmark" = "bookmark") {
         <div data-testid="User-Name"><a href="/alice"><span>Alice</span></a></div>
         <a href="/alice/status/123"><time datetime="2026-08-09T09:00:00.000Z"></time></a>
         <div data-testid="tweetText">A useful post</div>
+        <div data-testid="tweetPhoto"><img src="https://pbs.twimg.com/media/live?format=jpg&amp;name=large"></div>
         <button type="button" data-testid="${action}" aria-pressed="${action === "removeBookmark"}">
           Bookmark
         </button>
@@ -58,6 +59,10 @@ describe("startLiveBookmarkObserver", () => {
                 url: "https://x.com/alice/status/123",
                 author: { id: "alice", username: "alice", name: "Alice" },
                 postCreatedAt: "2026-08-09T09:00:00.000Z",
+                media: {
+                  images: ["https://pbs.twimg.com/media/live?format=jpg&name=large"],
+                  videos: [],
+                },
                 note: "",
                 folderId: null,
                 tagIds: [],
@@ -111,6 +116,9 @@ describe("startLiveBookmarkObserver", () => {
     if (confirmed?.type === "LIVE_BOOKMARK_CONFIRMED") {
       expect(confirmed.action).toBe("save");
       expect(confirmed.bookmark.id).toBe("123");
+      expect(confirmed.bookmark.media?.images).toEqual([
+        "https://pbs.twimg.com/media/live?format=jpg&name=large",
+      ]);
     }
     const modal = document.querySelector("bookmark-x-note-modal")?.shadowRoot;
     expect(modal?.querySelector('[role="status"]')?.textContent).toBe(
@@ -129,6 +137,7 @@ describe("startLiveBookmarkObserver", () => {
       url: "https://x.com/alice/status/123",
       author: { id: "alice", username: "alice", name: "Alice" },
       postCreatedAt: "2026-08-09T09:00:00.000Z",
+      media: { images: [], videos: [] },
       note: "Existing note",
       folderId: "folder-reading",
       tagIds: ["tag-existing"],

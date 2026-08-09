@@ -7,6 +7,7 @@ import {
   type BookmarkSnapshot,
   type ScrapeRun,
 } from "../domain/types";
+import { isBookmarkMedia } from "../domain/bookmark-media";
 import type {
   ContentControlRequest,
   ContentEvent,
@@ -278,9 +279,17 @@ function isBookmarkSnapshot(value: unknown): value is BookmarkSnapshot {
   if (typeof value.url === "string") {
     try {
       const url = new URL(value.url);
+      const match = url.pathname.match(/^\/[A-Za-z0-9_]+\/status\/(\d+)$/);
       statusUrlIsValid =
+        url.protocol === "https:" &&
         (url.hostname === "x.com" || url.hostname === "www.x.com") &&
-        /^\/[A-Za-z0-9_]+\/status\/\d+$/.test(url.pathname);
+        url.username === "" &&
+        url.password === "" &&
+        url.port === "" &&
+        url.search === "" &&
+        url.hash === "" &&
+        typeof value.id === "string" &&
+        match?.[1] === value.id;
     } catch {
       statusUrlIsValid = false;
     }
@@ -290,6 +299,7 @@ function isBookmarkSnapshot(value: unknown): value is BookmarkSnapshot {
     /^\d+$/.test(value.id) &&
     typeof value.text === "string" &&
     statusUrlIsValid &&
+    (value.media === undefined || isBookmarkMedia(value.media, value.url as string)) &&
     typeof value.postCreatedAt === "string" &&
     typeof value.author.id === "string" &&
     typeof value.author.username === "string" &&

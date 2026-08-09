@@ -12,6 +12,7 @@ import {
 } from "../surfaces/bookmark-modal";
 import { extractBookmarks } from "./extract-bookmarks";
 import { loadBookmarkMetadataValues, saveBookmarkMetadata } from "./bookmark-metadata";
+import { isContentBookmarkMedia } from "./bookmark-media";
 
 const DEFAULT_STABLE_FOR_MS = 900;
 const DEFAULT_TIMEOUT_MS = 6_000;
@@ -50,6 +51,7 @@ function isBookmarkRecord(value: unknown): value is BookmarkRecord {
     typeof bookmark.author.username === "string" &&
     typeof bookmark.author.name === "string" &&
     typeof bookmark.postCreatedAt === "string" &&
+    isContentBookmarkMedia(bookmark.media, bookmark.url) &&
     typeof bookmark.note === "string" &&
     (bookmark.folderId === null || typeof bookmark.folderId === "string") &&
     Array.isArray(bookmark.tagIds) &&

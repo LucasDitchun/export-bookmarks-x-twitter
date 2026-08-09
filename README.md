@@ -122,7 +122,9 @@ locally and used the next time you open Bookmark X.
 
 Open **More options** and use **Download JSON backup** to save a complete local
 copy of your bookmarks, notes, folders, tags, archive date, and Bookmark X
-settings. The file is created in your browser and is never uploaded.
+settings. Stable image links and video poster/canonical-post references are
+included when X rendered them. The file is created in your browser and is never
+uploaded.
 
 To restore it, choose the JSON file and one of these modes:
 

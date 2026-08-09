@@ -10,6 +10,7 @@ const bookmark: BookmarkRecord = {
   url: "https://x.com/alice/status/123",
   author: { id: "alice", username: "alice", name: "Alice" },
   postCreatedAt: "2026-08-09T09:00:00.000Z",
+  media: { images: [], videos: [] },
   note: "Old note",
   folderId: "folder-old",
   tagIds: ["tag-keep", "tag-remove"],

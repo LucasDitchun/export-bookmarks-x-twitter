@@ -5,7 +5,7 @@ import type {
   FolderRecord,
 } from "../domain/types";
 
-export const BOOKMARK_DATABASE_VERSION = 3;
+export const BOOKMARK_DATABASE_VERSION = 4;
 export const BOOKMARK_FOLDERS_STORE = "bookmarkFolders";
 export const BOOKMARKS_STORE = "bookmarks";
 export const FOLDERS_STORE = "folders";
@@ -103,6 +103,7 @@ function migrateVersionOne(transaction: IDBTransaction): void {
       url: legacy.url,
       author: legacy.author,
       postCreatedAt: legacy.postCreatedAt,
+      media: { images: [], videos: [] },
       note: "",
       folderId: folder?.id ?? null,
       tagIds: [],
@@ -159,7 +160,11 @@ function migrateVersionTwo(transaction: IDBTransaction): void {
         bookmark.folderId !== null && folderIds.has(bookmark.folderId)
           ? bookmark.folderId
           : (legacyFallback ?? null);
-      if (bookmark.folderId !== folderId) bookmarks.put({ ...bookmark, folderId });
+      bookmarks.put({
+        ...bookmark,
+        folderId,
+        media: { images: [], videos: [] },
+      } satisfies BookmarkRecord);
       if (folderId !== null) {
         memberships.put({
           bookmarkId: bookmark.id,
@@ -172,6 +177,22 @@ function migrateVersionTwo(transaction: IDBTransaction): void {
   folderRequest.addEventListener("success", normalize, { once: true });
   bookmarkRequest.addEventListener("success", normalize, { once: true });
   membershipRequest.addEventListener("success", normalize, { once: true });
+}
+
+function migrateVersionThree(transaction: IDBTransaction): void {
+  const bookmarks = transaction.objectStore(BOOKMARKS_STORE);
+  const cursorRequest = bookmarks.openCursor();
+  cursorRequest.addEventListener("success", () => {
+    const cursor = cursorRequest.result;
+    if (cursor === null) return;
+    const legacy = cursor.value as Omit<BookmarkRecord, "media"> &
+      Partial<Pick<BookmarkRecord, "media">>;
+    cursor.update({
+      ...legacy,
+      media: legacy.media ?? { images: [], videos: [] },
+    } satisfies BookmarkRecord);
+    cursor.continue();
+  });
 }
 
 function upgradeSchema(request: IDBOpenDBRequest, event: IDBVersionChangeEvent): void {
@@ -204,6 +225,7 @@ function upgradeSchema(request: IDBOpenDBRequest, event: IDBVersionChangeEvent):
 
   if (event.oldVersion === 1) migrateVersionOne(transaction);
   if (event.oldVersion === 2) migrateVersionTwo(transaction);
+  if (event.oldVersion === 3) migrateVersionThree(transaction);
 }
 
 export function requestAsPromise<T>(request: IDBRequest<T>): Promise<T> {

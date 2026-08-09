@@ -1,4 +1,5 @@
 import type { BookmarkSnapshot } from "../domain/types";
+import { extractBookmarkMedia } from "./bookmark-media";
 
 const STATUS_PATH = /^\/([A-Za-z0-9_]+)\/status\/(\d+)(?:\/|$)/;
 
@@ -102,6 +103,7 @@ export function extractBookmarks(root: ParentNode = document): BookmarkSnapshot[
         name: authorName(article, details.username),
       },
       postCreatedAt: time?.dateTime ?? "",
+      media: extractBookmarkMedia(article, details.url),
     });
   }
 

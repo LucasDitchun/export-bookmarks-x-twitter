@@ -60,6 +60,7 @@ const libraryBookmark: NotedBookmark = {
   url: "https://x.com/person/status/123",
   author: { id: "person", username: "person", name: "Person" },
   postCreatedAt: "2026-07-29T09:00:00.000Z",
+  media: { images: [], videos: [] },
   folderId: null,
   tagIds: [],
   firstSavedAt: "2026-07-29T10:00:00.000Z",

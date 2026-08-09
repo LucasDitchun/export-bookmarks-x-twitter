@@ -35,6 +35,10 @@ const bookmark: BookmarkSnapshot = {
   url: "https://x.com/person/status/123",
   author: { id: "person", username: "person", name: "Person" },
   postCreatedAt: "2026-07-29T11:00:00.000Z",
+  media: {
+    images: ["https://pbs.twimg.com/media/controller?format=jpg&name=large"],
+    videos: [],
+  },
 };
 
 function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
@@ -172,6 +176,7 @@ describe("BackgroundController", () => {
     });
     dependencies.archive.applyLiveBookmark.mockResolvedValue({
       ...bookmark,
+      media: bookmark.media ?? { images: [], videos: [] },
       note: "",
       folderId: null,
       tagIds: [],
@@ -1074,6 +1079,43 @@ describe("BackgroundController", () => {
       ok: false,
       error: { code: "invalid_request" },
     });
+    for (const media of [
+      { images: ["blob:https://x.com/temporary"], videos: [] },
+      {
+        images: [],
+        videos: [
+          {
+            thumbnailUrl: "https://video.twimg.com/ext_tw_video/123/file.mp4",
+            postUrl: bookmark.url,
+          },
+        ],
+      },
+      {
+        images: [],
+        videos: [{ thumbnailUrl: null, postUrl: "https://x.com/person/status/999" }],
+      },
+      {
+        images: Array.from(
+          { length: 17 },
+          (_, index) => `https://pbs.twimg.com/media/${index}`,
+        ),
+        videos: [],
+      },
+    ]) {
+      await expect(
+        controller.handle(
+          {
+            type: "SCRAPE_BATCH",
+            runId: "run-1",
+            bookmarks: [{ ...bookmark, media }],
+          },
+          CONTENT_SENDER,
+        ),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: { code: "invalid_request" },
+      });
+    }
     await expect(
       controller.handle(
         { type: "SCRAPE_PROGRESS", runId: "run-1", fetched: 10 },

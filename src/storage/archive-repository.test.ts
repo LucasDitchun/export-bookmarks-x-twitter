@@ -10,6 +10,10 @@ const syncedBookmark: BookmarkSnapshot = {
   url: "https://x.com/author/status/post-1",
   author: { id: "author-1", username: "author", name: "Author" },
   postCreatedAt: "2025-01-01T00:00:00.000Z",
+  media: {
+    images: ["https://pbs.twimg.com/media/original?format=jpg&name=large"],
+    videos: [],
+  },
 };
 
 async function putRecord(databaseName: string, record: BookmarkRecord): Promise<void> {
@@ -78,6 +82,10 @@ describe("ArchiveRepository", () => {
       tagIds: ["tag-ai"],
       firstSavedAt: "2026-08-09T09:00:00.000Z",
       metadataUpdatedAt: "2026-08-09T09:02:00.000Z",
+      media: {
+        images: ["https://pbs.twimg.com/media/original?format=jpg&name=large"],
+        videos: [],
+      },
     });
   });
 
@@ -126,6 +134,7 @@ describe("ArchiveRepository", () => {
     const repository = new ArchiveRepository(databaseName);
     const existing: BookmarkRecord = {
       ...syncedBookmark,
+      media: syncedBookmark.media ?? { images: [], videos: [] },
       note: "Read this later",
       folderId: "folder-1",
       tagIds: ["tag-1"],
@@ -161,6 +170,7 @@ describe("ArchiveRepository", () => {
     const databaseName = `folders-${crypto.randomUUID()}`;
     const existing: BookmarkRecord = {
       ...syncedBookmark,
+      media: syncedBookmark.media ?? { images: [], videos: [] },
       note: "",
       folderId: "folder-1",
       tagIds: [],

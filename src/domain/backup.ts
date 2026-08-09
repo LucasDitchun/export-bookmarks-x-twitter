@@ -9,8 +9,10 @@ import {
   isStoredSettingsEnvelope,
   type StoredSettingsEnvelope,
 } from "../settings/settings-repository";
+import { emptyBookmarkMedia, isBookmarkMedia } from "./bookmark-media";
 
-export const BACKUP_SCHEMA_VERSION = 1 as const;
+export const BACKUP_SCHEMA_VERSION = 2 as const;
+const LEGACY_BACKUP_SCHEMA_VERSION = 1 as const;
 export const MAX_BACKUP_BYTES = 50 * 1024 * 1024;
 export const MAX_BACKUP_BOOKMARKS = 100_000;
 export const MAX_BACKUP_FOLDERS = 10_000;
@@ -146,7 +148,10 @@ function parseStatusUrl(value: unknown, bookmarkId: string): string {
   return urlValue;
 }
 
-function parseBookmark(value: unknown): BookmarkRecord {
+function parseBookmark(
+  value: unknown,
+  schemaVersion: typeof BACKUP_SCHEMA_VERSION | typeof LEGACY_BACKUP_SCHEMA_VERSION,
+): BookmarkRecord {
   const item = record(
     value,
     [
@@ -155,6 +160,7 @@ function parseBookmark(value: unknown): BookmarkRecord {
       "url",
       "author",
       "postCreatedAt",
+      ...(schemaVersion === BACKUP_SCHEMA_VERSION ? ["media"] : []),
       "note",
       "folderId",
       "tagIds",
@@ -187,14 +193,22 @@ function parseBookmark(value: unknown): BookmarkRecord {
   ) {
     fail("bookmark archive state");
   }
+  const url = parseStatusUrl(item.url, id);
+  const media =
+    schemaVersion === LEGACY_BACKUP_SCHEMA_VERSION
+      ? emptyBookmarkMedia()
+      : isBookmarkMedia(item.media, url)
+        ? structuredClone(item.media)
+        : fail("bookmark media");
   const bookmark: BookmarkRecord = {
     id,
     text: safeString(item.text, "bookmark text", 1_000_000, { allowEmpty: true }),
-    url: parseStatusUrl(item.url, id),
+    url,
     author: parseAuthor(item.author),
     // The X timeline can omit <time> for some media-only cards. Preserve that
     // established empty-string sentinel; every present timestamp stays strict.
     postCreatedAt: optionalCanonicalDate(item.postCreatedAt, "bookmark post date"),
+    media,
     note: safeString(item.note, "bookmark note", 20_000, { allowEmpty: true }),
     folderId,
     tagIds,
@@ -281,9 +295,15 @@ function assertFolderGraph(folders: readonly FolderRecord[]): void {
   }
 }
 
-export function validateBackup(value: unknown): BookmarkXBackup {
+function validateBackupValue(value: unknown, allowLegacy: boolean): BookmarkXBackup {
   const root = record(value, ["schemaVersion", "exportedAt", "data"], "backup file");
-  if (root.schemaVersion !== BACKUP_SCHEMA_VERSION) fail("backup schema version");
+  const schemaVersion = root.schemaVersion;
+  if (
+    schemaVersion !== BACKUP_SCHEMA_VERSION &&
+    !(allowLegacy && schemaVersion === LEGACY_BACKUP_SCHEMA_VERSION)
+  ) {
+    fail("backup schema version");
+  }
   const data = record(
     root.data,
     ["bookmarks", "folders", "tags", "archive", "settings"],
@@ -299,7 +319,9 @@ export function validateBackup(value: unknown): BookmarkXBackup {
   ) {
     fail("backup collection size");
   }
-  const bookmarks = data.bookmarks.map(parseBookmark);
+  const bookmarks = data.bookmarks.map((bookmark) =>
+    parseBookmark(bookmark, schemaVersion),
+  );
   const folders = data.folders.map(parseFolder);
   const tags = data.tags.map(parseTag);
   assertUnique(bookmarks, ({ id }) => id, "duplicate bookmark ID");
@@ -349,12 +371,16 @@ export function validateBackup(value: unknown): BookmarkXBackup {
   };
 }
 
+export function validateBackup(value: unknown): BookmarkXBackup {
+  return validateBackupValue(value, false);
+}
+
 export function parseBackup(content: string): BookmarkXBackup {
   if (new TextEncoder().encode(content).byteLength > MAX_BACKUP_BYTES) {
     throw new BackupValidationError("The selected backup is too large.");
   }
   try {
-    return validateBackup(JSON.parse(content) as unknown);
+    return validateBackupValue(JSON.parse(content) as unknown, true);
   } catch (error) {
     if (error instanceof BackupValidationError) throw error;
     throw new BackupValidationError();

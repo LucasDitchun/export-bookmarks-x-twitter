@@ -10,6 +10,15 @@ For each visible `article[data-testid="tweet"]`, it locates a canonical
 `time[datetime]` when present. Media-only posts are valid even without text.
 Post IDs deduplicate both repeated DOM nodes and timeline virtualization.
 
+For posted images, the extractor reads the browser-selected `currentSrc` and
+keeps direct anonymous HTTPS URLs only from X's stable image host
+(`pbs.twimg.com`). The first DOM occurrence wins when the same image is rendered
+more than once. For video, Bookmark X stores a stable poster thumbnail and the
+canonical X post URL. It never persists `video.currentSrc`, `<source>` URLs,
+direct MP4/CDN URLs, `blob:` URLs, or `data:` URLs as permanent video links.
+Bookmark X does not fetch or download media; it records validated URLs already
+rendered by X.
+
 The content script scrolls the page and sends only newly discovered batches to
 the extension service worker. The worker treats content-script messages as
 untrusted input: it validates sender identity, source tab URL, run ID, batch
@@ -46,6 +55,8 @@ worker before IndexedDB writes.
   signed-in user.
 - Bookmark folders are not inferred because their page DOM is not a stable
   source of membership metadata.
+- A missing or rejected media URL leaves the bookmark intact; media capture is
+  best effort and never broadens host permissions.
 
 When selectors change, update the pure extractor fixtures first, then the
 implementation. Never add cookie access, credential extraction, remote code,

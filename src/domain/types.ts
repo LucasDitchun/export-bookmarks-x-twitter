@@ -28,12 +28,24 @@ export interface BookmarkTag {
 
 export type BookmarkStatus = "current" | "archived";
 
+export interface BookmarkVideoMedia {
+  thumbnailUrl: string | null;
+  /** Canonical X status URL. Direct MP4/CDN URLs are intentionally not stored. */
+  postUrl: string;
+}
+
+export interface BookmarkMedia {
+  images: string[];
+  videos: BookmarkVideoMedia[];
+}
+
 export interface BookmarkRecord {
   id: string;
   text: string;
   url: string;
   author: BookmarkAuthor;
   postCreatedAt: string;
+  media: BookmarkMedia;
   note: string;
   folderId: string | null;
   tagIds: string[];
@@ -51,7 +63,10 @@ export interface HydratedBookmarkRecord extends BookmarkRecord {
 export type BookmarkSnapshot = Pick<
   BookmarkRecord,
   "id" | "text" | "url" | "author" | "postCreatedAt"
->;
+> & {
+  /** Optional only for compatibility with an already-running older content script. */
+  media?: BookmarkMedia;
+};
 
 export type ExportFormat = "full" | "urls";
 export const SUPPORTED_LOCALES = [

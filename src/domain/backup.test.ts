@@ -23,6 +23,16 @@ const backup: BookmarkXBackup = {
         url: "https://x.com/person/status/123",
         author: { id: "456", username: "person", name: "Person" },
         postCreatedAt: "2026-07-01T10:00:00.000Z",
+        media: {
+          images: ["https://pbs.twimg.com/media/abc?format=jpg&name=large"],
+          videos: [
+            {
+              thumbnailUrl:
+                "https://pbs.twimg.com/ext_tw_video_thumb/123/pu/img/thumb.jpg",
+              postUrl: "https://x.com/person/status/123",
+            },
+          ],
+        },
         note: "Why this matters",
         folderId: "folder-ai",
         tagIds: ["tag-research"],
@@ -80,9 +90,23 @@ describe("backup schema", () => {
     const content = serializeBackup(backup);
 
     expect(parseBackup(content)).toEqual(backup);
-    expect(content).toContain('"schemaVersion": 1');
+    expect(content).toContain('"schemaVersion": 2');
     expect(content).not.toContain("scrapeRun");
     expect(content).not.toContain("bookmarkFolders");
+  });
+
+  it("migrates schema version 1 backups by adding empty media", () => {
+    const legacy = structuredClone(backup) as unknown as {
+      schemaVersion: number;
+      data: { bookmarks: Array<Record<string, unknown>> };
+    };
+    legacy.schemaVersion = 1;
+    delete legacy.data.bookmarks[0]?.media;
+
+    const restored = parseBackup(JSON.stringify(legacy));
+
+    expect(restored.schemaVersion).toBe(BACKUP_SCHEMA_VERSION);
+    expect(restored.data.bookmarks[0]?.media).toEqual({ images: [], videos: [] });
   });
 
   it("preserves the established missing post-date sentinel for media cards", () => {
@@ -97,7 +121,7 @@ describe("backup schema", () => {
   it.each([
     [
       "unsupported schema",
-      (draft: BookmarkXBackup) => Object.assign(draft, { schemaVersion: 2 }),
+      (draft: BookmarkXBackup) => Object.assign(draft, { schemaVersion: 99 }),
     ],
     [
       "unknown top-level key",
@@ -171,6 +195,30 @@ describe("backup schema", () => {
       "incorrect normalized tag",
       (draft: BookmarkXBackup) =>
         void (draft.data.tags[0]!.normalizedName = "Research"),
+    ],
+    [
+      "temporary image URL",
+      (draft: BookmarkXBackup) =>
+        void (draft.data.bookmarks[0]!.media.images = ["blob:https://x.com/temporary"]),
+    ],
+    [
+      "direct video URL as thumbnail",
+      (draft: BookmarkXBackup) =>
+        void (draft.data.bookmarks[0]!.media.videos[0]!.thumbnailUrl =
+          "https://video.twimg.com/ext_tw_video/123/file.mp4"),
+    ],
+    [
+      "mismatched video post URL",
+      (draft: BookmarkXBackup) =>
+        void (draft.data.bookmarks[0]!.media.videos[0]!.postUrl =
+          "https://x.com/person/status/999"),
+    ],
+    [
+      "duplicate image URL",
+      (draft: BookmarkXBackup) =>
+        void draft.data.bookmarks[0]!.media.images.push(
+          draft.data.bookmarks[0]!.media.images[0]!,
+        ),
     ],
     [
       "unknown extension setting",
