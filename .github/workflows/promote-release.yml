@@ -10,251 +10,64 @@ on:
       - reopened
       - ready_for_review
       - closed
-  workflow_dispatch:
-    inputs:
-      pull_request_number:
-        description: Release pull request number to validate
-        required: true
-        type: string
 
 permissions: {}
 
 concurrency:
-  group: bookmark-x-release-promotion-${{ github.event.pull_request.number || inputs.pull_request_number }}
+  group: bookmark-x-release-promotion-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
   policy:
     name: Validate the proposed release
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' &&
-      github.event.action != 'closed' &&
-      github.event.pull_request.draft == false)
+    if: github.event.action != 'closed' && github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 5
     permissions:
       contents: read
-      pull-requests: read
     steps:
-      - name: Resolve the release PR metadata
-        id: pr
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number || github.event.pull_request.number }}
-        run: |
-          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER")"
-          echo "number=$PULL_REQUEST_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "base_ref=$(jq -r '.base.ref' <<< "$pr_json")" >> "$GITHUB_OUTPUT"
-          echo "head_ref=$(jq -r '.head.ref' <<< "$pr_json")" >> "$GITHUB_OUTPUT"
-          echo "head_sha=$(jq -r '.head.sha' <<< "$pr_json")" >> "$GITHUB_OUTPUT"
-          echo "head_repository=$(jq -r '.head.repo.full_name' <<< "$pr_json")" >> "$GITHUB_OUTPUT"
-
       - name: Require the same-repository develop release train
         env:
-          BASE_REF: ${{ steps.pr.outputs.base_ref }}
-          HEAD_REF: ${{ steps.pr.outputs.head_ref }}
-          HEAD_REPOSITORY: ${{ steps.pr.outputs.head_repository }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           if [[ "$BASE_REF" != "main" || "$HEAD_REF" != "develop" || "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
             echo "::error::Only the same-repository develop release train may target main."
             exit 1
           fi
 
-      - name: Check out the proposed develop revision
+      - name: Check out the validated develop revision
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ steps.pr.outputs.head_sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Fetch release references
-        run: git fetch --force origin main develop --tags
+      - name: Fetch the published baseline
+        run: git fetch --force origin main --tags
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Validate release policy and metadata
+      - name: Validate release metadata and reviewed ZIP
         run: |
-          node --test .github/scripts/release-train.test.mjs
+          node --check .github/scripts/release-train.mjs
           node .github/scripts/release-train.mjs verify \
             --base-ref origin/main \
             --head-ref HEAD
-          version="$(node -p "require('./package.json').version")"
+          version="$(jq -r '.version' package.json)"
+          manifest_version="$(jq -r '.version' public/manifest.json)"
           archive_version="$(unzip -p download/bookmark-x.zip manifest.json | jq -r '.version')"
+          test "$manifest_version" = "$version"
           test "$archive_version" = "$version"
+          unzip -t download/bookmark-x.zip
 
-      - name: Preserve the reviewed release archive
-        run: cp download/bookmark-x.zip "$RUNNER_TEMP/reviewed-bookmark-x.zip"
-
-      - name: Check formatting
-        run: pnpm format:check
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Test with coverage
-        run: pnpm test:coverage
-
-      - name: Build and package extension
-        run: |
-          pnpm build
-          pnpm package
-
-      - name: Verify the reviewed ZIP matches the rebuilt ZIP
-        run: |
-          mkdir -p "$RUNNER_TEMP/reviewed-archive" "$RUNNER_TEMP/built-archive"
-          unzip -q "$RUNNER_TEMP/reviewed-bookmark-x.zip" -d "$RUNNER_TEMP/reviewed-archive"
-          unzip -q download/bookmark-x.zip -d "$RUNNER_TEMP/built-archive"
-          diff -ru "$RUNNER_TEMP/reviewed-archive" "$RUNNER_TEMP/built-archive"
-
-      - name: Verify release archives
-        run: |
-          plan="$(node .github/scripts/release-train.mjs verify \
-            --base-ref origin/main \
-            --head-ref HEAD \
-            --require-archive)"
-          archive="$(jq -r '.archive' <<< "$plan")"
-          cmp --silent "$archive" download/bookmark-x.zip
-
-  build_release:
-    name: Build and verify merged release
+  publish:
+    name: Tag and publish the reviewed release
     if: >-
-      github.event_name == 'pull_request' &&
       github.event.action == 'closed' &&
       github.event.pull_request.merged == true &&
       github.event.pull_request.base.ref == 'main' &&
       github.event.pull_request.head.ref == 'develop' &&
       github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    permissions:
-      contents: read
-    outputs:
-      archive_name: ${{ steps.release.outputs.archive_name }}
-      tag: ${{ steps.release.outputs.tag }}
-      version: ${{ steps.release.outputs.version }}
-    steps:
-      - name: Check out the merged release revision
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
-
-      - name: Fetch release tags
-        run: git fetch --force origin main --tags
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Preserve the reviewed release archive
-        run: cp download/bookmark-x.zip "$RUNNER_TEMP/reviewed-bookmark-x.zip"
-
-      - name: Resolve the release range
-        id: release
-        env:
-          EXPECTED_DEVELOP_SHA: ${{ github.event.pull_request.head.sha }}
-          EXPECTED_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
-        run: |
-          actual_sha="$(git rev-parse HEAD)"
-          if [[ "$actual_sha" != "$EXPECTED_MERGE_SHA" ]]; then
-            echo "::error::Checked out $actual_sha instead of merged revision $EXPECTED_MERGE_SHA."
-            exit 1
-          fi
-          if ! git merge-base --is-ancestor "$EXPECTED_DEVELOP_SHA" HEAD; then
-            echo "::error::The prepared develop revision is not part of the release merge."
-            exit 1
-          fi
-          version="$(node -p "require('./package.json').version")"
-          tag="v$version"
-          base_tag="$(git tag \
-            --merged HEAD \
-            --list 'v[0-9]*' \
-            --sort=-version:refname | grep -vxF "$tag" | head -n 1)"
-          if [[ -z "$base_tag" ]]; then
-            echo "::error::No previous release tag is reachable from the merge."
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "base_tag=$base_tag" >> "$GITHUB_OUTPUT"
-          echo "archive=release/bookmark-x-$version.zip" >> "$GITHUB_OUTPUT"
-          echo "archive_name=bookmark-x-$version.zip" >> "$GITHUB_OUTPUT"
-
-      - name: Validate, build, and package the merged release
-        env:
-          BASE_TAG: ${{ steps.release.outputs.base_tag }}
-        run: |
-          node --test .github/scripts/release-train.test.mjs
-          node .github/scripts/release-train.mjs verify \
-            --base-ref "$BASE_TAG" \
-            --head-ref HEAD
-          pnpm format:check
-          pnpm lint
-          pnpm typecheck
-          pnpm test:coverage
-          pnpm build
-          pnpm package
-
-      - name: Verify the reviewed ZIP matches the rebuilt ZIP
-        run: |
-          mkdir -p "$RUNNER_TEMP/reviewed-archive" "$RUNNER_TEMP/built-archive"
-          unzip -q "$RUNNER_TEMP/reviewed-bookmark-x.zip" -d "$RUNNER_TEMP/reviewed-archive"
-          unzip -q download/bookmark-x.zip -d "$RUNNER_TEMP/built-archive"
-          diff -ru "$RUNNER_TEMP/reviewed-archive" "$RUNNER_TEMP/built-archive"
-
-      - name: Re-stage the reviewed release archive
-        run: |
-          cp "$RUNNER_TEMP/reviewed-bookmark-x.zip" "${{ steps.release.outputs.archive }}"
-          cp "$RUNNER_TEMP/reviewed-bookmark-x.zip" download/bookmark-x.zip
-
-      - name: Verify release archive identity
-        env:
-          BASE_TAG: ${{ steps.release.outputs.base_tag }}
-          RELEASE_ARCHIVE: ${{ steps.release.outputs.archive }}
-        run: |
-          node .github/scripts/release-train.mjs verify \
-            --base-ref "$BASE_TAG" \
-            --head-ref HEAD \
-            --require-archive
-          cmp --silent "$RELEASE_ARCHIVE" download/bookmark-x.zip
-
-      - name: Upload the verified release archive
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: verified-release-${{ steps.release.outputs.tag }}
-          path: ${{ steps.release.outputs.archive }}
-          if-no-files-found: error
-          retention-days: 7
-
-  publish:
-    name: Tag and publish verified release
-    needs: build_release
-    if: needs.build_release.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -267,26 +80,46 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.pull_request.merge_commit_sha }}
 
-      - name: Download the verified release archive
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: verified-release-${{ needs.build_release.outputs.tag }}
-          path: ${{ runner.temp }}/verified-release
-
       - name: Fetch release tags
         run: git fetch --force origin --tags
+
+      - name: Resolve the reviewed release
+        id: release
+        env:
+          EXPECTED_DEVELOP_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "$actual_sha" != "$EXPECTED_MERGE_SHA" ]]; then
+            echo "::error::Checked out $actual_sha instead of merged revision $EXPECTED_MERGE_SHA."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$EXPECTED_DEVELOP_SHA" HEAD; then
+            echo "::error::The validated develop revision is not part of the release merge."
+            exit 1
+          fi
+
+          version="$(jq -r '.version' package.json)"
+          manifest_version="$(jq -r '.version' public/manifest.json)"
+          archive_version="$(unzip -p download/bookmark-x.zip manifest.json | jq -r '.version')"
+          if [[ "$manifest_version" != "$version" || "$archive_version" != "$version" ]]; then
+            echo "::error::The reviewed package, manifest, and ZIP versions differ."
+            exit 1
+          fi
+          unzip -t download/bookmark-x.zip
+
+          tag="v$version"
+          archive="$RUNNER_TEMP/bookmark-x-$version.zip"
+          cp download/bookmark-x.zip "$archive"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
 
       - name: Create or validate the release tag
         env:
           GH_TOKEN: ${{ github.token }}
-          EXPECTED_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
-          RELEASE_TAG: ${{ needs.build_release.outputs.tag }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: |
           expected_sha="$(git rev-parse HEAD)"
-          if [[ "$expected_sha" != "$EXPECTED_MERGE_SHA" ]]; then
-            echo "::error::Checked out $expected_sha instead of merged revision $EXPECTED_MERGE_SHA."
-            exit 1
-          fi
           if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
             tagged_sha="$(git rev-list -n 1 "$RELEASE_TAG")"
             if [[ "$tagged_sha" != "$expected_sha" ]]; then
@@ -305,8 +138,8 @@ jobs:
       - name: Create or validate the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_ARCHIVE: ${{ runner.temp }}/verified-release/${{ needs.build_release.outputs.archive_name }}
-          RELEASE_TAG: ${{ needs.build_release.outputs.tag }}
+          RELEASE_ARCHIVE: ${{ steps.release.outputs.archive }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: |
           asset_name="$(basename "$RELEASE_ARCHIVE")"
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
@@ -316,10 +149,10 @@ jobs:
               --pattern "$asset_name" \
               --dir "$existing" >/dev/null 2>&1; then
               if ! cmp --silent "$RELEASE_ARCHIVE" "$existing/$asset_name"; then
-                echo "::error::Release asset $asset_name differs from the verified build."
+                echo "::error::Release asset $asset_name differs from the reviewed ZIP."
                 exit 1
               fi
-              echo "Release and asset already match the verified build."
+              echo "Release and asset already match the reviewed ZIP."
             else
               gh release upload "$RELEASE_TAG" \
                 "$RELEASE_ARCHIVE#Bookmark X $RELEASE_TAG" \
