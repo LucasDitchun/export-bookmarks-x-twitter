@@ -2,9 +2,10 @@ import type {
   BookmarkFolder,
   BookmarkFolderMembership,
   BookmarkRecord,
+  FolderRecord,
 } from "../domain/types";
 
-export const BOOKMARK_DATABASE_VERSION = 2;
+export const BOOKMARK_DATABASE_VERSION = 3;
 export const BOOKMARK_FOLDERS_STORE = "bookmarkFolders";
 export const BOOKMARKS_STORE = "bookmarks";
 export const FOLDERS_STORE = "folders";
@@ -49,6 +50,21 @@ function createNamedStore(database: IDBDatabase, name: string): IDBObjectStore {
   return store;
 }
 
+function createFolderIndexes(store: IDBObjectStore): void {
+  if (!store.indexNames.contains("byName")) {
+    store.createIndex("byName", "name", { unique: false });
+  }
+  if (!store.indexNames.contains("byParent")) {
+    store.createIndex("byParent", "parentId", { unique: false });
+  }
+}
+
+function createFoldersStore(database: IDBDatabase): IDBObjectStore {
+  const store = database.createObjectStore(FOLDERS_STORE, { keyPath: "id" });
+  createFolderIndexes(store);
+  return store;
+}
+
 function createBookmarkFoldersStore(database: IDBDatabase): IDBObjectStore {
   const store = database.createObjectStore(BOOKMARK_FOLDERS_STORE, {
     keyPath: ["bookmarkId", "folderId"],
@@ -72,10 +88,12 @@ function migrateVersionOne(transaction: IDBTransaction): void {
     const firstSavedAt = legacy.firstArchivedAt;
     const folder = legacy.folders[0] ?? null;
     for (const legacyFolder of legacy.folders) {
-      folders.put(legacyFolder);
+      folders.put({ ...legacyFolder, parentId: null } satisfies FolderRecord);
+    }
+    if (folder !== null) {
       bookmarkFolders.put({
         bookmarkId: legacy.id,
-        folderId: legacyFolder.id,
+        folderId: folder.id,
       } satisfies BookmarkFolderMembership);
     }
 
@@ -99,6 +117,63 @@ function migrateVersionOne(transaction: IDBTransaction): void {
   });
 }
 
+function migrateVersionTwo(transaction: IDBTransaction): void {
+  const bookmarks = transaction.objectStore(BOOKMARKS_STORE);
+  const folders = transaction.objectStore(FOLDERS_STORE);
+  const memberships = transaction.objectStore(BOOKMARK_FOLDERS_STORE);
+  const folderRequest = folders.getAll();
+  const bookmarkRequest = bookmarks.getAll();
+  const membershipRequest = memberships.getAll();
+  let completed = 0;
+
+  const normalize = (): void => {
+    completed += 1;
+    if (completed !== 3) return;
+
+    const legacyFolders = folderRequest.result as Array<
+      BookmarkFolder & { parentId?: string | null }
+    >;
+    const normalizedFolders = legacyFolders.map((folder): FolderRecord => ({
+      id: folder.id,
+      name: folder.name,
+      // Version 2 had no hierarchy. Treat any unexpected parent as untrusted
+      // legacy data so the new tree cannot begin with an orphan or cycle.
+      parentId: null,
+    }));
+    const folderIds = new Set(normalizedFolders.map(({ id }) => id));
+    const membershipsByBookmark = new Map<string, string[]>();
+    for (const membership of membershipRequest.result as BookmarkFolderMembership[]) {
+      if (!folderIds.has(membership.folderId)) continue;
+      const assigned = membershipsByBookmark.get(membership.bookmarkId) ?? [];
+      assigned.push(membership.folderId);
+      membershipsByBookmark.set(membership.bookmarkId, assigned);
+    }
+
+    for (const folder of normalizedFolders) folders.put(folder);
+    memberships.clear();
+    for (const bookmark of bookmarkRequest.result as BookmarkRecord[]) {
+      const legacyFallback = membershipsByBookmark
+        .get(bookmark.id)
+        ?.sort((left, right) => left.localeCompare(right))[0];
+      const folderId =
+        bookmark.folderId !== null && folderIds.has(bookmark.folderId)
+          ? bookmark.folderId
+          : (legacyFallback ?? null);
+      if (bookmark.folderId !== folderId) bookmarks.put({ ...bookmark, folderId });
+      if (folderId !== null) {
+        memberships.put({
+          bookmarkId: bookmark.id,
+          folderId,
+        } satisfies BookmarkFolderMembership);
+      }
+    }
+  };
+
+  folderRequest.addEventListener("success", normalize, { once: true });
+  bookmarkRequest.addEventListener("success", normalize, { once: true });
+  membershipRequest.addEventListener("success", normalize, { once: true });
+}
+
 function upgradeSchema(request: IDBOpenDBRequest, event: IDBVersionChangeEvent): void {
   const database = request.result;
   const transaction = request.transaction;
@@ -116,9 +191,10 @@ function upgradeSchema(request: IDBOpenDBRequest, event: IDBVersionChangeEvent):
   if (!database.objectStoreNames.contains(META_STORE)) {
     database.createObjectStore(META_STORE, { keyPath: "key" });
   }
-  if (!database.objectStoreNames.contains(FOLDERS_STORE)) {
-    createNamedStore(database, FOLDERS_STORE);
-  }
+  const folders = database.objectStoreNames.contains(FOLDERS_STORE)
+    ? transaction.objectStore(FOLDERS_STORE)
+    : createFoldersStore(database);
+  createFolderIndexes(folders);
   if (!database.objectStoreNames.contains(BOOKMARK_FOLDERS_STORE)) {
     createBookmarkFoldersStore(database);
   }
@@ -127,6 +203,7 @@ function upgradeSchema(request: IDBOpenDBRequest, event: IDBVersionChangeEvent):
   }
 
   if (event.oldVersion === 1) migrateVersionOne(transaction);
+  if (event.oldVersion === 2) migrateVersionTwo(transaction);
 }
 
 export function requestAsPromise<T>(request: IDBRequest<T>): Promise<T> {

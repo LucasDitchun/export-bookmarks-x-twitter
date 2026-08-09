@@ -43,6 +43,34 @@
   "noteSaving": { "message": "Saving…" },
   "noteSaved": { "message": "Saved" },
   "noteSaveError": { "message": "Not saved" },
+  "folderTitle": { "message": "Folder" },
+  "folderBreadcrumbLabel": { "message": "Folder path" },
+  "folderAssignmentLabel": { "message": "Save in folder" },
+  "uncategorizedFolder": { "message": "Uncategorized" },
+  "manageFolders": { "message": "Manage folders" },
+  "newFolderName": { "message": "Name" },
+  "parentFolderLabel": { "message": "Parent folder" },
+  "rootFolder": { "message": "No parent (top level)" },
+  "createFolderButton": { "message": "Create folder" },
+  "renameFolder": { "message": "Rename" },
+  "renameFolderInputLabel": {
+    "message": "Rename $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "Save name" },
+  "deleteFolder": { "message": "Delete" },
+  "deleteFolderConfirmation": {
+    "message": "Delete $NAME$ and all its subfolders? Bookmarks will become uncategorized.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "Delete folder" },
+  "folderSaving": { "message": "Saving…" },
+  "folderSaved": { "message": "Saved" },
+  "folderDeleting": { "message": "Deleting…" },
+  "folderDeleted": { "message": "Folder deleted" },
+  "folderCreated": { "message": "Folder created" },
+  "folderActionError": { "message": "Could not update folders." },
+  "folderLoadError": { "message": "Could not load folders." },
   "lastCaptureAt": {
     "message": "Captured $DATE$",
     "placeholders": { "date": { "content": "$1" } }

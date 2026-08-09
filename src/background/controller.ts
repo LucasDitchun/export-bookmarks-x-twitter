@@ -58,6 +58,13 @@ interface BackgroundDependencies {
     add(bookmarkId: string, name: string): Promise<unknown>;
     remove(bookmarkId: string, tagId: string): Promise<unknown>;
   };
+  folders: {
+    list(): Promise<unknown>;
+    create(input: { name: string; parentId: string | null }): Promise<unknown>;
+    rename(id: string, name: string): Promise<unknown>;
+    delete(id: string): Promise<unknown>;
+    assignBookmark(bookmarkId: string, folderId: string | null): Promise<unknown>;
+  };
   browser: BrowserBridge;
   extensionId: string;
   now?: () => Date;
@@ -74,6 +81,21 @@ function isBookmarkId(value: unknown): value is string {
 
 function isLocalEntityId(value: unknown): value is string {
   return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
+}
+
+function isFolderName(value: unknown): value is string {
+  const hasControlCharacters =
+    typeof value === "string" &&
+    Array.from(value).some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint <= 31 || codePoint === 127;
+    });
+  return (
+    typeof value === "string" &&
+    value.trim().length >= 1 &&
+    value.trim().length <= 100 &&
+    !hasControlCharacters
+  );
 }
 
 export function isBookmarksUrl(value: string | undefined): boolean {
@@ -97,7 +119,8 @@ function isUiRequest(value: unknown): value is UiRequest {
     value.type === "START_SCRAPE" ||
     value.type === "CANCEL_SCRAPE" ||
     value.type === "CLEAR_ARCHIVE" ||
-    value.type === "LIST_TAGS"
+    value.type === "LIST_TAGS" ||
+    value.type === "LIST_FOLDERS"
   ) {
     return true;
   }
@@ -141,6 +164,30 @@ function isUiRequest(value: unknown): value is UiRequest {
       isRecord(value.payload) &&
       isBookmarkId(value.payload.id) &&
       isLocalEntityId(value.payload.tagId)
+    );
+  }
+  if (value.type === "CREATE_FOLDER") {
+    return (
+      isRecord(value.payload) &&
+      isFolderName(value.payload.name) &&
+      (value.payload.parentId === null || isLocalEntityId(value.payload.parentId))
+    );
+  }
+  if (value.type === "RENAME_FOLDER") {
+    return (
+      isRecord(value.payload) &&
+      isLocalEntityId(value.payload.id) &&
+      isFolderName(value.payload.name)
+    );
+  }
+  if (value.type === "DELETE_FOLDER") {
+    return isRecord(value.payload) && isLocalEntityId(value.payload.id);
+  }
+  if (value.type === "ASSIGN_BOOKMARK_FOLDER") {
+    return (
+      isRecord(value.payload) &&
+      isBookmarkId(value.payload.bookmarkId) &&
+      (value.payload.folderId === null || isLocalEntityId(value.payload.folderId))
     );
   }
   if (value.type !== "EXPORT_BOOKMARKS" || !isRecord(value.payload)) return false;
@@ -286,6 +333,28 @@ export class BackgroundController {
             bookmark: await this.dependencies.tags.remove(
               request.payload.id,
               request.payload.tagId,
+            ),
+          });
+        case "LIST_FOLDERS":
+          return success({ folders: await this.dependencies.folders.list() });
+        case "CREATE_FOLDER":
+          return success({
+            folder: await this.dependencies.folders.create(request.payload),
+          });
+        case "RENAME_FOLDER":
+          return success({
+            folder: await this.dependencies.folders.rename(
+              request.payload.id,
+              request.payload.name,
+            ),
+          });
+        case "DELETE_FOLDER":
+          return success(await this.dependencies.folders.delete(request.payload.id));
+        case "ASSIGN_BOOKMARK_FOLDER":
+          return success({
+            bookmark: await this.dependencies.folders.assignBookmark(
+              request.payload.bookmarkId,
+              request.payload.folderId,
             ),
           });
         case "OPEN_BOOKMARKS":

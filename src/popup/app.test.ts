@@ -240,6 +240,162 @@ describe("popup app", () => {
     app.destroy();
   });
 
+  it("disconnects folder controls while a newly selected bookmark is loading", async () => {
+    const secondBookmark: NotedBookmark = {
+      ...libraryBookmark,
+      id: "456",
+      text: "A second bookmark",
+      url: "https://x.com/person/status/456",
+      folderId: "folder-b",
+    };
+    const firstBookmark = { ...libraryBookmark, folderId: "folder-a" };
+    const secondDetail = deferred<{
+      ok: true;
+      data: { bookmark: NotedBookmark };
+    }>();
+    const assignments: Array<{ bookmarkId: string; folderId: string | null }> = [];
+    let secondDetailRequested = false;
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [firstBookmark, secondBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "LIST_FOLDERS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            folders: [
+              { id: "folder-a", name: "A", parentId: null },
+              { id: "folder-b", name: "B", parentId: null },
+            ],
+          },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        if (request.payload.id === secondBookmark.id) {
+          secondDetailRequested = true;
+          return secondDetail.promise;
+        }
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: firstBookmark },
+        });
+      }
+      if (request.type === "ASSIGN_BOOKMARK_FOLDER") {
+        assignments.push(request.payload);
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: firstBookmark },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await app.ready;
+
+    document.querySelector<HTMLButtonElement>('[data-bookmark-id="456"]')?.click();
+    await vi.waitFor(() => expect(secondDetailRequested).toBe(true));
+    const folderSelect = document.getElementById(
+      "folder-assignment",
+    ) as HTMLSelectElement;
+    expect(folderSelect.disabled).toBe(true);
+    expect(folderSelect.value).toBe("");
+    folderSelect.value = "folder-b";
+    folderSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(assignments).toEqual([]);
+
+    secondDetail.resolve({
+      ok: true,
+      data: { bookmark: secondBookmark },
+    });
+    await vi.waitFor(() => expect(folderSelect.value).toBe("folder-b"));
+    expect(folderSelect.disabled).toBe(false);
+    app.destroy();
+  });
+
+  it("dispatches the latest debounced note before popup teardown", async () => {
+    const firstSave = deferred<{
+      ok: true;
+      data: { bookmark: NotedBookmark };
+    }>();
+    const scheduled: Array<{ callback: () => void; delay: number }> = [];
+    const cancelled: number[] = [];
+    const savedNotes: Array<{ id: string; note: string }> = [];
+    const schedule = ((callback: () => void, delay = 0) => {
+      scheduled.push({ callback, delay });
+      return scheduled.length;
+    }) as typeof window.setTimeout;
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [libraryBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "LIST_FOLDERS") {
+        return Promise.resolve({ ok: true as const, data: { folders: [] } });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: libraryBookmark },
+        });
+      }
+      if (request.type === "SAVE_BOOKMARK_NOTE") {
+        savedNotes.push(request.payload);
+        if (savedNotes.length === 1) return firstSave.promise;
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            bookmark: { ...libraryBookmark, note: request.payload.note },
+          },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      schedule,
+      cancelSchedule: ((handle: number) =>
+        cancelled.push(handle)) as typeof window.clearTimeout,
+    });
+    await app.ready;
+
+    const textarea = document.getElementById("note-textarea") as HTMLTextAreaElement;
+    textarea.value = "Already dispatched";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(savedNotes).toEqual([]);
+    scheduled.find(({ delay }) => delay === 400)?.callback();
+    await vi.waitFor(() =>
+      expect(savedNotes).toEqual([{ id: "123", note: "Already dispatched" }]),
+    );
+
+    textarea.value = "Save before close";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    app.destroy();
+
+    expect(savedNotes).toEqual([
+      { id: "123", note: "Already dispatched" },
+      { id: "123", note: "Save before close" },
+    ]);
+    expect(cancelled).toContain(2);
+    firstSave.resolve({
+      ok: true,
+      data: { bookmark: { ...libraryBookmark, note: "Already dispatched" } },
+    });
+  });
+
   it("serializes and coalesces autosaves without applying stale responses", async () => {
     const firstSave = deferred<{
       ok: true;

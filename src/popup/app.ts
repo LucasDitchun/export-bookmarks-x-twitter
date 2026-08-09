@@ -6,6 +6,7 @@ import type {
   SupportedLocale,
 } from "../domain/types";
 import { getLocaleTag, type Translator } from "./i18n";
+import { createFolderUi } from "./folder-ui";
 import type {
   BookmarkDetailResult,
   BookmarkListPage,
@@ -177,6 +178,7 @@ export function createPopupApp(options: PopupAppOptions): {
   let debouncedNoteSave: PendingNoteSave | null = null;
   let pendingNoteSave: PendingNoteSave | null = null;
   let noteSaveInFlight = false;
+  let folderUi: ReturnType<typeof createFolderUi> | null = null;
 
   const formatDate = (isoDate: string): string => {
     const date = new Date(isoDate);
@@ -444,6 +446,7 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.selectedBookmarkAuthor.textContent = "";
     elements.noteTextarea.value = "";
     elements.noteTextarea.disabled = true;
+    folderUi?.setBookmark(null);
     setNoteSaveStatus(null);
     setTagStatus(null);
     renderSelectedTags();
@@ -520,13 +523,34 @@ export function createPopupApp(options: PopupAppOptions): {
     }, 400);
   };
 
+  const flushPendingNoteBeforeDestroy = (): void => {
+    if (noteSaveHandle !== null) {
+      cancelSchedule(noteSaveHandle);
+      noteSaveHandle = null;
+    }
+    const latestDraft = debouncedNoteSave ?? pendingNoteSave;
+    debouncedNoteSave = null;
+    pendingNoteSave = null;
+    if (latestDraft === null) return;
+
+    void sendMessage<BookmarkDetailResult>({
+      type: "SAVE_BOOKMARK_NOTE",
+      payload: { id: latestDraft.id, note: latestDraft.note },
+    }).catch(() => undefined);
+  };
+
   async function selectBookmark(id: string): Promise<void> {
     if (selectedBookmarkId !== id) queueDebouncedNote();
     const version = ++selectionVersion;
     selectedBookmarkId = id;
     selectedBookmark = null;
     renderSelectedTags();
+    elements.noteEditor.hidden = true;
+    elements.selectedBookmarkTitle.textContent = "";
+    elements.selectedBookmarkAuthor.textContent = "";
+    elements.noteTextarea.value = "";
     elements.noteTextarea.disabled = true;
+    folderUi?.setBookmark(null);
     elements.noteSaveStatus.textContent = translate("noteLoading");
     renderBookmarkList();
     const response = await sendMessage<BookmarkDetailResult>({
@@ -545,6 +569,7 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.selectedBookmarkTitle.textContent = bookmark.text || bookmark.url;
     elements.selectedBookmarkAuthor.textContent = `@${bookmark.author.username}`;
     elements.noteTextarea.value = bookmark.note;
+    folderUi?.setBookmark(bookmark);
     editRevision += 1;
     elements.noteTextarea.disabled = false;
     setNoteSaveStatus(null);
@@ -753,16 +778,29 @@ export function createPopupApp(options: PopupAppOptions): {
     void addSelectedTag();
   });
 
+  folderUi = createFolderUi({
+    document,
+    sendMessage,
+    translate,
+    onBookmarkUpdated: (updatedBookmark) => {
+      updateBookmarkTags(updatedBookmark);
+    },
+  });
+
   render();
-  const ready = Promise.all([loadStatus(), loadLibrary(), loadTags()]).then(
-    () => undefined,
-  );
+  const ready = Promise.all([
+    loadStatus(),
+    loadLibrary(),
+    loadTags(),
+    folderUi.ready,
+  ]).then(() => undefined);
   return {
     ready,
     destroy: () => {
+      if (destroyed) return;
+      flushPendingNoteBeforeDestroy();
       destroyed = true;
       if (refreshHandle !== null) cancelSchedule(refreshHandle);
-      if (noteSaveHandle !== null) cancelSchedule(noteSaveHandle);
     },
   };
 }

@@ -27,6 +27,34 @@
   "noteSaving": { "message": "Salvataggio…" },
   "noteSaved": { "message": "Salvata" },
   "noteSaveError": { "message": "Non salvata" },
+  "folderTitle": { "message": "Cartella" },
+  "folderBreadcrumbLabel": { "message": "Percorso della cartella" },
+  "folderAssignmentLabel": { "message": "Salva nella cartella" },
+  "uncategorizedFolder": { "message": "Senza categoria" },
+  "manageFolders": { "message": "Gestisci cartelle" },
+  "newFolderName": { "message": "Nome" },
+  "parentFolderLabel": { "message": "Cartella principale" },
+  "rootFolder": { "message": "Nessuna cartella principale (primo livello)" },
+  "createFolderButton": { "message": "Crea cartella" },
+  "renameFolder": { "message": "Rinomina" },
+  "renameFolderInputLabel": {
+    "message": "Rinomina $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "Salva nome" },
+  "deleteFolder": { "message": "Elimina" },
+  "deleteFolderConfirmation": {
+    "message": "Eliminare $NAME$ e tutte le sottocartelle? I segnalibri diventeranno senza categoria.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "Elimina cartella" },
+  "folderSaving": { "message": "Salvataggio…" },
+  "folderSaved": { "message": "Salvato" },
+  "folderDeleting": { "message": "Eliminazione…" },
+  "folderDeleted": { "message": "Cartella eliminata" },
+  "folderCreated": { "message": "Cartella creata" },
+  "folderActionError": { "message": "Impossibile aggiornare le cartelle." },
+  "folderLoadError": { "message": "Impossibile caricare le cartelle." },
   "extensionName": {
     "message": "Bookmark X"
   },

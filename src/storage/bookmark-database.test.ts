@@ -24,6 +24,38 @@ function openVersionOne(databaseName: string): Promise<IDBDatabase> {
   });
 }
 
+function openVersionTwo(databaseName: string): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(databaseName, 2);
+    request.addEventListener("upgradeneeded", () => {
+      const bookmarks = request.result.createObjectStore("bookmarks", {
+        keyPath: "id",
+      });
+      bookmarks.createIndex("byStatusSaved", ["status", "firstSavedAt", "id"]);
+      bookmarks.createIndex("byFolder", "folderId");
+      bookmarks.createIndex("byTag", "tagIds", { multiEntry: true });
+      const seen = request.result.createObjectStore("seen", { keyPath: "key" });
+      seen.createIndex("runId", "runId");
+      request.result.createObjectStore("meta", { keyPath: "key" });
+      const folders = request.result.createObjectStore("folders", { keyPath: "id" });
+      folders.createIndex("byName", "name");
+      const memberships = request.result.createObjectStore("bookmarkFolders", {
+        keyPath: ["bookmarkId", "folderId"],
+      });
+      memberships.createIndex("byBookmark", "bookmarkId");
+      memberships.createIndex("byFolder", "folderId");
+      const tags = request.result.createObjectStore("tags", { keyPath: "id" });
+      tags.createIndex("byName", "name");
+    });
+    request.addEventListener("success", () => resolve(request.result), {
+      once: true,
+    });
+    request.addEventListener("error", () => reject(indexedDbError(request.error)), {
+      once: true,
+    });
+  });
+}
+
 function transactionDone(transaction: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     transaction.addEventListener("complete", () => resolve(), { once: true });
@@ -38,7 +70,7 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
 }
 
 describe("BookmarkDatabase", () => {
-  it("creates the complete version 2 schema for a new database", async () => {
+  it("creates the complete version 3 schema for a new database", async () => {
     const database = await new BookmarkDatabase(
       `fresh-v2-${crypto.randomUUID()}`,
     ).open();
@@ -68,6 +100,7 @@ describe("BookmarkDatabase", () => {
     ]);
     expect(Array.from(transaction.objectStore("folders").indexNames)).toEqual([
       "byName",
+      "byParent",
     ]);
     expect(Array.from(transaction.objectStore("tags").indexNames)).toEqual(["byName"]);
     await transactionDone(transaction);
@@ -178,16 +211,134 @@ describe("BookmarkDatabase", () => {
       metadataUpdatedAt: "2026-01-02T00:00:00.000Z",
       status: "archived",
     });
-    expect(migratedFolder).toEqual({ id: "folder-1", name: "Research" });
+    expect(migratedFolder).toEqual({
+      id: "folder-1",
+      name: "Research",
+      parentId: null,
+    });
     expect(secondMigratedFolder).toEqual({
       id: "folder-2",
       name: "Reading list",
+      parentId: null,
     });
     expect(migratedMemberships).toEqual([
       { bookmarkId: "post-1", folderId: "folder-1" },
-      { bookmarkId: "post-1", folderId: "folder-2" },
     ]);
 
+    database.close();
+  });
+
+  it("normalizes version 2 folders and legacy memberships to one valid assignment", async () => {
+    const databaseName = `migrate-v2-${crypto.randomUUID()}`;
+    const versionTwo = await openVersionTwo(databaseName);
+    const transaction = versionTwo.transaction(
+      ["folders", "bookmarks", "bookmarkFolders"],
+      "readwrite",
+    );
+    transaction.objectStore("folders").put({ id: "folder-a", name: "A" });
+    transaction.objectStore("folders").put({ id: "folder-b", name: "B" });
+    const base = {
+      text: "Legacy post",
+      url: "https://x.com/author/status/100",
+      author: { id: "author", username: "author", name: "Author" },
+      postCreatedAt: "2026-01-01T00:00:00.000Z",
+      note: "Preserved note",
+      tagIds: ["tag-1"],
+      firstSavedAt: "2026-01-02T00:00:00.000Z",
+      lastSeenAt: "2026-01-03T00:00:00.000Z",
+      archivedAt: null,
+      metadataUpdatedAt: "2026-01-04T00:00:00.000Z",
+      status: "current",
+    } as const;
+    transaction.objectStore("bookmarks").put({
+      ...base,
+      id: "100",
+      folderId: "folder-b",
+    });
+    transaction.objectStore("bookmarks").put({
+      ...base,
+      id: "200",
+      folderId: "deleted-folder",
+    });
+    transaction.objectStore("bookmarkFolders").put({
+      bookmarkId: "100",
+      folderId: "folder-a",
+    });
+    transaction.objectStore("bookmarkFolders").put({
+      bookmarkId: "100",
+      folderId: "folder-b",
+    });
+    transaction.objectStore("bookmarkFolders").put({
+      bookmarkId: "200",
+      folderId: "folder-a",
+    });
+    transaction.objectStore("bookmarkFolders").put({
+      bookmarkId: "200",
+      folderId: "deleted-folder",
+    });
+    await transactionDone(transaction);
+    versionTwo.close();
+
+    const database = await new BookmarkDatabase(databaseName).open();
+    const read = database.transaction(
+      ["folders", "bookmarks", "bookmarkFolders"],
+      "readonly",
+    );
+    const folders = await new Promise<Record<string, unknown>[]>((resolve, reject) => {
+      const request = read.objectStore("folders").getAll();
+      request.addEventListener("success", () => resolve(request.result), {
+        once: true,
+      });
+      request.addEventListener("error", () => reject(indexedDbError(request.error)), {
+        once: true,
+      });
+    });
+    const bookmarks = await new Promise<Record<string, unknown>[]>(
+      (resolve, reject) => {
+        const request = read.objectStore("bookmarks").getAll();
+        request.addEventListener("success", () => resolve(request.result), {
+          once: true,
+        });
+        request.addEventListener("error", () => reject(indexedDbError(request.error)), {
+          once: true,
+        });
+      },
+    );
+    const memberships = await new Promise<Record<string, unknown>[]>(
+      (resolve, reject) => {
+        const request = read.objectStore("bookmarkFolders").getAll();
+        request.addEventListener("success", () => resolve(request.result), {
+          once: true,
+        });
+        request.addEventListener("error", () => reject(indexedDbError(request.error)), {
+          once: true,
+        });
+      },
+    );
+    await transactionDone(read);
+
+    expect(folders).toEqual([
+      { id: "folder-a", name: "A", parentId: null },
+      { id: "folder-b", name: "B", parentId: null },
+    ]);
+    expect(bookmarks).toEqual([
+      expect.objectContaining({
+        id: "100",
+        folderId: "folder-b",
+        note: "Preserved note",
+        tagIds: ["tag-1"],
+      }),
+      expect.objectContaining({
+        id: "200",
+        folderId: "folder-a",
+        note: "Preserved note",
+        tagIds: ["tag-1"],
+      }),
+    ]);
+    expect(memberships).toEqual([
+      { bookmarkId: "100", folderId: "folder-b" },
+      { bookmarkId: "200", folderId: "folder-a" },
+    ]);
     database.close();
   });
 
@@ -211,7 +362,7 @@ describe("BookmarkDatabase", () => {
     expect(onBlocked).toHaveBeenCalledOnce();
     versionOne.close();
 
-    await expect(opening).resolves.toMatchObject({ version: 2 });
+    await expect(opening).resolves.toMatchObject({ version: 3 });
     await connection.close();
   });
 
@@ -221,7 +372,7 @@ describe("BookmarkDatabase", () => {
     await connection.open();
 
     const upgraded = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(databaseName, 3);
+      const request = indexedDB.open(databaseName, 4);
       request.addEventListener("success", () => resolve(request.result), {
         once: true,
       });
@@ -233,14 +384,14 @@ describe("BookmarkDatabase", () => {
       });
     });
 
-    expect(upgraded.version).toBe(3);
+    expect(upgraded.version).toBe(4);
     upgraded.close();
   });
 
   it("allows retry after a rejected open request", async () => {
     const databaseName = `retry-${crypto.randomUUID()}`;
     const futureDatabase = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(databaseName, 3);
+      const request = indexedDB.open(databaseName, 4);
       request.addEventListener("success", () => resolve(request.result), {
         once: true,
       });
@@ -260,7 +411,7 @@ describe("BookmarkDatabase", () => {
       });
     });
 
-    await expect(connection.open()).resolves.toMatchObject({ version: 2 });
+    await expect(connection.open()).resolves.toMatchObject({ version: 3 });
     await connection.close();
   });
 });

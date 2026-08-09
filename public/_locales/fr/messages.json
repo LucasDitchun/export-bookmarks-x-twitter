@@ -29,6 +29,34 @@
   "noteSaving": { "message": "Enregistrement…" },
   "noteSaved": { "message": "Enregistrée" },
   "noteSaveError": { "message": "Non enregistrée" },
+  "folderTitle": { "message": "Dossier" },
+  "folderBreadcrumbLabel": { "message": "Chemin du dossier" },
+  "folderAssignmentLabel": { "message": "Enregistrer dans le dossier" },
+  "uncategorizedFolder": { "message": "Non classé" },
+  "manageFolders": { "message": "Gérer les dossiers" },
+  "newFolderName": { "message": "Nom" },
+  "parentFolderLabel": { "message": "Dossier parent" },
+  "rootFolder": { "message": "Aucun parent (niveau supérieur)" },
+  "createFolderButton": { "message": "Créer un dossier" },
+  "renameFolder": { "message": "Renommer" },
+  "renameFolderInputLabel": {
+    "message": "Renommer $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "Enregistrer le nom" },
+  "deleteFolder": { "message": "Supprimer" },
+  "deleteFolderConfirmation": {
+    "message": "Supprimer $NAME$ et tous ses sous-dossiers ? Les favoris deviendront non classés.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "Supprimer le dossier" },
+  "folderSaving": { "message": "Enregistrement…" },
+  "folderSaved": { "message": "Enregistré" },
+  "folderDeleting": { "message": "Suppression…" },
+  "folderDeleted": { "message": "Dossier supprimé" },
+  "folderCreated": { "message": "Dossier créé" },
+  "folderActionError": { "message": "Impossible de mettre à jour les dossiers." },
+  "folderLoadError": { "message": "Impossible de charger les dossiers." },
   "extensionName": {
     "message": "Bookmark X"
   },

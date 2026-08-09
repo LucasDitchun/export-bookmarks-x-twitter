@@ -9,6 +9,12 @@ export interface BookmarkFolder {
   name: string;
 }
 
+export interface FolderRecord {
+  id: string;
+  name: string;
+  parentId: string | null;
+}
+
 export interface BookmarkFolderMembership {
   bookmarkId: string;
   folderId: string;

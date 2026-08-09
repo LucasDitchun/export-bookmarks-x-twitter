@@ -4,6 +4,7 @@ import type {
   BookmarkSnapshot,
   BookmarkTag,
   ExportFormat,
+  FolderRecord,
   ScrapeRun,
   SupportedLocale,
 } from "../domain/types";
@@ -40,6 +41,19 @@ export interface TagRemovalResult {
   bookmark: NotedBookmark;
 }
 
+export interface FolderListResult {
+  folders: FolderRecord[];
+}
+
+export interface FolderDetailResult {
+  folder: FolderRecord;
+}
+
+export interface FolderDeleteResult {
+  deletedFolderIds: string[];
+  uncategorizedBookmarkCount: number;
+}
+
 export type UiRequest =
   | { type: "GET_STATUS" }
   | { type: "OPEN_BOOKMARKS" }
@@ -61,6 +75,17 @@ export type UiRequest =
   | {
       type: "REMOVE_BOOKMARK_TAG";
       payload: { id: string; tagId: string };
+    }
+  | { type: "LIST_FOLDERS" }
+  | {
+      type: "CREATE_FOLDER";
+      payload: { name: string; parentId: string | null };
+    }
+  | { type: "RENAME_FOLDER"; payload: { id: string; name: string } }
+  | { type: "DELETE_FOLDER"; payload: { id: string } }
+  | {
+      type: "ASSIGN_BOOKMARK_FOLDER";
+      payload: { bookmarkId: string; folderId: string | null };
     };
 
 /** @deprecated Use UiRequest. Kept as a source-compatible alias for popup callers. */

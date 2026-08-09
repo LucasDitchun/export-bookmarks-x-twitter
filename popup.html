@@ -192,6 +192,57 @@
               <p id="note-help" class="note-help" data-i18n="noteHelp">
                 Plain text, saved locally as you type.
               </p>
+
+              <section class="folder-editor" aria-labelledby="folder-heading">
+                <div class="folder-heading-row">
+                  <h3 id="folder-heading" data-i18n="folderTitle">Folder</h3>
+                  <span
+                    id="folder-status"
+                    class="quiet-status"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                  ></span>
+                </div>
+                <nav
+                  id="folder-breadcrumb"
+                  class="folder-breadcrumb"
+                  data-i18n-aria-label="folderBreadcrumbLabel"
+                  aria-label="Folder path"
+                >
+                  <ol id="folder-breadcrumb-list"></ol>
+                </nav>
+                <label for="folder-assignment" data-i18n="folderAssignmentLabel">
+                  Save in folder
+                </label>
+                <select id="folder-assignment" disabled></select>
+
+                <details id="folder-manager" class="folder-manager">
+                  <summary data-i18n="manageFolders">Manage folders</summary>
+                  <form id="create-folder-form" class="folder-form">
+                    <label for="folder-name" data-i18n="newFolderName">Name</label>
+                    <input
+                      id="folder-name"
+                      name="folderName"
+                      maxlength="100"
+                      required
+                    />
+                    <label for="folder-parent" data-i18n="parentFolderLabel">
+                      Parent folder
+                    </label>
+                    <select id="folder-parent"></select>
+                    <button
+                      id="create-folder-button"
+                      class="button button-secondary compact-button"
+                      type="submit"
+                      data-i18n="createFolderButton"
+                    >
+                      Create folder
+                    </button>
+                  </form>
+                  <ul id="folder-list" class="folder-list"></ul>
+                </details>
+              </section>
             </section>
           </section>
 

@@ -1,5 +1,8 @@
 export type {
   ExportResult,
+  FolderDeleteResult,
+  FolderDetailResult,
+  FolderListResult,
   BookmarkDetailResult,
   BookmarkListPage,
   BookmarkView,

@@ -27,6 +27,34 @@
   "noteSaving": { "message": "Wird gespeichert…" },
   "noteSaved": { "message": "Gespeichert" },
   "noteSaveError": { "message": "Nicht gespeichert" },
+  "folderTitle": { "message": "Ordner" },
+  "folderBreadcrumbLabel": { "message": "Ordnerpfad" },
+  "folderAssignmentLabel": { "message": "In Ordner speichern" },
+  "uncategorizedFolder": { "message": "Nicht kategorisiert" },
+  "manageFolders": { "message": "Ordner verwalten" },
+  "newFolderName": { "message": "Name" },
+  "parentFolderLabel": { "message": "Übergeordneter Ordner" },
+  "rootFolder": { "message": "Kein übergeordneter Ordner (oberste Ebene)" },
+  "createFolderButton": { "message": "Ordner erstellen" },
+  "renameFolder": { "message": "Umbenennen" },
+  "renameFolderInputLabel": {
+    "message": "$NAME$ umbenennen",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "Name speichern" },
+  "deleteFolder": { "message": "Löschen" },
+  "deleteFolderConfirmation": {
+    "message": "$NAME$ und alle Unterordner löschen? Lesezeichen werden nicht kategorisiert.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "Ordner löschen" },
+  "folderSaving": { "message": "Wird gespeichert…" },
+  "folderSaved": { "message": "Gespeichert" },
+  "folderDeleting": { "message": "Wird gelöscht…" },
+  "folderDeleted": { "message": "Ordner gelöscht" },
+  "folderCreated": { "message": "Ordner erstellt" },
+  "folderActionError": { "message": "Ordner konnten nicht aktualisiert werden." },
+  "folderLoadError": { "message": "Ordner konnten nicht geladen werden." },
   "extensionName": {
     "message": "Bookmark X"
   },
