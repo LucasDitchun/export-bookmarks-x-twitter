@@ -24,6 +24,35 @@ Only model data is remote. `Xenova/multilingual-e5-small` is pinned to revision
 weights are 118,308,185 bytes and the tokenizer is 17,082,730 bytes, for about
 135.4 MB before small configuration files and cache overhead.
 
+## Release-candidate model gate
+
+The manually dispatched **Release train** is the release-candidate boundary. It
+runs `pnpm semantic-model:gate`; normal pull-request CI runs only the gate's unit
+tests and `--dry-run`, so it never downloads model weights.
+
+The gate downloads the pinned revision into a temporary local filesystem cache.
+Every request is a bodyless `GET` for a model asset. Before Transformers.js is
+loaded, the cache is verified against the SHA-256 and byte length published by
+the Hugging Face model API for that exact revision:
+
+| Asset                       |       Bytes | SHA-256                                                            |
+| --------------------------- | ----------: | ------------------------------------------------------------------ |
+| `onnx/model_quantized.onnx` | 118,308,185 | `f80102d3f2a1229f387d3c81909990d8945513e347b0eab049f7de3c6f98c193` |
+| `tokenizer.json`            |  17,082,730 | `0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39` |
+
+Configuration files are pinned and hashed as well. Inference then switches
+Transformers.js to `local_files_only`, disables remote models, and installs a
+rejecting fetch handler before any test content is embedded. No query or passage
+can leave the runner. The Node gate uses the supported ONNX Runtime CPU backend;
+the q8 graph, tokenizer, mean pooling, and normalization match the production
+browser pipeline, whose deterministic fallback is WASM.
+
+The real q8 model must produce finite, unit-normalized, 384-dimensional query
+and passage embeddings. Eight deterministic retrieval cases cover German,
+English, Spanish, French, Italian, Japanese, Brazilian Portuguese, and Simplified
+Chinese. In every case, the matching passage must rank first by cosine similarity
+with a score margin of at least 0.01 over the runner-up.
+
 ## Local indexing and ranking
 
 Each document passage includes post text, author, private note, tag names, and

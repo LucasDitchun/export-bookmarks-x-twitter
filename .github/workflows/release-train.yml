@@ -106,6 +106,9 @@ jobs:
       - name: Test the release policy
         run: node --test .github/scripts/release-train.test.mjs
 
+      - name: Validate the pinned semantic model release candidate
+        run: pnpm semantic-model:gate
+
       - name: Calculate and write the release version
         id: release
         run: |

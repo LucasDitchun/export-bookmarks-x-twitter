@@ -56,6 +56,11 @@ jobs:
       - name: Test release policy
         run: node --test .github/scripts/release-train.test.mjs
 
+      - name: Test the semantic model gate without downloading weights
+        run: |
+          pnpm semantic-model:gate:test
+          pnpm semantic-model:gate:dry-run
+
       - name: Test with coverage
         run: pnpm test:coverage
 

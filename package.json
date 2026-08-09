@@ -30,6 +30,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "semantic-model:gate": "node scripts/semantic-model-gate.mjs",
+    "semantic-model:gate:dry-run": "node scripts/semantic-model-gate.mjs --dry-run",
+    "semantic-model:gate:test": "node --test scripts/semantic-model-gate.test.mjs",
     "smoke:chrome": "node scripts/chrome-smoke.mjs",
     "package": "node scripts/package.mjs"
   },
