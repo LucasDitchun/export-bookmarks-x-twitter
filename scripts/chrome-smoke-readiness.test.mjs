@@ -1,8 +1,29 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { waitForExtensionContext } from "./chrome-smoke-readiness.mjs";
+import {
+  navigateToExtensionContext,
+  waitForExtensionContext,
+} from "./chrome-smoke-readiness.mjs";
 
 describe("Chrome smoke extension context readiness", () => {
+  it("attaches to a neutral target before navigating to an extension page", async () => {
+    const send = vi
+      .fn()
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ result: { value: true } });
+    const url = "chrome-extension://example/popup.html";
+
+    await navigateToExtensionContext({ send }, url);
+
+    expect(send.mock.calls.map(([method]) => method)).toEqual([
+      "Page.enable",
+      "Page.navigate",
+      "Runtime.evaluate",
+    ]);
+    expect(send.mock.calls[1]?.[1]).toEqual({ url });
+  });
+
   it("waits through navigation races until the extension storage API is ready", async () => {
     const send = vi
       .fn()

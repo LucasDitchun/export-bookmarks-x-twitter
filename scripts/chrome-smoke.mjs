@@ -4,7 +4,10 @@ import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promise
 import { constants } from "node:fs";
 import { delimiter, resolve } from "node:path";
 
-import { waitForExtensionContext } from "./chrome-smoke-readiness.mjs";
+import {
+  navigateToExtensionContext,
+  waitForExtensionContext,
+} from "./chrome-smoke-readiness.mjs";
 
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const DIST_DIRECTORY = resolve(PROJECT_ROOT, "dist");
@@ -1025,10 +1028,10 @@ async function main() {
     const worker = await waitForServiceWorker(port);
     const extensionId = new URL(worker.url).host;
     const popupUrl = `chrome-extension://${extensionId}/popup.html`;
-    const popupTarget = await openTarget(port, popupUrl);
+    const popupTarget = await openTarget(port, "about:blank");
     popupDevTools = await connectDevTools(popupTarget.webSocketDebuggerUrl);
     await popupDevTools.send("Runtime.enable");
-    await waitForExtensionContext(popupDevTools, popupUrl);
+    await navigateToExtensionContext(popupDevTools, popupUrl);
 
     const optionsTarget = await openTarget(port, "about:blank");
     optionsDevTools = await connectDevTools(optionsTarget.webSocketDebuggerUrl);
@@ -1040,10 +1043,8 @@ async function main() {
         modelRequests.push(request.url);
       }
     });
-    await optionsDevTools.send("Page.enable");
     const optionsUrl = `chrome-extension://${extensionId}/options.html`;
-    await optionsDevTools.send("Page.navigate", { url: optionsUrl });
-    await waitForExtensionContext(optionsDevTools, optionsUrl);
+    await navigateToExtensionContext(optionsDevTools, optionsUrl);
     const optionsEvaluation = await optionsDevTools.send("Runtime.evaluate", {
       expression: optionsDefaultsScenario,
       awaitPromise: true,
