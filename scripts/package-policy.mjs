@@ -5,6 +5,10 @@ export const EXPECTED_MANIFEST_PERMISSIONS = Object.freeze([
   "unlimitedStorage",
 ]);
 
+export const EXPECTED_MANIFEST_HOST_PERMISSIONS = Object.freeze([
+  "https://api.github.com/*",
+]);
+
 export function validateExactStringArray(actual, expected, fieldName) {
   if (!Array.isArray(actual) || actual.some((value) => typeof value !== "string")) {
     throw new Error(`Manifest ${fieldName} must be an array of strings.`);

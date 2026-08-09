@@ -8,6 +8,7 @@ import {
   resolvePreferredLocale,
 } from "../popup/i18n";
 import type { SendMessage } from "../shared/protocol";
+import { getGithubStarCount } from "../github/github-project";
 import { createOptionsApp } from "./app";
 
 async function startOptions(): Promise<void> {
@@ -20,7 +21,18 @@ async function startOptions(): Promise<void> {
   document.documentElement.lang = getLocaleTag(locale);
   applyTranslations(document, translate);
   const sendMessage: SendMessage = (request) => chrome.runtime.sendMessage(request);
-  const app = createOptionsApp({ document, sendMessage, translate });
+  const app = createOptionsApp({
+    document,
+    sendMessage,
+    translate,
+    loadGithubStars: () =>
+      getGithubStarCount({
+        storage: {
+          get: (key) => chrome.storage.local.get(key),
+          set: (items) => chrome.storage.local.set(items),
+        },
+      }),
+  });
   window.addEventListener("unload", () => app.destroy(), { once: true });
 }
 

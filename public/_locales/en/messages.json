@@ -219,6 +219,16 @@
   "settingsSaved": { "message": "Saved" },
   "settingsSaveError": { "message": "Could not save settings." },
   "settingsLoadError": { "message": "Could not load settings." },
+  "githubProjectEyebrow": { "message": "Independent and open" },
+  "githubProjectTitle": { "message": "Open source on GitHub" },
+  "githubProjectDescription": {
+    "message": "Inspect the code, follow progress, or support the project if it is useful to you."
+  },
+  "githubStarAction": { "message": "Star on GitHub" },
+  "githubStarCount": {
+    "message": "$COUNT$ GitHub stars",
+    "placeholders": { "count": { "content": "$1" } }
+  },
   "bookmarkPromptTitle": { "message": "Why are you saving this?" },
   "bookmarkPromptClose": { "message": "Close" },
   "bookmarkPromptSave": { "message": "Save note" },

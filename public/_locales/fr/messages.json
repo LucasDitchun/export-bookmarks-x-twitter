@@ -313,6 +313,16 @@
   "settingsSaved": { "message": "Enregistré" },
   "settingsSaveError": { "message": "Impossible d’enregistrer les paramètres." },
   "settingsLoadError": { "message": "Impossible de charger les paramètres." },
+  "githubProjectEyebrow": { "message": "Indépendant et ouvert" },
+  "githubProjectTitle": { "message": "Open source sur GitHub" },
+  "githubProjectDescription": {
+    "message": "Consultez le code, suivez l’avancement ou soutenez le projet s’il vous est utile."
+  },
+  "githubStarAction": { "message": "Ajouter une étoile sur GitHub" },
+  "githubStarCount": {
+    "message": "$COUNT$ étoiles sur GitHub",
+    "placeholders": { "count": { "content": "$1" } }
+  },
   "bookmarkPromptTitle": { "message": "Pourquoi enregistrez-vous ceci ?" },
   "bookmarkPromptClose": { "message": "Fermer" },
   "bookmarkPromptSave": { "message": "Enregistrer la note" },

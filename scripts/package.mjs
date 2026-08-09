@@ -15,6 +15,7 @@ import process from "node:process";
 import { ZipArchive } from "archiver";
 
 import {
+  EXPECTED_MANIFEST_HOST_PERMISSIONS,
   EXPECTED_MANIFEST_PERMISSIONS,
   validateExactStringArray,
 } from "./package-policy.mjs";
@@ -106,9 +107,11 @@ async function validateBuild(packageVersion) {
     EXPECTED_MANIFEST_PERMISSIONS,
     "permissions",
   );
-  if (Object.hasOwn(manifest, "host_permissions")) {
-    fail("Manifest must not declare broad host_permissions.");
-  }
+  validateExactStringArray(
+    manifest.host_permissions,
+    EXPECTED_MANIFEST_HOST_PERMISSIONS,
+    "host_permissions",
+  );
 
   const forbiddenManifestKeys = [
     "externally_connectable",

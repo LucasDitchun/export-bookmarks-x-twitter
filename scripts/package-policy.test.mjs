@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  EXPECTED_MANIFEST_HOST_PERMISSIONS,
   EXPECTED_MANIFEST_PERMISSIONS,
   validateExactStringArray,
 } from "./package-policy.mjs";
@@ -45,4 +46,34 @@ describe("extension package permission policy", () => {
       "Manifest permissions must be exactly: activeTab, sidePanel, storage, unlimitedStorage.",
     );
   });
+
+  it("allows only the fixed public GitHub API origin", () => {
+    expect(EXPECTED_MANIFEST_HOST_PERMISSIONS).toEqual(["https://api.github.com/*"]);
+    expect(() =>
+      validateExactStringArray(
+        ["https://api.github.com/*"],
+        EXPECTED_MANIFEST_HOST_PERMISSIONS,
+        "host_permissions",
+      ),
+    ).not.toThrow();
+  });
+
+  it.each([
+    { permissions: [] },
+    { permissions: ["https://github.com/"] },
+    { permissions: ["https://api.github.com/"] },
+    { permissions: ["https://api.github.com/*", "https://x.com/*"] },
+    { permissions: ["<all_urls>"] },
+  ])(
+    "rejects missing, path-wildcard, and broad host access: $permissions",
+    ({ permissions }) => {
+      expect(() =>
+        validateExactStringArray(
+          permissions,
+          EXPECTED_MANIFEST_HOST_PERMISSIONS,
+          "host_permissions",
+        ),
+      ).toThrow("Manifest host_permissions must be exactly: https://api.github.com/*.");
+    },
+  );
 });

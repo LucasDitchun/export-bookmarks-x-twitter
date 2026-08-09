@@ -307,6 +307,16 @@
   "settingsSaved": { "message": "保存しました" },
   "settingsSaveError": { "message": "設定を保存できませんでした。" },
   "settingsLoadError": { "message": "設定を読み込めませんでした。" },
+  "githubProjectEyebrow": { "message": "独立したオープンソース" },
+  "githubProjectTitle": { "message": "GitHubでオープンソース" },
+  "githubProjectDescription": {
+    "message": "コードや開発状況を確認し、役に立ったらスターで応援できます。"
+  },
+  "githubStarAction": { "message": "GitHubでスターを付ける" },
+  "githubStarCount": {
+    "message": "GitHubで$COUNT$スター",
+    "placeholders": { "count": { "content": "$1" } }
+  },
   "bookmarkPromptTitle": { "message": "なぜこの投稿を保存しますか？" },
   "bookmarkPromptClose": { "message": "閉じる" },
   "bookmarkPromptSave": { "message": "メモを保存" },

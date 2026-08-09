@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { BACKUP_SCHEMA_VERSION, parseBackup } from "../domain/backup";
 import type { BookmarkRecord } from "../domain/types";
+import { GITHUB_CACHE_KEY } from "../github/github-project";
 import {
   DEFAULT_SETTINGS,
   SETTINGS_SCHEMA_VERSION,
@@ -163,6 +164,10 @@ describe("BackupRepository", () => {
       settings: backedUpSettings,
     };
     storage.values.scrapeRun = { id: "must-not-export" };
+    storage.values[GITHUB_CACHE_KEY] = {
+      stars: 999,
+      fetchedAt: Date.UTC(2026, 7, 9),
+    };
     storage.getDelayMs = 10;
     await seed(databaseName, {
       lastSuccessfulSyncAt: "2026-07-03T10:05:00.000Z",
@@ -198,6 +203,7 @@ describe("BackupRepository", () => {
     expect(result.content).not.toContain("must-not-export");
     expect(result.content).not.toContain("checkpoint");
     expect(result.content).not.toContain("bookmarkFolders");
+    expect(result.content).not.toContain(GITHUB_CACHE_KEY);
   });
 
   it("replaces IDB user data atomically and rebuilds hydration indexes", async () => {
@@ -221,6 +227,10 @@ describe("BackupRepository", () => {
     await seed(targetName, { bookmark: oldBookmark, ephemeral: true });
     const targetStorage = new MemoryStorage();
     targetStorage.values.uiLocale = "de";
+    targetStorage.values[GITHUB_CACHE_KEY] = {
+      stars: 123,
+      fetchedAt: Date.UTC(2026, 7, 9),
+    };
     const onDataRestored = vi.fn();
 
     const restored = await repository(targetName, targetStorage, {
@@ -246,6 +256,10 @@ describe("BackupRepository", () => {
     expect(targetStorage.values[SETTINGS_STORAGE_KEY]).toEqual({
       schemaVersion: SETTINGS_SCHEMA_VERSION,
       settings: backedUpSettings,
+    });
+    expect(targetStorage.values[GITHUB_CACHE_KEY]).toEqual({
+      stars: 123,
+      fetchedAt: Date.UTC(2026, 7, 9),
     });
 
     const page = await new BookmarkRepository(targetName).list({
