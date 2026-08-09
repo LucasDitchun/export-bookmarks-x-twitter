@@ -1,6 +1,13 @@
 {
   "libraryTitle": { "message": "Biblioteca de marcadores" },
   "libraryHelp": { "message": "Selecciona un marcador para añadir una nota privada." },
+  "libraryViewsLabel": { "message": "Vistas de la biblioteca de marcadores" },
+  "libraryViewInbox": { "message": "Sin categoría" },
+  "libraryViewCurrent": { "message": "En X ahora" },
+  "libraryViewArchived": { "message": "Archivados" },
+  "libraryEmptyInbox": { "message": "No hay marcadores sin categoría." },
+  "libraryEmptyCurrent": { "message": "No hay marcadores guardados actualmente en X." },
+  "libraryEmptyArchived": { "message": "No hay marcadores archivados." },
   "libraryEmpty": { "message": "Captura marcadores para empezar tu biblioteca." },
   "libraryLoading": { "message": "Cargando…" },
   "libraryLoadError": { "message": "No se pudieron cargar los marcadores." },

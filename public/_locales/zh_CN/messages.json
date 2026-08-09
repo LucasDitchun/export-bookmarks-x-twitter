@@ -1,6 +1,13 @@
 {
   "libraryTitle": { "message": "书签库" },
   "libraryHelp": { "message": "选择一个书签以添加私人备注。" },
+  "libraryViewsLabel": { "message": "书签库视图" },
+  "libraryViewInbox": { "message": "未分类" },
+  "libraryViewCurrent": { "message": "X 中现有" },
+  "libraryViewArchived": { "message": "已归档" },
+  "libraryEmptyInbox": { "message": "没有未分类的书签。" },
+  "libraryEmptyCurrent": { "message": "X 中目前没有已保存的书签。" },
+  "libraryEmptyArchived": { "message": "没有已归档的书签。" },
   "libraryEmpty": { "message": "抓取书签即可开始使用书签库。" },
   "libraryLoading": { "message": "正在加载…" },
   "libraryLoadError": { "message": "无法加载书签。" },

@@ -3,6 +3,15 @@
   "libraryHelp": {
     "message": "Wähle ein Lesezeichen aus, um eine private Notiz hinzuzufügen."
   },
+  "libraryViewsLabel": { "message": "Ansichten der Lesezeichenbibliothek" },
+  "libraryViewInbox": { "message": "Nicht kategorisiert" },
+  "libraryViewCurrent": { "message": "Jetzt auf X" },
+  "libraryViewArchived": { "message": "Archiviert" },
+  "libraryEmptyInbox": { "message": "Keine nicht kategorisierten Lesezeichen." },
+  "libraryEmptyCurrent": {
+    "message": "Derzeit sind keine Lesezeichen auf X gespeichert."
+  },
+  "libraryEmptyArchived": { "message": "Keine archivierten Lesezeichen." },
   "libraryEmpty": { "message": "Erfasse Lesezeichen, um deine Bibliothek zu starten." },
   "libraryLoading": { "message": "Wird geladen…" },
   "libraryLoadError": { "message": "Lesezeichen konnten nicht geladen werden." },

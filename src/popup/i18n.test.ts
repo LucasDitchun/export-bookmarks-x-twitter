@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { SupportedLocale } from "../domain/types";
 import {
+  applyTranslations,
   bindLanguageSelector,
   createCatalogTranslator,
   getLocaleTag,
@@ -78,6 +79,24 @@ describe("popup localization", () => {
     expect(translate("count", "42")).toBe("42 saved");
     expect(translate("missingInSelected")).toBe("English fallback");
     expect(translate("unknownKey")).toBe("unknownKey");
+  });
+
+  it("localizes the accessible name of the library tab list", () => {
+    document.body.innerHTML = `
+      <div
+        id="library-views"
+        role="tablist"
+        data-i18n-aria-label="libraryViewsLabel"
+        aria-label="Library views"
+      ></div>
+    `;
+    applyTranslations(document, (key) =>
+      key === "libraryViewsLabel" ? "Vistas de la biblioteca" : key,
+    );
+
+    expect(document.getElementById("library-views")?.getAttribute("aria-label")).toBe(
+      "Vistas de la biblioteca",
+    );
   });
 
   it("persists a manual language selection before reloading the popup", async () => {
