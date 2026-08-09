@@ -834,7 +834,7 @@ export function createPopupApp(options: PopupAppOptions): {
               all.findIndex(({ id }) => id === bookmark.id) === index,
           )
         : fused;
-      nextBookmarkCursor = semanticItems === null ? response.data.nextCursor : null;
+      nextBookmarkCursor = response.data.nextCursor;
       if (
         selectedBookmarkId &&
         !bookmarks.some((bookmark) => bookmark.id === selectedBookmarkId)

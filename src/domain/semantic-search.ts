@@ -44,6 +44,7 @@ export async function semanticDocumentFingerprint(
     JSON.stringify({
       id: document.bookmark.id,
       passage: buildSemanticPassage(document),
+      status: document.bookmark.status,
     }),
   );
   const digest = await crypto.subtle.digest("SHA-256", bytes);

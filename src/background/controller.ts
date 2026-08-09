@@ -1058,6 +1058,7 @@ export class BackgroundController {
         event.action,
         timestamp,
       );
+      this.dependencies.search.invalidate();
       await this.dependencies.liveState.set(tabId, {
         ...pending,
         bookmark: event.bookmark,
