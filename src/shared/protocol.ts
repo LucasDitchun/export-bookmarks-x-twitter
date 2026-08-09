@@ -2,6 +2,7 @@ import type {
   ArchiveStats,
   BookmarkRecord,
   BookmarkSnapshot,
+  BookmarkTag,
   ExportFormat,
   ScrapeRun,
   SupportedLocale,
@@ -26,6 +27,19 @@ export interface BookmarkDetailResult {
   bookmark: NotedBookmark | null;
 }
 
+export interface TagListResult {
+  tags: BookmarkTag[];
+}
+
+export interface TagAssignmentResult {
+  bookmark: NotedBookmark;
+  tag: BookmarkTag;
+}
+
+export interface TagRemovalResult {
+  bookmark: NotedBookmark;
+}
+
 export type UiRequest =
   | { type: "GET_STATUS" }
   | { type: "OPEN_BOOKMARKS" }
@@ -41,7 +55,13 @@ export type UiRequest =
       payload?: { view?: BookmarkView; cursor?: string; limit?: number };
     }
   | { type: "GET_BOOKMARK"; payload: { id: string } }
-  | { type: "SAVE_BOOKMARK_NOTE"; payload: { id: string; note: string } };
+  | { type: "SAVE_BOOKMARK_NOTE"; payload: { id: string; note: string } }
+  | { type: "LIST_TAGS" }
+  | { type: "ADD_BOOKMARK_TAG"; payload: { id: string; name: string } }
+  | {
+      type: "REMOVE_BOOKMARK_TAG";
+      payload: { id: string; tagId: string };
+    };
 
 /** @deprecated Use UiRequest. Kept as a source-compatible alias for popup callers. */
 export type PopupRequest = UiRequest;

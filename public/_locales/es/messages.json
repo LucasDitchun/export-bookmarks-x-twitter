@@ -5,6 +5,19 @@
   "libraryLoading": { "message": "Cargando…" },
   "libraryLoadError": { "message": "No se pudieron cargar los marcadores." },
   "loadMoreBookmarks": { "message": "Cargar más" },
+  "tagsLabel": { "message": "Etiquetas" },
+  "tagInputPlaceholder": { "message": "Escribe una etiqueta y pulsa Enter" },
+  "tagHelp": {
+    "message": "Pulsa Enter para añadir. Las etiquetas se guardan localmente."
+  },
+  "tagSaving": { "message": "Guardando…" },
+  "tagAdded": { "message": "Etiqueta añadida" },
+  "tagRemoved": { "message": "Etiqueta eliminada" },
+  "tagSaveError": { "message": "No se guardó" },
+  "removeTagLabel": {
+    "message": "Eliminar etiqueta $TAG$",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
   "noteLabel": { "message": "Nota privada" },
   "noteHelp": {
     "message": "Texto sin formato, guardado localmente mientras escribes."

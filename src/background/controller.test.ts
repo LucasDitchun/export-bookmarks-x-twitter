@@ -40,6 +40,11 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       get: vi.fn(async (): Promise<unknown> => null),
       saveNote: vi.fn(async (): Promise<unknown> => null),
     },
+    tags: {
+      list: vi.fn(async (): Promise<unknown> => []),
+      add: vi.fn(async (): Promise<unknown> => null),
+      remove: vi.fn(async (): Promise<unknown> => null),
+    },
     state: {
       getScrapeRun: vi.fn(async () => currentRun),
       setScrapeRun: vi.fn(async (run: ScrapeRun) => {
@@ -145,6 +150,78 @@ describe("BackgroundController", () => {
       "123",
       "<b>Keep as text</b>",
     );
+  });
+
+  it("lists, assigns, and removes validated bookmark tags", async () => {
+    const dependencies = createDependencies();
+    const tag = {
+      id: "tag-research",
+      name: "Research",
+      normalizedName: "research",
+    };
+    const taggedBookmark = { ...bookmark, note: "", tagIds: [tag.id] };
+    dependencies.tags.list.mockResolvedValueOnce([tag]);
+    dependencies.tags.add.mockResolvedValueOnce({ bookmark: taggedBookmark, tag });
+    dependencies.tags.remove.mockResolvedValueOnce({ ...taggedBookmark, tagIds: [] });
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "LIST_TAGS" }, POPUP_SENDER),
+    ).resolves.toEqual({ ok: true, data: { tags: [tag] } });
+    await expect(
+      controller.handle(
+        {
+          type: "ADD_BOOKMARK_TAG",
+          payload: { id: "123", name: " Research " },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      data: { bookmark: taggedBookmark, tag },
+    });
+    await expect(
+      controller.handle(
+        {
+          type: "REMOVE_BOOKMARK_TAG",
+          payload: { id: "123", tagId: "tag-research" },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      data: { bookmark: { ...taggedBookmark, tagIds: [] } },
+    });
+    expect(dependencies.tags.add).toHaveBeenCalledWith("123", " Research ");
+    expect(dependencies.tags.remove).toHaveBeenCalledWith("123", "tag-research");
+  });
+
+  it("rejects invalid tag requests at the extension boundary", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    for (const request of [
+      { type: "ADD_BOOKMARK_TAG", payload: { id: "123", name: "   " } },
+      {
+        type: "ADD_BOOKMARK_TAG",
+        payload: { id: "123", name: "x".repeat(51) },
+      },
+      {
+        type: "ADD_BOOKMARK_TAG",
+        payload: { id: "123", name: `${" ".repeat(200)}x` },
+      },
+      {
+        type: "REMOVE_BOOKMARK_TAG",
+        payload: { id: "123", tagId: "<script>" },
+      },
+    ]) {
+      await expect(controller.handle(request, POPUP_SENDER)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "invalid_request" },
+      });
+    }
+    expect(dependencies.tags.add).not.toHaveBeenCalled();
+    expect(dependencies.tags.remove).not.toHaveBeenCalled();
   });
 
   it("rejects invalid bookmark IDs and notes over 20,000 characters", async () => {

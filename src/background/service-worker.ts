@@ -1,6 +1,7 @@
 import { ArchiveRepository } from "../storage/archive-repository";
 import { BookmarkRepository } from "../storage/bookmark-repository";
 import { ExtensionStateRepository } from "../storage/extension-state";
+import { TagRepository } from "../storage/tag-repository";
 import { BackgroundController } from "./controller";
 
 const state = new ExtensionStateRepository({
@@ -10,9 +11,11 @@ const state = new ExtensionStateRepository({
 });
 const archive = new ArchiveRepository();
 const bookmarks = new BookmarkRepository();
+const tags = new TagRepository();
 const controller = new BackgroundController({
   archive,
   bookmarks,
+  tags,
   state,
   extensionId: chrome.runtime.id,
   browser: {

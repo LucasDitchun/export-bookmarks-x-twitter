@@ -7,6 +7,19 @@
   "libraryLoading": { "message": "Caricamento…" },
   "libraryLoadError": { "message": "Impossibile caricare i segnalibri." },
   "loadMoreBookmarks": { "message": "Carica altro" },
+  "tagsLabel": { "message": "Tag" },
+  "tagInputPlaceholder": { "message": "Digita un tag e premi Invio" },
+  "tagHelp": {
+    "message": "Premi Invio per aggiungere. I tag vengono salvati in locale."
+  },
+  "tagSaving": { "message": "Salvataggio…" },
+  "tagAdded": { "message": "Tag aggiunto" },
+  "tagRemoved": { "message": "Tag rimosso" },
+  "tagSaveError": { "message": "Non salvato" },
+  "removeTagLabel": {
+    "message": "Rimuovi tag $TAG$",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
   "noteLabel": { "message": "Nota privata" },
   "noteHelp": { "message": "Testo semplice, salvato localmente mentre scrivi." },
   "noteLoading": { "message": "Caricamento…" },

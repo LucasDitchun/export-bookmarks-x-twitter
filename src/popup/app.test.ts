@@ -115,6 +115,131 @@ describe("popup app", () => {
     app.destroy();
   });
 
+  it("adds a plain-text tag on Enter and removes it from an accessible badge", async () => {
+    const unsafeName = '<img src=x onerror="alert(1)">';
+    const tag = {
+      id: "tag-security",
+      name: unsafeName,
+      normalizedName: unsafeName,
+    };
+    const taggedBookmark = { ...libraryBookmark, tagIds: [tag.id] };
+    const requests: string[] = [];
+    const sendMessage = ((request) => {
+      requests.push(request.type);
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [libraryBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: libraryBookmark },
+        });
+      }
+      if (request.type === "LIST_TAGS") {
+        return Promise.resolve({ ok: true as const, data: { tags: [] } });
+      }
+      if (request.type === "ADD_BOOKMARK_TAG") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: taggedBookmark, tag },
+        });
+      }
+      if (request.type === "REMOVE_BOOKMARK_TAG") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: libraryBookmark },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await app.ready;
+
+    const input = document.getElementById("tag-input") as HTMLInputElement;
+    input.value = `  ${unsafeName}  `;
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    await vi.waitFor(() => expect(requests).toContain("ADD_BOOKMARK_TAG"));
+    await vi.waitFor(() =>
+      expect(document.getElementById("selected-tags")?.textContent).toContain(
+        unsafeName,
+      ),
+    );
+    expect(document.querySelector("#selected-tags img")).toBeNull();
+    const remove = document.querySelector<HTMLButtonElement>(
+      '#selected-tags [data-tag-id="tag-security"]',
+    );
+    expect(remove?.getAttribute("aria-label")).toBe(`removeTagLabel:${unsafeName}`);
+    remove?.click();
+    await vi.waitFor(() => expect(requests).toContain("REMOVE_BOOKMARK_TAG"));
+    await vi.waitFor(() =>
+      expect(document.getElementById("selected-tags")?.textContent).not.toContain(
+        unsafeName,
+      ),
+    );
+    app.destroy();
+  });
+
+  it("keeps a tag added while the startup tag list is still loading", async () => {
+    const startupTags = deferred<{
+      ok: true;
+      data: { tags: [] };
+    }>();
+    const tag = {
+      id: "tag-research",
+      name: "Research",
+      normalizedName: "research",
+    };
+    const taggedBookmark = { ...libraryBookmark, tagIds: [tag.id] };
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [libraryBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: libraryBookmark },
+        });
+      }
+      if (request.type === "LIST_TAGS") return startupTags.promise;
+      if (request.type === "ADD_BOOKMARK_TAG") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: taggedBookmark, tag },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    const input = document.getElementById("tag-input") as HTMLInputElement;
+    await vi.waitFor(() => expect(input.disabled).toBe(false));
+
+    input.value = "Research";
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await vi.waitFor(() =>
+      expect(document.getElementById("selected-tags")?.textContent).toContain(
+        "Research",
+      ),
+    );
+
+    startupTags.resolve({ ok: true, data: { tags: [] } });
+    await app.ready;
+    expect(document.getElementById("selected-tags")?.textContent).toContain("Research");
+    app.destroy();
+  });
+
   it("serializes and coalesces autosaves without applying stale responses", async () => {
     const firstSave = deferred<{
       ok: true;

@@ -1,5 +1,6 @@
 import type {
   ArchiveStats,
+  BookmarkTag,
   ExportFormat,
   ScrapeRun,
   SupportedLocale,
@@ -13,8 +14,12 @@ import type {
   PopupStatus,
   RuntimeError,
   SendMessage,
+  TagAssignmentResult,
+  TagListResult,
+  TagRemovalResult,
   UiRequest,
 } from "./protocol";
+import { getTagBadgeColors } from "./tag-colors";
 
 interface PopupAppOptions {
   document: Document;
@@ -59,6 +64,10 @@ interface RequiredElements {
   pageLabel: HTMLElement;
   selectedBookmarkAuthor: HTMLElement;
   selectedBookmarkTitle: HTMLElement;
+  selectedTags: HTMLElement;
+  tagInput: HTMLInputElement;
+  tagStatus: HTMLElement;
+  tagSuggestions: HTMLDataListElement;
   totalCount: HTMLElement;
 }
 
@@ -115,6 +124,10 @@ function getElements(document: Document): RequiredElements {
     pageLabel: requireElement(document, "page-label"),
     selectedBookmarkAuthor: requireElement(document, "selected-bookmark-author"),
     selectedBookmarkTitle: requireElement(document, "selected-bookmark-title"),
+    selectedTags: requireElement(document, "selected-tags"),
+    tagInput: requireElement(document, "tag-input"),
+    tagStatus: requireElement(document, "tag-status"),
+    tagSuggestions: requireElement(document, "tag-suggestions"),
     totalCount: requireElement(document, "total-count"),
   };
 }
@@ -143,6 +156,7 @@ export function createPopupApp(options: PopupAppOptions): {
     cancelSchedule = window.clearTimeout.bind(window),
   } = options;
   const elements = getElements(document);
+  elements.tagInput.placeholder = translate("tagInputPlaceholder");
   let status: PopupStatus | null = null;
   let busy = false;
   let refreshHandle: number | null = null;
@@ -150,6 +164,9 @@ export function createPopupApp(options: PopupAppOptions): {
   let bookmarks: NotedBookmark[] = [];
   let nextBookmarkCursor: string | null = null;
   let selectedBookmarkId: string | null = null;
+  let selectedBookmark: NotedBookmark | null = null;
+  let tags: BookmarkTag[] = [];
+  let tagBusy = false;
   let selectionVersion = 0;
   let libraryGeneration = 0;
   let libraryBusy = false;
@@ -221,6 +238,72 @@ export function createPopupApp(options: PopupAppOptions): {
     }, 1_000);
   };
 
+  const tagById = (id: string): BookmarkTag | undefined =>
+    tags.find((tag) => tag.id === id);
+
+  const createTagBadge = (tag: BookmarkTag, removable: boolean): HTMLElement => {
+    const colors = getTagBadgeColors(tag.normalizedName ?? tag.name);
+    const badge = document.createElement(removable ? "button" : "span");
+    const name = document.createElement("span");
+    badge.className = removable ? "tag-badge tag-badge-remove" : "tag-badge";
+    badge.dataset.tagId = tag.id;
+    badge.style.backgroundColor = colors.background;
+    badge.style.color = colors.foreground;
+    badge.style.borderColor = colors.border;
+    name.textContent = tag.name;
+    badge.append(name);
+    if (removable) {
+      const removeIcon = document.createElement("span");
+      (badge as HTMLButtonElement).type = "button";
+      badge.setAttribute("aria-label", translate("removeTagLabel", tag.name));
+      removeIcon.className = "tag-remove-icon";
+      removeIcon.textContent = "×";
+      removeIcon.setAttribute("aria-hidden", "true");
+      badge.append(removeIcon);
+      badge.addEventListener("click", () => void removeSelectedTag(tag.id));
+    }
+    return badge;
+  };
+
+  const appendTags = (
+    container: HTMLElement,
+    tagIds: readonly string[],
+    removable: boolean,
+  ): void => {
+    container.replaceChildren();
+    for (const tagId of tagIds) {
+      const tag = tagById(tagId);
+      if (tag) {
+        const item = document.createElement("span");
+        item.className = "tag-list-item";
+        item.setAttribute("role", "listitem");
+        item.append(createTagBadge(tag, removable));
+        container.append(item);
+      }
+    }
+  };
+
+  const renderSelectedTags = (): void => {
+    appendTags(elements.selectedTags, selectedBookmark?.tagIds ?? [], true);
+    elements.tagInput.disabled = selectedBookmark === null || tagBusy;
+  };
+
+  const updateBookmarkTags = (updated: NotedBookmark): void => {
+    bookmarks = bookmarks.map((bookmark) =>
+      bookmark.id === updated.id ? updated : bookmark,
+    );
+    if (selectedBookmarkId === updated.id) selectedBookmark = updated;
+    renderBookmarkList();
+    renderSelectedTags();
+  };
+
+  const setTagStatus = (
+    messageKey: "tagSaving" | "tagAdded" | "tagRemoved" | "tagSaveError" | null,
+  ): void => {
+    elements.tagStatus.textContent = messageKey ? translate(messageKey) : "";
+    elements.tagStatus.dataset.state = messageKey ?? "idle";
+  };
+
   const renderBookmarkList = (): void => {
     elements.bookmarkList.replaceChildren();
     for (const bookmark of bookmarks) {
@@ -228,6 +311,7 @@ export function createPopupApp(options: PopupAppOptions): {
       const button = document.createElement("button");
       const title = document.createElement("span");
       const author = document.createElement("span");
+      const bookmarkTags = document.createElement("span");
       button.type = "button";
       button.className = "bookmark-option";
       button.dataset.bookmarkId = bookmark.id;
@@ -236,7 +320,10 @@ export function createPopupApp(options: PopupAppOptions): {
       title.textContent = bookmark.text || bookmark.url;
       author.className = "bookmark-option-author";
       author.textContent = `@${bookmark.author.username}`;
-      button.append(title, author);
+      bookmarkTags.className = "tag-list bookmark-option-tags";
+      bookmarkTags.setAttribute("role", "list");
+      appendTags(bookmarkTags, bookmark.tagIds, false);
+      button.append(title, author, bookmarkTags);
       button.addEventListener("click", () => void selectBookmark(bookmark.id));
       item.append(button);
       elements.bookmarkList.append(item);
@@ -245,6 +332,96 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.loadMoreBookmarks.hidden = nextBookmarkCursor === null;
     elements.loadMoreBookmarks.disabled = libraryBusy;
   };
+
+  async function addSelectedTag(): Promise<void> {
+    const bookmarkId = selectedBookmarkId;
+    const name = elements.tagInput.value.trim().normalize("NFKC");
+    if (!bookmarkId || tagBusy || name.length === 0 || name.length > 50) return;
+    tagBusy = true;
+    setTagStatus("tagSaving");
+    renderSelectedTags();
+    try {
+      const response = await sendMessage<TagAssignmentResult>({
+        type: "ADD_BOOKMARK_TAG",
+        payload: { id: bookmarkId, name },
+      });
+      if (!response.ok) {
+        setTagStatus("tagSaveError");
+        return;
+      }
+      if (!tags.some((tag) => tag.id === response.data.tag.id)) {
+        tags = [...tags, response.data.tag];
+      }
+      updateBookmarkTags(response.data.bookmark);
+      renderTagSuggestions();
+      if (selectedBookmarkId === bookmarkId) {
+        elements.tagInput.value = "";
+        setTagStatus("tagAdded");
+      }
+    } catch {
+      setTagStatus("tagSaveError");
+    } finally {
+      tagBusy = false;
+      renderSelectedTags();
+    }
+  }
+
+  async function removeSelectedTag(tagId: string): Promise<void> {
+    const bookmarkId = selectedBookmarkId;
+    if (!bookmarkId || tagBusy) return;
+    tagBusy = true;
+    setTagStatus("tagSaving");
+    renderSelectedTags();
+    try {
+      const response = await sendMessage<TagRemovalResult>({
+        type: "REMOVE_BOOKMARK_TAG",
+        payload: { id: bookmarkId, tagId },
+      });
+      if (!response.ok) {
+        setTagStatus("tagSaveError");
+        return;
+      }
+      updateBookmarkTags(response.data.bookmark);
+      if (selectedBookmarkId === bookmarkId) setTagStatus("tagRemoved");
+    } catch {
+      setTagStatus("tagSaveError");
+    } finally {
+      tagBusy = false;
+      renderSelectedTags();
+    }
+  }
+
+  function renderTagSuggestions(): void {
+    elements.tagSuggestions.replaceChildren();
+    for (const tag of tags) {
+      const option = document.createElement("option");
+      option.value = tag.name;
+      elements.tagSuggestions.append(option);
+    }
+  }
+
+  function mergeTags(
+    loadedTags: readonly BookmarkTag[],
+    localTags: readonly BookmarkTag[],
+  ): BookmarkTag[] {
+    const merged = new Map(loadedTags.map((tag) => [tag.id, tag]));
+    for (const tag of localTags) merged.set(tag.id, tag);
+    return [...merged.values()];
+  }
+
+  async function loadTags(): Promise<void> {
+    try {
+      const response = await sendMessage<TagListResult>({ type: "LIST_TAGS" });
+      if (response.ok && Array.isArray(response.data?.tags)) {
+        tags = mergeTags(response.data.tags, tags);
+        renderTagSuggestions();
+        renderBookmarkList();
+        renderSelectedTags();
+      }
+    } catch {
+      // The library and note editor remain usable if tags cannot be loaded.
+    }
+  }
 
   const setNoteSaveStatus = (
     messageKey: "noteSaving" | "noteSaved" | "noteSaveError" | null,
@@ -256,6 +433,7 @@ export function createPopupApp(options: PopupAppOptions): {
   const resetBookmarkSelection = (): void => {
     selectionVersion += 1;
     selectedBookmarkId = null;
+    selectedBookmark = null;
     editRevision += 1;
     if (noteSaveHandle !== null) cancelSchedule(noteSaveHandle);
     noteSaveHandle = null;
@@ -267,6 +445,8 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.noteTextarea.value = "";
     elements.noteTextarea.disabled = true;
     setNoteSaveStatus(null);
+    setTagStatus(null);
+    renderSelectedTags();
   };
 
   const resetLibrary = (): void => {
@@ -344,6 +524,8 @@ export function createPopupApp(options: PopupAppOptions): {
     if (selectedBookmarkId !== id) queueDebouncedNote();
     const version = ++selectionVersion;
     selectedBookmarkId = id;
+    selectedBookmark = null;
+    renderSelectedTags();
     elements.noteTextarea.disabled = true;
     elements.noteSaveStatus.textContent = translate("noteLoading");
     renderBookmarkList();
@@ -358,6 +540,7 @@ export function createPopupApp(options: PopupAppOptions): {
       return;
     }
     const bookmark = response.data.bookmark;
+    selectedBookmark = bookmark;
     elements.noteEditor.hidden = false;
     elements.selectedBookmarkTitle.textContent = bookmark.text || bookmark.url;
     elements.selectedBookmarkAuthor.textContent = `@${bookmark.author.username}`;
@@ -365,6 +548,8 @@ export function createPopupApp(options: PopupAppOptions): {
     editRevision += 1;
     elements.noteTextarea.disabled = false;
     setNoteSaveStatus(null);
+    setTagStatus(null);
+    renderSelectedTags();
     renderBookmarkList();
   }
 
@@ -562,9 +747,16 @@ export function createPopupApp(options: PopupAppOptions): {
   });
   elements.noteTextarea.addEventListener("input", stageNoteSave);
   elements.noteTextarea.addEventListener("blur", queueDebouncedNote);
+  elements.tagInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.isComposing) return;
+    event.preventDefault();
+    void addSelectedTag();
+  });
 
   render();
-  const ready = Promise.all([loadStatus(), loadLibrary()]).then(() => undefined);
+  const ready = Promise.all([loadStatus(), loadLibrary(), loadTags()]).then(
+    () => undefined,
+  );
   return {
     ready,
     destroy: () => {
