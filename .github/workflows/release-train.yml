@@ -140,6 +140,10 @@ jobs:
         if: steps.state.outputs.noop != 'true'
         run: pnpm install --lockfile-only
 
+      - name: Format the refreshed lockfile
+        if: steps.state.outputs.noop != 'true'
+        run: pnpm exec prettier --write pnpm-lock.yaml
+
       - name: Check formatting
         if: steps.state.outputs.noop != 'true'
         run: pnpm format:check

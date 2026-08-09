@@ -116,4 +116,18 @@ describe("release workflow permissions and gates", () => {
     expect(ci.match(/pnpm audit:high/gu)).toHaveLength(1);
     expect(preparation.match(/pnpm audit:high/gu)).toHaveLength(1);
   });
+
+  it("formats the refreshed release lockfile before the formatting gate", async () => {
+    const preparation = await readWorkflow("release-train.yml");
+    const refresh = preparation.indexOf("pnpm install --lockfile-only");
+    const formatLockfile = preparation.indexOf(
+      "pnpm exec prettier --write pnpm-lock.yaml",
+      refresh,
+    );
+    const formatCheck = preparation.indexOf("pnpm format:check", refresh);
+
+    expect(refresh).toBeGreaterThanOrEqual(0);
+    expect(formatLockfile).toBeGreaterThan(refresh);
+    expect(formatCheck).toBeGreaterThan(formatLockfile);
+  });
 });
