@@ -12,6 +12,7 @@ import {
 } from "../domain/types";
 import { folderBreadcrumb } from "../domain/folder-tree";
 import { isBookmarkMedia } from "../domain/bookmark-media";
+import { isFullReviewDue } from "../domain/review-schedule";
 import type {
   ContentControlRequest,
   ContentEvent,
@@ -69,7 +70,12 @@ interface BackgroundDependencies {
   >;
   state: Pick<
     ExtensionStateRepository,
-    "getScrapeRun" | "setScrapeRun" | "clearScrapeRun"
+    | "getScrapeRun"
+    | "setScrapeRun"
+    | "clearScrapeRun"
+    | "getScrapeCheckpoints"
+    | "setScrapeCheckpoints"
+    | "clearScrapeCheckpoints"
   >;
   bookmarks: {
     list(options: {
@@ -136,6 +142,43 @@ function isLocalEntityId(value: unknown): value is string {
   return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 }
 
+function collectCheckpointCandidates(
+  current: readonly string[],
+  incoming: readonly string[],
+): string[] {
+  const candidates = [...current];
+  const known = new Set(candidates);
+  for (const id of incoming) {
+    if (known.has(id)) continue;
+    known.add(id);
+    candidates.push(id);
+    if (candidates.length === 10) break;
+  }
+  return candidates;
+}
+
+function collectCheckpointMatches(
+  current: readonly string[],
+  incoming: readonly string[],
+  checkpoints: readonly string[],
+): string[] {
+  const known = new Set(checkpoints);
+  let matches = [...current];
+  for (const id of incoming) {
+    if (!known.has(id)) {
+      matches = [];
+      continue;
+    }
+    if (matches.includes(id)) {
+      matches = [id];
+      continue;
+    }
+    matches.push(id);
+    if (matches.length > 3) matches = matches.slice(-3);
+  }
+  return matches;
+}
+
 function isFolderName(value: unknown): value is string {
   const hasControlCharacters =
     typeof value === "string" &&
@@ -182,7 +225,6 @@ function isUiRequest(value: unknown): value is UiRequest {
     value.type === "GET_SEMANTIC_CORPUS" ||
     value.type === "OPEN_SELECTED_SURFACE" ||
     value.type === "OPEN_BOOKMARKS" ||
-    value.type === "START_SCRAPE" ||
     value.type === "CANCEL_SCRAPE" ||
     value.type === "CLEAR_ARCHIVE" ||
     value.type === "EXPORT_BACKUP" ||
@@ -190,6 +232,13 @@ function isUiRequest(value: unknown): value is UiRequest {
     value.type === "LIST_FOLDERS"
   ) {
     return true;
+  }
+  if (value.type === "START_SCRAPE") {
+    return (
+      value.payload === undefined ||
+      (isRecord(value.payload) &&
+        (value.payload.mode === "quick" || value.payload.mode === "full"))
+    );
   }
   if (value.type === "SAVE_SETTINGS") {
     return isRecord(value.payload) && isSettingsPatch(value.payload.settings);
@@ -351,7 +400,12 @@ function isContentEvent(value: unknown): value is ContentEvent {
     return (
       Array.isArray(value.bookmarks) &&
       value.bookmarks.length <= 100 &&
-      value.bookmarks.every(isBookmarkSnapshot)
+      value.bookmarks.every(isBookmarkSnapshot) &&
+      new Set(
+        value.bookmarks.map((bookmark) =>
+          isRecord(bookmark) && typeof bookmark.id === "string" ? bookmark.id : "",
+        ),
+      ).size === value.bookmarks.length
     );
   }
   if (value.type === "SCRAPE_PROGRESS") {
@@ -362,7 +416,9 @@ function isContentEvent(value: unknown): value is ContentEvent {
       (value.status === "completed" || value.status === "cancelled") &&
       typeof value.fetched === "number" &&
       Number.isSafeInteger(value.fetched) &&
-      (value.status === "cancelled" || value.completionReason === "stable_end")
+      (value.status === "cancelled" ||
+        value.completionReason === "stable_end" ||
+        value.completionReason === "checkpoint_stop")
     );
   }
   return value.type === "SCRAPE_FAILED" && typeof value.errorCode === "string";
@@ -585,12 +641,15 @@ export class BackgroundController {
           await this.dependencies.browser.openBookmarks();
           return success(null);
         case "START_SCRAPE":
-          return success(await this.startScrape());
+          return success(await this.startScrape(request.payload?.mode ?? "quick"));
         case "CANCEL_SCRAPE":
           return success(await this.cancelScrape());
         case "CLEAR_ARCHIVE":
           await this.dependencies.archive.clear();
-          await this.dependencies.state.clearScrapeRun();
+          await Promise.all([
+            this.dependencies.state.clearScrapeRun(),
+            this.dependencies.state.clearScrapeCheckpoints(),
+          ]);
           this.dependencies.search.invalidate();
           return success(null);
         case "EXPORT_BACKUP":
@@ -609,7 +668,10 @@ export class BackgroundController {
               request.payload.mode,
             );
             this.dependencies.search.invalidate();
-            await this.dependencies.state.clearScrapeRun();
+            await Promise.all([
+              this.dependencies.state.clearScrapeRun(),
+              this.dependencies.state.clearScrapeCheckpoints(),
+            ]);
             try {
               const settings = await this.dependencies.settings.get();
               await this.dependencies.browser.configureSurface(
@@ -624,7 +686,10 @@ export class BackgroundController {
           } catch (error) {
             if (error instanceof BackupSettingsWriteError) {
               this.dependencies.search.invalidate();
-              await this.dependencies.state.clearScrapeRun();
+              await Promise.all([
+                this.dependencies.state.clearScrapeRun(),
+                this.dependencies.state.clearScrapeCheckpoints(),
+              ]);
             }
             throw error;
           }
@@ -638,19 +703,22 @@ export class BackgroundController {
   }
 
   private async getStatus(): Promise<PopupStatus> {
-    const [tab, stats, scrape] = await Promise.all([
+    const [tab, stats, scrape, checkpoints] = await Promise.all([
       this.dependencies.browser.getActiveTab(),
       this.dependencies.archive.getStats(),
       this.dependencies.state.getScrapeRun(),
+      this.dependencies.state.getScrapeCheckpoints(),
     ]);
     return {
       pageReady: isBookmarksUrl(tab?.url),
       stats,
       scrape,
+      fullReviewDue: isFullReviewDue(stats.lastSuccessfulSyncAt, this.now()),
+      quickUpdateAvailable: (checkpoints?.ids.length ?? 0) >= 3,
     };
   }
 
-  private async startScrape(): Promise<ScrapeRun> {
+  private async startScrape(requestedMode: "quick" | "full"): Promise<ScrapeRun> {
     const previous = await this.dependencies.state.getScrapeRun();
     if (previous?.status === "running") {
       throw new BookmarkXError(
@@ -668,6 +736,14 @@ export class BackgroundController {
     }
 
     const timestamp = this.now().toISOString();
+    const checkpoints =
+      requestedMode === "quick"
+        ? await this.dependencies.state.getScrapeCheckpoints()
+        : null;
+    const mode =
+      requestedMode === "quick" && (checkpoints?.ids.length ?? 0) >= 3
+        ? "quick"
+        : "full";
     const run: ScrapeRun = {
       id: this.createId(),
       tabId: tab.id,
@@ -678,12 +754,19 @@ export class BackgroundController {
       startedAt: timestamp,
       updatedAt: timestamp,
       errorCode: null,
+      mode,
+      checkpointIds: mode === "quick" ? (checkpoints?.ids ?? []) : [],
+      checkpointCandidates: [],
+      checkpointMatchIds: [],
+      completionReason: null,
     };
     await this.dependencies.state.setScrapeRun(run);
     try {
       const response = await this.dependencies.browser.sendToTab(tab.id, {
         type: "START_SCRAPE",
         runId: run.id,
+        mode,
+        checkpointIds: mode === "quick" ? (checkpoints?.ids ?? []) : [],
       });
       if (!isRecord(response) || response.accepted !== true) {
         throw new Error("The content script did not accept capture.");
@@ -766,6 +849,15 @@ export class BackgroundController {
           added: run.added + merged.added,
           updated: run.updated + merged.updated,
           updatedAt: timestamp,
+          checkpointCandidates: collectCheckpointCandidates(
+            run.checkpointCandidates,
+            event.bookmarks.map(({ id }) => id),
+          ),
+          checkpointMatchIds: collectCheckpointMatches(
+            run.checkpointMatchIds,
+            event.bookmarks.map(({ id }) => id),
+            run.checkpointIds,
+          ),
         };
         await this.dependencies.state.setScrapeRun(updated);
         return success(updated);
@@ -793,19 +885,59 @@ export class BackgroundController {
         return success(failed);
       }
 
+      if (
+        event.status === "completed" &&
+        event.completionReason === "checkpoint_stop"
+      ) {
+        if (run.mode !== "quick") {
+          throw new BookmarkXError(
+            "invalid_capture_completion",
+            "A full review cannot stop at quick-update checkpoints.",
+          );
+        }
+        if (run.checkpointMatchIds.length < 3) {
+          throw new BookmarkXError(
+            "invalid_capture_completion",
+            "The quick-update checkpoint proof is incomplete.",
+          );
+        }
+      }
+      const fellBackToFull =
+        event.status === "completed" &&
+        run.mode === "quick" &&
+        event.completionReason === "stable_end";
       const completed: ScrapeRun = {
         ...run,
         status: event.status,
         fetched: Math.max(run.fetched, event.fetched),
         updatedAt: timestamp,
+        mode: fellBackToFull ? "full" : run.mode,
+        completionReason:
+          event.status === "completed"
+            ? fellBackToFull
+              ? "full_fallback"
+              : event.completionReason
+            : null,
       };
       if (event.status === "completed") {
-        const settings = await this.dependencies.settings.get();
-        await this.dependencies.archive.finalizeCapture(
-          run.id,
-          timestamp,
-          settings.data.keepArchived,
-        );
+        if (event.completionReason === "checkpoint_stop") {
+          await this.dependencies.archive.discardCapture(run.id);
+        } else {
+          const settings = await this.dependencies.settings.get();
+          await this.dependencies.archive.finalizeCapture(
+            run.id,
+            timestamp,
+            settings.data.keepArchived,
+          );
+        }
+        if (run.checkpointCandidates.length > 0) {
+          await this.dependencies.state.setScrapeCheckpoints({
+            ids: run.checkpointCandidates,
+            updatedAt: timestamp,
+          });
+        } else {
+          await this.dependencies.state.clearScrapeCheckpoints();
+        }
         this.dependencies.search.invalidate();
       }
       await this.dependencies.state.setScrapeRun(completed);

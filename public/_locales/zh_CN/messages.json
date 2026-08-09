@@ -149,7 +149,7 @@
     "message": "尚未获取任何书签。"
   },
   "lastCaptureAt": {
-    "message": "获取于 $DATE$",
+    "message": "上次完整检查：$DATE$",
     "placeholders": {
       "date": {
         "content": "$1"
@@ -157,7 +157,7 @@
     }
   },
   "neverCaptured": {
-    "message": "从未获取"
+    "message": "尚未进行完整检查"
   },
   "unknownDate": {
     "message": "未知日期"
@@ -168,6 +168,30 @@
   "captureDescription": {
     "message": "Bookmark X 会滚动已打开的书签页面，并将每条可见帖子保存到本地。"
   },
+  "captureModeLabel": { "message": "检查模式" },
+  "captureModeQuick": { "message": "快速更新" },
+  "captureModeFull": { "message": "完整检查" },
+  "captureModeQuickHelp": {
+    "message": "查找新内容，并在识别到近期书签后停止。"
+  },
+  "captureModeFullHelp": {
+    "message": "检查整个列表，并同步在其他设备上删除的书签。"
+  },
+  "captureModeFirstFullHelp": {
+    "message": "首次捕获必须安全地检查整个列表。"
+  },
+  "fullReviewReminder": {
+    "message": "距离上次完整检查已超过30天。建议现在执行一次。"
+  },
+  "captureRunningQuick": { "message": "正在快速更新" },
+  "captureRunningFull": { "message": "正在完整检查" },
+  "captureCompleteQuick": { "message": "快速更新完成" },
+  "captureCompleteFull": { "message": "完整检查完成" },
+  "captureCompleteFallback": {
+    "message": "检查点已变化；完整检查已完成"
+  },
+  "captureButtonQuick": { "message": "运行快速更新" },
+  "captureButtonFull": { "message": "运行完整检查" },
   "captureIdle": {
     "message": "已就绪"
   },

@@ -55,11 +55,13 @@ old folder, and select **Reload** on the Bookmark X card at
 3. Wait until the bookmarks timeline is visible.
 4. Open **Bookmark X** from Chrome's extension menu.
 5. Confirm that the popup says the page is ready.
-6. Select **Capture bookmarks**.
-7. Keep the X tab open while the extension scrolls and waits for new items to
+6. Choose **Quick update** for recent additions or **Full review** to reconcile
+   the whole list. The first capture automatically uses a full review.
+7. Select the capture button.
+8. Keep the X tab open while the extension scrolls and waits for new items to
    load. You may close the popup.
-8. Reopen Bookmark X to check the result.
-9. Choose one of the TXT export options:
+9. Reopen Bookmark X to check the result.
+10. Choose one of the TXT export options:
 
 | Export option             | Result                                                       |
 | ------------------------- | ------------------------------------------------------------ |
@@ -84,13 +86,19 @@ Bookmark X identifies each post by its canonical X status ID:
 Running capture again is therefore safe and does not create duplicate archive
 entries.
 
-## Full review and cross-device reconciliation
+## Quick updates and full reviews
 
-Every **Capture bookmarks** run is a full review. Bookmark X advances through
-the entire virtualized timeline, sends new posts in batches of at most 100, and
-confirms the end only after repeated quiet checks at the real page bottom.
-Visible X progress indicators reset that confirmation, including a loader that
-disappears and later returns.
+Choose **Quick update** to fetch recent additions without traversing a large
+library every time. Bookmark X keeps ten recent local checkpoint IDs and stops
+only after recognizing three of them consecutively. The first capture is always
+a **Full review**. If a quick update cannot find enough checkpoints, it safely
+continues to the real end and becomes a full review automatically.
+
+A full review advances through the entire virtualized timeline, sends posts in
+batches of at most 100, and confirms the end only after repeated quiet checks
+at the real page bottom. Visible X progress indicators reset that confirmation,
+including a loader that disappears and later returns. The extension shows a
+discreet reminder after 30 days without a successful full review.
 
 Only a successfully confirmed full review reconciles posts that were removed
 on another device. Cancelling, leaving the bookmarks route, closing the tab,
@@ -98,7 +106,9 @@ an endless loader, or any other error keeps already captured data but never
 archives or deletes an unseen post. By default, confirmed missing posts move to
 **Archived**. Turn off **Settings → Data → Keep archived bookmarks** to remove
 confirmed missing posts from the local library instead. This setting never
-changes the user's bookmarks on X.
+changes the user's bookmarks on X. A checkpoint-stopped quick update saves its
+new batches but never archives or deletes unseen posts and does not reset the
+full-review reminder.
 
 ## Live save and remove synchronization
 

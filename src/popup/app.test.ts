@@ -31,6 +31,8 @@ const emptyStatus: PopupStatus = {
     lastSuccessfulSyncAt: null,
   },
   scrape: null,
+  fullReviewDue: false,
+  quickUpdateAvailable: false,
 };
 
 const readyStatus: PopupStatus = {
@@ -51,7 +53,14 @@ const readyStatus: PopupStatus = {
     startedAt: "2026-07-29T10:00:00.000Z",
     updatedAt: "2026-07-29T10:01:00.000Z",
     errorCode: null,
+    mode: "full",
+    checkpointIds: [],
+    checkpointCandidates: ["123"],
+    checkpointMatchIds: [],
+    completionReason: "stable_end",
   },
+  fullReviewDue: false,
+  quickUpdateAvailable: true,
 };
 
 const libraryBookmark: NotedBookmark = {
@@ -1128,10 +1137,87 @@ describe("popup app", () => {
 
     expect(document.getElementById("total-count")?.textContent).toBe("42");
     expect(document.getElementById("capture-state")?.textContent).toBe(
-      "captureComplete",
+      "captureCompleteFull",
     );
     document.getElementById("capture-button")?.click();
     await vi.waitFor(() => expect(requests).toContain("START_SCRAPE"));
+    app.destroy();
+  });
+
+  it("offers a simple quick or full selector and sends the selected mode", async () => {
+    const requests: unknown[] = [];
+    const sendMessage = ((request) => {
+      requests.push(request);
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [libraryBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "LIST_TAGS") {
+        return Promise.resolve({ ok: true as const, data: { tags: [] } });
+      }
+      if (request.type === "LIST_FOLDERS") {
+        return Promise.resolve({ ok: true as const, data: { folders: [] } });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await app.ready;
+
+    const mode = document.getElementById("capture-mode") as HTMLSelectElement;
+    expect(mode.value).toBe("quick");
+    expect(mode.getAttribute("aria-describedby")).toBe("capture-mode-help");
+    mode.value = "full";
+    mode.dispatchEvent(new Event("change", { bubbles: true }));
+    document.getElementById("capture-button")?.click();
+
+    await vi.waitFor(() =>
+      expect(requests).toContainEqual({
+        type: "START_SCRAPE",
+        payload: { mode: "full" },
+      }),
+    );
+    app.destroy();
+  });
+
+  it("forces the first capture to full and shows the thirty-day reminder discreetly", async () => {
+    const firstCaptureStatus: PopupStatus = {
+      ...readyStatus,
+      scrape: null,
+      quickUpdateAvailable: false,
+      fullReviewDue: true,
+    };
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: firstCaptureStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [], nextCursor: null },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: { tags: [], folders: [] } });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await app.ready;
+
+    const mode = document.getElementById("capture-mode") as HTMLSelectElement;
+    expect(mode.value).toBe("full");
+    expect(
+      mode.querySelector<HTMLOptionElement>('option[value="quick"]')?.disabled,
+    ).toBe(true);
+    expect(document.getElementById("capture-mode-help")?.textContent).toBe(
+      "captureModeFirstFullHelp",
+    );
+    expect(document.getElementById("full-review-reminder")?.hidden).toBe(false);
+    expect(document.getElementById("full-review-reminder")?.textContent).toBe(
+      "fullReviewReminder",
+    );
     app.destroy();
   });
 

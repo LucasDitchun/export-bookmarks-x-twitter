@@ -60,6 +60,21 @@
             Open bookmarks
           </button>
 
+          <div id="capture-mode-field" class="capture-mode-field">
+            <label for="capture-mode" data-i18n="captureModeLabel">Review mode</label>
+            <select
+              id="capture-mode"
+              class="capture-mode-select"
+              aria-describedby="capture-mode-help"
+            >
+              <option value="quick" data-i18n="captureModeQuick">Quick update</option>
+              <option value="full" data-i18n="captureModeFull">Full review</option>
+            </select>
+            <p id="capture-mode-help" class="capture-mode-help"></p>
+          </div>
+
+          <p id="full-review-reminder" class="full-review-reminder" hidden></p>
+
           <div
             id="capture-feedback"
             class="capture-feedback"

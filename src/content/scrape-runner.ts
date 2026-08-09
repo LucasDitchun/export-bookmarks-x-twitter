@@ -11,6 +11,7 @@ export interface ScrapeWaitResult {
 
 export interface ScrapeRunnerOptions {
   scan: () => BookmarkSnapshot[];
+  checkpointIds?: readonly string[];
   isLoading?: () => boolean;
   isAtEnd?: () => boolean;
   isPageValid?: () => boolean;
@@ -27,11 +28,13 @@ export interface ScrapeRunnerOptions {
 export interface ScrapeResult {
   status: "completed" | "cancelled" | "incomplete";
   fetched: number;
+  completionReason?: "checkpoint_stop" | "stable_end";
   errorCode?: "capture_navigation_changed" | "capture_loading_timeout";
 }
 
 export async function runScrape({
   scan,
+  checkpointIds = [],
   isLoading = () => false,
   isAtEnd = () => true,
   isPageValid = () => true,
@@ -54,7 +57,9 @@ export async function runScrape({
     throw new RangeError("Loading pass limit must be a positive integer.");
   }
   const seen = new Set<string>();
+  const checkpointSet = new Set(checkpointIds);
   let deliveredCount = 0;
+  let consecutiveKnownCheckpoints = 0;
   let idlePasses = 0;
   let loadingPasses = 0;
   let lastReportedFetched = -1;
@@ -67,11 +72,21 @@ export async function runScrape({
         errorCode: "capture_navigation_changed",
       };
     }
-    const batch = scan().filter(({ id }) => {
-      if (seen.has(id)) return false;
+    const batch: BookmarkSnapshot[] = [];
+    let checkpointStop = false;
+    for (const bookmark of scan()) {
+      if (seen.has(bookmark.id)) continue;
+      const { id } = bookmark;
       seen.add(id);
-      return true;
-    });
+      batch.push(bookmark);
+      consecutiveKnownCheckpoints = checkpointSet.has(id)
+        ? consecutiveKnownCheckpoints + 1
+        : 0;
+      if (checkpointSet.size > 0 && consecutiveKnownCheckpoints >= 3) {
+        checkpointStop = true;
+        break;
+      }
+    }
 
     const loading = isLoading();
     const reachedEnd = isAtEnd();
@@ -98,7 +113,7 @@ export async function runScrape({
     }
 
     const contentUpdate = waitForContent(signal);
-    if (!loading && !quietEndCandidate) {
+    if (!loading && !quietEndCandidate && !checkpointStop) {
       scroll();
     }
     const waitResult = await contentUpdate;
@@ -122,6 +137,22 @@ export async function runScrape({
       }
     }
 
+    if (checkpointStop && !signal?.aborted) {
+      const checkpointStayedQuiet =
+        !loading &&
+        waitResult?.reason === "timeout" &&
+        !waitResult?.loadingObserved &&
+        !loadingAfterWait;
+      if (checkpointStayedQuiet) {
+        return {
+          status: "completed",
+          fetched: deliveredCount,
+          completionReason: "checkpoint_stop",
+        };
+      }
+      consecutiveKnownCheckpoints = 0;
+    }
+
     if (
       quietEndCandidate &&
       !signal?.aborted &&
@@ -132,7 +163,13 @@ export async function runScrape({
     ) {
       idlePasses += 1;
       if (idlePasses >= idlePassLimit) {
-        return { status: "completed", fetched: deliveredCount };
+        return {
+          status: "completed",
+          fetched: deliveredCount,
+          ...(checkpointSet.size > 0
+            ? { completionReason: "stable_end" as const }
+            : {}),
+        };
       }
     } else if (
       waitResult?.loadingObserved ||

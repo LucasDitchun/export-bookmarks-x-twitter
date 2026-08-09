@@ -14,6 +14,159 @@ function bookmark(id: string): BookmarkSnapshot {
 }
 
 describe("runScrape", () => {
+  it("stops a quick update only after three known checkpoints in a row", async () => {
+    const pages: BookmarkSnapshot[][] = [
+      [bookmark("9"), bookmark("8"), bookmark("7")],
+      [bookmark("7"), bookmark("6"), bookmark("5"), bookmark("4"), bookmark("3")],
+    ];
+    let index = 0;
+    let waits = 0;
+    const controller = new AbortController();
+    const received: string[] = [];
+    const scroll = vi.fn(() => {
+      index += 1;
+    });
+
+    const result = await runScrape({
+      scan: () => pages[Math.min(index, pages.length - 1)] ?? [],
+      checkpointIds: ["6", "5", "4", "3"],
+      signal: controller.signal,
+      scroll,
+      waitForContent: async () => {
+        waits += 1;
+        if (waits === 3) controller.abort();
+        return {
+          reason: waits === 1 ? "activity" : "timeout",
+          loadingObserved: false,
+        };
+      },
+      onBatch: async (items) => {
+        received.push(...items.map(({ id }) => id));
+      },
+      onProgress: () => undefined,
+    });
+
+    expect(result).toEqual({
+      status: "completed",
+      fetched: 6,
+      completionReason: "checkpoint_stop",
+    });
+    expect(received).toEqual(["9", "8", "7", "6", "5", "4"]);
+    expect(scroll).toHaveBeenCalledOnce();
+  });
+
+  it("waits past a checkpoint match when a loader reveals a late bookmark", async () => {
+    let page = 0;
+    let loading = true;
+    let waits = 0;
+    const received: string[] = [];
+    const pages = [
+      [bookmark("6"), bookmark("5"), bookmark("4")],
+      [
+        bookmark("9"),
+        bookmark("6"),
+        bookmark("5"),
+        bookmark("4"),
+        bookmark("3"),
+        bookmark("2"),
+        bookmark("1"),
+      ],
+    ];
+
+    const result = await runScrape({
+      scan: () => pages[page] ?? [],
+      checkpointIds: ["6", "5", "4", "3", "2", "1"],
+      isLoading: () => loading,
+      isAtEnd: () => true,
+      scroll: vi.fn(),
+      waitForContent: async () => {
+        waits += 1;
+        if (waits === 1) {
+          page = 1;
+          loading = false;
+          return { reason: "activity" as const, loadingObserved: true };
+        }
+        return { reason: "timeout" as const, loadingObserved: false };
+      },
+      onBatch: async (items) => {
+        received.push(...items.map(({ id }) => id));
+      },
+      onProgress: () => undefined,
+    });
+
+    expect(result).toEqual({
+      status: "completed",
+      fetched: 7,
+      completionReason: "checkpoint_stop",
+    });
+    expect(received).toEqual(["6", "5", "4", "9", "3", "2", "1"]);
+    expect(waits).toBe(2);
+  });
+
+  it("continues to stable end when fewer than three checkpoints overlap", async () => {
+    const pages: BookmarkSnapshot[][] = [
+      [bookmark("9"), bookmark("8"), bookmark("7")],
+      [bookmark("7"), bookmark("6"), bookmark("5"), bookmark("4")],
+      [bookmark("4")],
+    ];
+    let index = 0;
+
+    const result = await runScrape({
+      scan: () => pages[Math.min(index, pages.length - 1)] ?? [],
+      checkpointIds: ["6", "5", "1"],
+      isAtEnd: () => index >= 2,
+      scroll: () => {
+        index += 1;
+      },
+      waitForContent: async () => ({ reason: "timeout", loadingObserved: false }),
+      onBatch: async () => undefined,
+      onProgress: () => undefined,
+      idlePassLimit: 1,
+    });
+
+    expect(result).toEqual({
+      status: "completed",
+      fetched: 6,
+      completionReason: "stable_end",
+    });
+  });
+
+  it("resets a partial checkpoint match when an unknown item appears", async () => {
+    const pages: BookmarkSnapshot[][] = [
+      [bookmark("9"), bookmark("6"), bookmark("5")],
+      [bookmark("5"), bookmark("99"), bookmark("4"), bookmark("3"), bookmark("2")],
+    ];
+    let index = 0;
+    let waits = 0;
+    const received: string[] = [];
+
+    const result = await runScrape({
+      scan: () => pages[Math.min(index, pages.length - 1)] ?? [],
+      checkpointIds: ["6", "5", "4", "3", "2"],
+      scroll: () => {
+        index += 1;
+      },
+      waitForContent: async () => {
+        waits += 1;
+        return {
+          reason: waits === 1 ? "activity" : "timeout",
+          loadingObserved: false,
+        };
+      },
+      onBatch: async (items) => {
+        received.push(...items.map(({ id }) => id));
+      },
+      onProgress: () => undefined,
+    });
+
+    expect(result).toEqual({
+      status: "completed",
+      fetched: 7,
+      completionReason: "checkpoint_stop",
+    });
+    expect(received).toEqual(["9", "6", "5", "99", "4", "3", "2"]);
+  });
+
   it("collects virtualized pages, emits only new batches, and stops after idle passes", async () => {
     const pages: BookmarkSnapshot[][] = [
       [bookmark("1"), bookmark("2")],

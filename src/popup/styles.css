@@ -295,6 +295,47 @@ h3 {
   margin-top: 18px;
 }
 
+.capture-mode-field {
+  display: grid;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.capture-mode-field > label {
+  font-weight: 800;
+}
+
+.capture-mode-select {
+  width: 100%;
+  min-height: 48px;
+  padding: 9px 42px 9px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+}
+
+.capture-mode-select:focus-visible {
+  outline: 4px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.capture-mode-help,
+.full-review-reminder {
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.full-review-reminder {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--ink);
+  background: var(--canvas);
+}
+
 .capture-feedback {
   display: flex;
   min-height: 48px;

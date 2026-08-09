@@ -130,15 +130,39 @@
   "archivedLabel": { "message": "Arquivados" },
   "emptyArchive": { "message": "Nenhum bookmark capturado ainda." },
   "lastCaptureAt": {
-    "message": "Capturado em $DATE$",
+    "message": "Última revisão completa em $DATE$",
     "placeholders": { "date": { "content": "$1" } }
   },
-  "neverCaptured": { "message": "Nunca capturado" },
+  "neverCaptured": { "message": "Nenhuma revisão completa ainda" },
   "unknownDate": { "message": "Data desconhecida" },
   "captureTitle": { "message": "Capturar bookmarks" },
   "captureDescription": {
     "message": "O Bookmark X rola a página aberta de bookmarks e salva localmente cada post visível."
   },
+  "captureModeLabel": { "message": "Modo de revisão" },
+  "captureModeQuick": { "message": "Atualização rápida" },
+  "captureModeFull": { "message": "Revisão completa" },
+  "captureModeQuickHelp": {
+    "message": "Encontra itens novos e para ao reconhecer seus bookmarks recentes."
+  },
+  "captureModeFullHelp": {
+    "message": "Verifica toda a lista e reconcilia bookmarks removidos em outro dispositivo."
+  },
+  "captureModeFirstFullHelp": {
+    "message": "Sua primeira captura precisa revisar toda a lista com segurança."
+  },
+  "fullReviewReminder": {
+    "message": "Já faz mais de 30 dias desde a última revisão completa. Considere executar uma agora."
+  },
+  "captureRunningQuick": { "message": "Atualização rápida em andamento" },
+  "captureRunningFull": { "message": "Revisão completa em andamento" },
+  "captureCompleteQuick": { "message": "Atualização rápida concluída" },
+  "captureCompleteFull": { "message": "Revisão completa concluída" },
+  "captureCompleteFallback": {
+    "message": "Os checkpoints mudaram; revisão completa concluída"
+  },
+  "captureButtonQuick": { "message": "Executar atualização rápida" },
+  "captureButtonFull": { "message": "Executar revisão completa" },
   "captureIdle": { "message": "Pronto" },
   "captureRunning": { "message": "Capturando" },
   "captureComplete": { "message": "Concluído" },

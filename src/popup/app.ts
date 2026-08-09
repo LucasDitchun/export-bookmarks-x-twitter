@@ -52,6 +52,9 @@ interface RequiredElements {
   captureButton: HTMLButtonElement;
   captureButtonLabel: HTMLElement;
   captureFeedback: HTMLElement;
+  captureModeField: HTMLElement;
+  captureModeHelp: HTMLElement;
+  captureModeSelect: HTMLSelectElement;
   captureProgress: HTMLElement;
   captureProgressCopy: HTMLElement;
   captureState: HTMLElement;
@@ -63,6 +66,7 @@ interface RequiredElements {
   emptyNote: HTMLElement;
   exportFullButton: HTMLButtonElement;
   exportUrlsButton: HTMLButtonElement;
+  fullReviewReminder: HTMLElement;
   lastSync: HTMLElement;
   libraryEmpty: HTMLElement;
   libraryPanel: HTMLElement;
@@ -120,6 +124,9 @@ function getElements(document: Document): RequiredElements {
     captureButton: requireElement(document, "capture-button"),
     captureButtonLabel: requireElement(document, "capture-button-label"),
     captureFeedback: requireElement(document, "capture-feedback"),
+    captureModeField: requireElement(document, "capture-mode-field"),
+    captureModeHelp: requireElement(document, "capture-mode-help"),
+    captureModeSelect: requireElement(document, "capture-mode"),
     captureProgress: requireElement(document, "capture-progress"),
     captureProgressCopy: requireElement(document, "capture-progress-copy"),
     captureState: requireElement(document, "capture-state"),
@@ -131,6 +138,7 @@ function getElements(document: Document): RequiredElements {
     emptyNote: requireElement(document, "empty-note"),
     exportFullButton: requireElement(document, "export-full-button"),
     exportUrlsButton: requireElement(document, "export-urls-button"),
+    fullReviewReminder: requireElement(document, "full-review-reminder"),
     lastSync: requireElement(document, "last-sync"),
     libraryEmpty: requireElement(document, "library-empty"),
     libraryPanel: requireElement(document, "library-view-panel"),
@@ -219,6 +227,7 @@ export function createPopupApp(options: PopupAppOptions): {
   let filterAsYouType = initialFilterAsYouType;
   let libraryRefreshWaiters: Array<() => void> = [];
   let captureRefreshPending = false;
+  let captureModeTouched = false;
   let editRevision = 0;
   let noteSaveHandle: number | null = null;
   let debouncedNoteSave: PendingNoteSave | null = null;
@@ -264,6 +273,20 @@ export function createPopupApp(options: PopupAppOptions): {
   };
   const captureLabel = (scrape: ScrapeRun | null): string => {
     if (!scrape) return translate("captureIdle");
+    if (scrape.status === "running") {
+      return translate(
+        scrape.mode === "quick" ? "captureRunningQuick" : "captureRunningFull",
+      );
+    }
+    if (scrape.status === "completed") {
+      if (scrape.completionReason === "checkpoint_stop") {
+        return translate("captureCompleteQuick");
+      }
+      if (scrape.completionReason === "full_fallback") {
+        return translate("captureCompleteFallback");
+      }
+      return translate("captureCompleteFull");
+    }
     const keys: Record<ScrapeRun["status"], string> = {
       idle: "captureIdle",
       running: "captureRunning",
@@ -277,6 +300,7 @@ export function createPopupApp(options: PopupAppOptions): {
   const updateDisabledControls = (): void => {
     const running = status?.scrape?.status === "running";
     elements.captureButton.disabled = busy || (!running && !status?.pageReady);
+    elements.captureModeSelect.disabled = busy || running || !status?.pageReady;
     elements.openBookmarksButton.disabled = busy;
     elements.confirmClearButton.disabled = busy;
     elements.openClearDialogButton.disabled = busy;
@@ -961,6 +985,29 @@ export function createPopupApp(options: PopupAppOptions): {
 
     const running = scrape?.status === "running";
     const showCaptureControls = pageReady || running;
+    const quickOption = elements.captureModeSelect.querySelector<HTMLOptionElement>(
+      'option[value="quick"]',
+    );
+    if (quickOption) quickOption.disabled = !status.quickUpdateAvailable;
+    if (running && scrape) {
+      elements.captureModeSelect.value = scrape.mode;
+    } else if (!status.quickUpdateAvailable) {
+      elements.captureModeSelect.value = "full";
+    } else if (!captureModeTouched) {
+      elements.captureModeSelect.value = "quick";
+    }
+    const selectedMode =
+      elements.captureModeSelect.value === "quick" ? "quick" : "full";
+    elements.captureModeField.hidden = !showCaptureControls;
+    elements.captureModeHelp.textContent = !status.quickUpdateAvailable
+      ? translate("captureModeFirstFullHelp")
+      : translate(
+          selectedMode === "quick" ? "captureModeQuickHelp" : "captureModeFullHelp",
+        );
+    elements.fullReviewReminder.hidden = !status.fullReviewDue || running;
+    elements.fullReviewReminder.textContent = status.fullReviewDue
+      ? translate("fullReviewReminder")
+      : "";
     elements.captureFeedback.hidden = !showCaptureControls;
     elements.captureFeedback.setAttribute("aria-busy", String(running));
     elements.captureButton.hidden = !showCaptureControls;
@@ -977,7 +1024,11 @@ export function createPopupApp(options: PopupAppOptions): {
       : "";
     elements.captureButton.dataset.action = running ? "cancel" : "start";
     elements.captureButtonLabel.textContent = translate(
-      running ? "cancelCaptureButton" : "captureButton",
+      running
+        ? "cancelCaptureButton"
+        : selectedMode === "quick"
+          ? "captureButtonQuick"
+          : "captureButtonFull",
     );
     if (scrape?.status === "error" && scrape.errorCode) {
       showAlert(errorMessage({ code: scrape.errorCode, message: "" }));
@@ -996,7 +1047,13 @@ export function createPopupApp(options: PopupAppOptions): {
     const response = await sendMessage<PopupStatus>({ type: "GET_STATUS" });
     if (destroyed) return;
     if (!response.ok) {
-      status = { pageReady: false, stats: EMPTY_STATS, scrape: null };
+      status = {
+        pageReady: false,
+        stats: EMPTY_STATS,
+        scrape: null,
+        fullReviewDue: false,
+        quickUpdateAvailable: false,
+      };
       showAlert(errorMessage(response.error));
     } else {
       status = response.data;
@@ -1054,14 +1111,21 @@ export function createPopupApp(options: PopupAppOptions): {
   });
   elements.captureButton.addEventListener("click", () => {
     const isCancel = elements.captureButton.dataset.action === "cancel";
+    const mode = elements.captureModeSelect.value === "quick" ? "quick" : "full";
     void perform(
-      { type: isCancel ? "CANCEL_SCRAPE" : "START_SCRAPE" },
+      isCancel
+        ? { type: "CANCEL_SCRAPE" }
+        : { type: "START_SCRAPE", payload: { mode } },
       isCancel
         ? undefined
         : () => {
             captureRefreshPending = true;
           },
     );
+  });
+  elements.captureModeSelect.addEventListener("change", () => {
+    captureModeTouched = true;
+    render();
   });
   elements.openClearDialogButton.addEventListener("click", () => {
     elements.clearDialog.showModal();

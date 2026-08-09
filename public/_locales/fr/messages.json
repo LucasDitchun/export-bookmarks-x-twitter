@@ -165,7 +165,7 @@
     "message": "Aucun signet capturé pour le moment."
   },
   "lastCaptureAt": {
-    "message": "Capturé le $DATE$",
+    "message": "Dernière vérification complète : $DATE$",
     "placeholders": {
       "date": {
         "content": "$1"
@@ -173,7 +173,7 @@
     }
   },
   "neverCaptured": {
-    "message": "Jamais capturé"
+    "message": "Aucune vérification complète"
   },
   "unknownDate": {
     "message": "Date inconnue"
@@ -184,6 +184,30 @@
   "captureDescription": {
     "message": "Bookmark X fait défiler votre page de signets ouverte et enregistre localement chaque publication visible."
   },
+  "captureModeLabel": { "message": "Mode de vérification" },
+  "captureModeQuick": { "message": "Mise à jour rapide" },
+  "captureModeFull": { "message": "Vérification complète" },
+  "captureModeQuickHelp": {
+    "message": "Trouve les nouveaux éléments, puis s’arrête après avoir reconnu vos signets récents."
+  },
+  "captureModeFullHelp": {
+    "message": "Vérifie toute la liste et réconcilie les signets supprimés sur un autre appareil."
+  },
+  "captureModeFirstFullHelp": {
+    "message": "La première capture doit vérifier toute la liste en toute sécurité."
+  },
+  "fullReviewReminder": {
+    "message": "La dernière vérification complète date de plus de 30 jours. Envisagez d’en lancer une maintenant."
+  },
+  "captureRunningQuick": { "message": "Mise à jour rapide en cours" },
+  "captureRunningFull": { "message": "Vérification complète en cours" },
+  "captureCompleteQuick": { "message": "Mise à jour rapide terminée" },
+  "captureCompleteFull": { "message": "Vérification complète terminée" },
+  "captureCompleteFallback": {
+    "message": "Points de contrôle modifiés ; vérification complète terminée"
+  },
+  "captureButtonQuick": { "message": "Lancer la mise à jour rapide" },
+  "captureButtonFull": { "message": "Lancer la vérification complète" },
   "captureIdle": {
     "message": "Prêt"
   },

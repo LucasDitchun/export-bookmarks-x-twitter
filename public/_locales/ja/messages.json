@@ -161,7 +161,7 @@
     "message": "まだブックマークを取得していません。"
   },
   "lastCaptureAt": {
-    "message": "$DATE$ に取得",
+    "message": "最終完全確認: $DATE$",
     "placeholders": {
       "date": {
         "content": "$1"
@@ -169,7 +169,7 @@
     }
   },
   "neverCaptured": {
-    "message": "未取得"
+    "message": "完全確認はまだありません"
   },
   "unknownDate": {
     "message": "日付不明"
@@ -180,6 +180,30 @@
   "captureDescription": {
     "message": "Bookmark Xが開いているブックマークページをスクロールし、表示された各ポストをローカルに保存します。"
   },
+  "captureModeLabel": { "message": "確認モード" },
+  "captureModeQuick": { "message": "クイック更新" },
+  "captureModeFull": { "message": "完全確認" },
+  "captureModeQuickHelp": {
+    "message": "新しい項目を見つけ、最近のブックマークを認識すると停止します。"
+  },
+  "captureModeFullHelp": {
+    "message": "リスト全体を確認し、別の端末で削除されたブックマークを反映します。"
+  },
+  "captureModeFirstFullHelp": {
+    "message": "初回の取得では、リスト全体を安全に確認する必要があります。"
+  },
+  "fullReviewReminder": {
+    "message": "最後の完全確認から30日以上経過しています。今すぐ実行することをおすすめします。"
+  },
+  "captureRunningQuick": { "message": "クイック更新中" },
+  "captureRunningFull": { "message": "完全確認中" },
+  "captureCompleteQuick": { "message": "クイック更新が完了しました" },
+  "captureCompleteFull": { "message": "完全確認が完了しました" },
+  "captureCompleteFallback": {
+    "message": "チェックポイントが変わったため、完全確認を完了しました"
+  },
+  "captureButtonQuick": { "message": "クイック更新を実行" },
+  "captureButtonFull": { "message": "完全確認を実行" },
   "captureIdle": {
     "message": "準備完了"
   },

@@ -41,10 +41,15 @@ async function sendCaptureEvent(event: ContentEvent): Promise<void> {
   throw new CaptureDeliveryError(code);
 }
 
-async function capture(runId: string, controller: AbortController): Promise<void> {
+async function capture(
+  runId: string,
+  controller: AbortController,
+  checkpointIds: readonly string[],
+): Promise<void> {
   try {
     const result = await runScrape({
       scan: () => extractBookmarks(document),
+      checkpointIds,
       isLoading: () => isPageLoading(document),
       isPageValid: () => {
         const location = new URL(window.location.href);
@@ -101,7 +106,7 @@ async function capture(runId: string, controller: AbortController): Promise<void
         runId,
         status: "completed",
         fetched: result.fetched,
-        completionReason: "stable_end",
+        completionReason: result.completionReason ?? "stable_end",
       });
       return;
     }
@@ -135,17 +140,26 @@ async function capture(runId: string, controller: AbortController): Promise<void
 function isControlRequest(value: unknown): value is ContentControlRequest {
   if (typeof value !== "object" || value === null) return false;
   const request = value as Record<string, unknown>;
-  if (request.type === "START_SCRAPE" || request.type === "CANCEL_SCRAPE") {
-    return typeof request.runId === "string";
-  }
-  return (
-    request.type === "REFRESH_BOOKMARK_METADATA" &&
-    (request.bookmarkIds === undefined ||
+  if (request.type === "REFRESH_BOOKMARK_METADATA") {
+    return (
+      request.bookmarkIds === undefined ||
       (Array.isArray(request.bookmarkIds) &&
         request.bookmarkIds.length <= 100 &&
         request.bookmarkIds.every(
           (bookmarkId) => typeof bookmarkId === "string" && /^\d+$/.test(bookmarkId),
-        )))
+        ))
+    );
+  }
+  if (typeof request.runId !== "string") return false;
+  if (request.type === "CANCEL_SCRAPE") return true;
+  if (request.type !== "START_SCRAPE") return false;
+  if (request.mode !== "quick" && request.mode !== "full") return false;
+  if (!Array.isArray(request.checkpointIds) || request.checkpointIds.length > 10) {
+    return false;
+  }
+  return (
+    request.checkpointIds.every((id) => typeof id === "string" && /^\d+$/.test(id)) &&
+    new Set(request.checkpointIds).size === request.checkpointIds.length
   );
 }
 
@@ -196,7 +210,7 @@ chrome.runtime.onMessage.addListener((request: unknown, sender, sendResponse) =>
   const controller = new AbortController();
   activeCapture = { runId: request.runId, controller };
   sendResponse({ accepted: true });
-  void capture(request.runId, controller);
+  void capture(request.runId, controller, request.checkpointIds);
   return false;
 });
 
