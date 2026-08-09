@@ -428,6 +428,51 @@ h3 {
   margin-top: 16px;
 }
 
+.library-search {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.library-search label {
+  font-size: 0.9375rem;
+  font-weight: 800;
+}
+
+.library-search-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.library-search input,
+.library-search button {
+  min-height: 2.875rem;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  font-size: 1.0625rem;
+}
+
+.library-search input {
+  width: 100%;
+  padding: 0.5625rem 0.75rem;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.library-search button {
+  padding-inline: 0.875rem;
+  background: var(--paper);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.library-search .note-help,
+.library-search-status {
+  margin: 0;
+}
+
 .library-view-button {
   min-height: 44px;
   padding: 8px 10px;

@@ -122,4 +122,22 @@ describe("shared library settings UI", () => {
     expect(document.documentElement.dataset.metadataCategoryIndicator).toBe("true");
     controller.destroy();
   });
+
+  it("publishes the latest search behavior to every shared library surface", async () => {
+    const applied: boolean[] = [];
+    const settings = {
+      ...structuredClone(DEFAULT_SETTINGS),
+      search: { filterAsYouType: false },
+    };
+    const controller = createSettingsUiController({
+      document,
+      load: async () => settings,
+      onApply: (current) => applied.push(current.search.filterAsYouType),
+    });
+
+    await controller.refresh();
+
+    expect(applied).toEqual([false]);
+    controller.destroy();
+  });
 });

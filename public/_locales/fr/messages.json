@@ -34,6 +34,20 @@
   },
   "libraryTitle": { "message": "Bibliothèque de favoris" },
   "libraryHelp": { "message": "Sélectionnez un favori pour ajouter une note privée." },
+  "searchLabel": { "message": "Rechercher les posts enregistrés" },
+  "searchPlaceholder": { "message": "Saisissez ce dont vous vous souvenez" },
+  "searchHelp": {
+    "message": "Recherchez dans le texte, les personnes, les notes, les tags et les dossiers. Tout reste local."
+  },
+  "searchButton": { "message": "Rechercher" },
+  "searchReady": { "message": "Appuyez sur Entrée ou Rechercher." },
+  "searching": { "message": "Recherche…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ résultats",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "Aucun favori correspondant dans cette vue." },
+  "searchLoadError": { "message": "Impossible de rechercher les favoris." },
   "libraryViewsLabel": { "message": "Vues de la bibliothèque de favoris" },
   "libraryViewInbox": { "message": "À classer" },
   "libraryViewCurrent": { "message": "Sur X actuellement" },

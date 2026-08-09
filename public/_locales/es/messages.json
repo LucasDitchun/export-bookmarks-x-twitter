@@ -32,6 +32,20 @@
   },
   "libraryTitle": { "message": "Biblioteca de marcadores" },
   "libraryHelp": { "message": "Selecciona un marcador para añadir una nota privada." },
+  "searchLabel": { "message": "Buscar publicaciones guardadas" },
+  "searchPlaceholder": { "message": "Escribe lo que recuerdes" },
+  "searchHelp": {
+    "message": "Busca texto, personas, notas, etiquetas y carpetas. Todo permanece local."
+  },
+  "searchButton": { "message": "Buscar" },
+  "searchReady": { "message": "Pulsa Intro o Buscar." },
+  "searching": { "message": "Buscando…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ resultados",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "No hay marcadores coincidentes en esta vista." },
+  "searchLoadError": { "message": "No se pudieron buscar los marcadores." },
   "libraryViewsLabel": { "message": "Vistas de la biblioteca de marcadores" },
   "libraryViewInbox": { "message": "Bandeja" },
   "libraryViewCurrent": { "message": "En X ahora" },

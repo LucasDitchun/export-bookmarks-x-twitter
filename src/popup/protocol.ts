@@ -7,6 +7,7 @@ export type {
   JsonBackupRestoreResult,
   BookmarkDetailResult,
   BookmarkListPage,
+  BookmarkSearchPage,
   BookmarkView,
   NotedBookmark,
   PopupRequest,

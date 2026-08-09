@@ -5,6 +5,7 @@ import { TagRepository } from "../storage/tag-repository";
 import { FolderRepository } from "../storage/folder-repository";
 import { SettingsRepository } from "../settings/settings-repository";
 import { BackupRepository } from "../storage/backup-repository";
+import { SearchRepository } from "../storage/search-repository";
 import { BackgroundController } from "./controller";
 
 const state = new ExtensionStateRepository({
@@ -16,6 +17,7 @@ const archive = new ArchiveRepository();
 const bookmarks = new BookmarkRepository();
 const tags = new TagRepository();
 const folders = new FolderRepository();
+const search = new SearchRepository();
 const settings = new SettingsRepository({
   get: (keys) => chrome.storage.local.get(keys),
   set: (items) => chrome.storage.local.set(items),
@@ -40,6 +42,7 @@ const controller = new BackgroundController({
   bookmarks,
   tags,
   folders,
+  search,
   settings,
   backup,
   state,

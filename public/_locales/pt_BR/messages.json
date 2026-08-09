@@ -34,6 +34,20 @@
   "libraryHelp": {
     "message": "Selecione um favorito para adicionar uma nota privada."
   },
+  "searchLabel": { "message": "Pesquisar posts salvos" },
+  "searchPlaceholder": { "message": "Digite o que você lembra" },
+  "searchHelp": {
+    "message": "Pesquise texto, pessoas, notas, tags e pastas. Tudo fica local."
+  },
+  "searchButton": { "message": "Pesquisar" },
+  "searchReady": { "message": "Pressione Enter ou Pesquisar." },
+  "searching": { "message": "Pesquisando…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ resultados",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "Nenhum favorito correspondente nesta visualização." },
+  "searchLoadError": { "message": "Não foi possível pesquisar os favoritos." },
   "libraryViewsLabel": { "message": "Visualizações da biblioteca de favoritos" },
   "libraryViewInbox": { "message": "Entrada" },
   "libraryViewCurrent": { "message": "No X agora" },

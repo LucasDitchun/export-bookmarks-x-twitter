@@ -1,5 +1,6 @@
 import { exportBookmarks } from "../domain/export-bookmarks";
 import { BackupValidationError } from "../domain/backup";
+import { MAX_SEARCH_QUERY_LENGTH } from "../domain/search-bookmarks";
 import {
   isSupportedLocale,
   type BookmarkRecord,
@@ -65,6 +66,15 @@ interface BackgroundDependencies {
     }): Promise<unknown>;
     get(id: string): Promise<unknown>;
     saveNote(id: string, note: string): Promise<unknown>;
+  };
+  search: {
+    search(options: {
+      query: string;
+      view: BookmarkView;
+      cursor?: string;
+      limit: number;
+    }): Promise<unknown>;
+    invalidate(): void;
   };
   tags: {
     list(): Promise<unknown>;
@@ -167,6 +177,18 @@ function isUiRequest(value: unknown): value is UiRequest {
         view === "current" ||
         view === "inbox" ||
         view === "archived") &&
+      (cursor === undefined || typeof cursor === "string") &&
+      (limit === undefined ||
+        (typeof limit === "number" && Number.isSafeInteger(limit) && limit > 0))
+    );
+  }
+  if (value.type === "SEARCH_BOOKMARKS") {
+    if (!isRecord(value.payload)) return false;
+    const { query, view, cursor, limit } = value.payload;
+    return (
+      typeof query === "string" &&
+      query.length <= MAX_SEARCH_QUERY_LENGTH &&
+      (view === "current" || view === "inbox" || view === "archived") &&
       (cursor === undefined || typeof cursor === "string") &&
       (limit === undefined ||
         (typeof limit === "number" && Number.isSafeInteger(limit) && limit > 0))
@@ -388,52 +410,76 @@ export class BackgroundController {
             }),
           );
         }
+        case "SEARCH_BOOKMARKS": {
+          const limit = Math.min(request.payload.limit ?? 50, 100);
+          const cursor = request.payload.cursor;
+          return success(
+            await this.dependencies.search.search({
+              query: request.payload.query,
+              view: request.payload.view,
+              limit,
+              ...(cursor === undefined ? {} : { cursor }),
+            }),
+          );
+        }
         case "GET_BOOKMARK":
           return success({
             bookmark: await this.dependencies.bookmarks.get(request.payload.id),
           });
-        case "SAVE_BOOKMARK_NOTE":
-          return success({
-            bookmark: await this.dependencies.bookmarks.saveNote(
-              request.payload.id,
-              request.payload.note,
-            ),
-          });
+        case "SAVE_BOOKMARK_NOTE": {
+          const bookmark = await this.dependencies.bookmarks.saveNote(
+            request.payload.id,
+            request.payload.note,
+          );
+          this.dependencies.search.invalidate();
+          return success({ bookmark });
+        }
         case "LIST_TAGS":
           return success({ tags: await this.dependencies.tags.list() });
-        case "ADD_BOOKMARK_TAG":
-          return success(
-            await this.dependencies.tags.add(request.payload.id, request.payload.name),
+        case "ADD_BOOKMARK_TAG": {
+          const result = await this.dependencies.tags.add(
+            request.payload.id,
+            request.payload.name,
           );
-        case "REMOVE_BOOKMARK_TAG":
-          return success({
-            bookmark: await this.dependencies.tags.remove(
-              request.payload.id,
-              request.payload.tagId,
-            ),
-          });
+          this.dependencies.search.invalidate();
+          return success(result);
+        }
+        case "REMOVE_BOOKMARK_TAG": {
+          const bookmark = await this.dependencies.tags.remove(
+            request.payload.id,
+            request.payload.tagId,
+          );
+          this.dependencies.search.invalidate();
+          return success({ bookmark });
+        }
         case "LIST_FOLDERS":
           return success({ folders: await this.dependencies.folders.list() });
-        case "CREATE_FOLDER":
-          return success({
-            folder: await this.dependencies.folders.create(request.payload),
-          });
-        case "RENAME_FOLDER":
-          return success({
-            folder: await this.dependencies.folders.rename(
-              request.payload.id,
-              request.payload.name,
-            ),
-          });
-        case "DELETE_FOLDER":
-          return success(await this.dependencies.folders.delete(request.payload.id));
-        case "ASSIGN_BOOKMARK_FOLDER":
-          return success({
-            bookmark: await this.dependencies.folders.assignBookmark(
-              request.payload.bookmarkId,
-              request.payload.folderId,
-            ),
-          });
+        case "CREATE_FOLDER": {
+          const folder = await this.dependencies.folders.create(request.payload);
+          this.dependencies.search.invalidate();
+          return success({ folder });
+        }
+        case "RENAME_FOLDER": {
+          const folder = await this.dependencies.folders.rename(
+            request.payload.id,
+            request.payload.name,
+          );
+          this.dependencies.search.invalidate();
+          return success({ folder });
+        }
+        case "DELETE_FOLDER": {
+          const result = await this.dependencies.folders.delete(request.payload.id);
+          this.dependencies.search.invalidate();
+          return success(result);
+        }
+        case "ASSIGN_BOOKMARK_FOLDER": {
+          const bookmark = await this.dependencies.folders.assignBookmark(
+            request.payload.bookmarkId,
+            request.payload.folderId,
+          );
+          this.dependencies.search.invalidate();
+          return success({ bookmark });
+        }
         case "OPEN_BOOKMARKS":
           await this.dependencies.browser.openBookmarks();
           return success(null);
@@ -444,6 +490,7 @@ export class BackgroundController {
         case "CLEAR_ARCHIVE":
           await this.dependencies.archive.clear();
           await this.dependencies.state.clearScrapeRun();
+          this.dependencies.search.invalidate();
           return success(null);
         case "EXPORT_BACKUP":
           return success(await this.dependencies.backup.export());
@@ -460,6 +507,7 @@ export class BackgroundController {
               request.payload.content,
               request.payload.mode,
             );
+            this.dependencies.search.invalidate();
             await this.dependencies.state.clearScrapeRun();
             try {
               const settings = await this.dependencies.settings.get();
@@ -474,6 +522,7 @@ export class BackgroundController {
             return success(restored);
           } catch (error) {
             if (error instanceof BackupSettingsWriteError) {
+              this.dependencies.search.invalidate();
               await this.dependencies.state.clearScrapeRun();
             }
             throw error;
@@ -605,6 +654,7 @@ export class BackgroundController {
           run.id,
           timestamp,
         );
+        this.dependencies.search.invalidate();
         const updated: ScrapeRun = {
           ...run,
           fetched: run.fetched + event.bookmarks.length,
@@ -645,6 +695,7 @@ export class BackgroundController {
       };
       if (event.status === "completed") {
         await this.dependencies.archive.finalizeCapture(run.id, timestamp);
+        this.dependencies.search.invalidate();
       }
       await this.dependencies.state.setScrapeRun(completed);
       return success(completed);

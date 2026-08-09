@@ -11,6 +11,7 @@ import { createFolderUi } from "./folder-ui";
 import type {
   BookmarkDetailResult,
   BookmarkListPage,
+  BookmarkSearchPage,
   BookmarkView,
   ExportResult,
   NotedBookmark,
@@ -35,6 +36,7 @@ interface PopupAppOptions {
   readBackupFile?: (file: File) => Promise<string>;
   confirmRestore?: (message: string) => boolean;
   reload?: () => void;
+  filterAsYouType?: boolean;
 }
 
 interface RequiredElements {
@@ -57,6 +59,9 @@ interface RequiredElements {
   lastSync: HTMLElement;
   libraryEmpty: HTMLElement;
   libraryPanel: HTMLElement;
+  librarySearch: HTMLInputElement;
+  librarySearchButton: HTMLButtonElement;
+  librarySearchStatus: HTMLElement;
   libraryStatus: HTMLElement;
   loadMoreBookmarks: HTMLButtonElement;
   loadingView: HTMLElement;
@@ -122,6 +127,9 @@ function getElements(document: Document): RequiredElements {
     lastSync: requireElement(document, "last-sync"),
     libraryEmpty: requireElement(document, "library-empty"),
     libraryPanel: requireElement(document, "library-view-panel"),
+    librarySearch: requireElement(document, "library-search"),
+    librarySearchButton: requireElement(document, "library-search-button"),
+    librarySearchStatus: requireElement(document, "library-search-status"),
     libraryStatus: requireElement(document, "library-status"),
     loadMoreBookmarks: requireElement(document, "load-more-bookmarks"),
     loadingView: requireElement(document, "loading-view"),
@@ -164,6 +172,7 @@ function defaultDownload(result: ExportResult): void {
 export function createPopupApp(options: PopupAppOptions): {
   destroy: () => void;
   ready: Promise<void>;
+  setFilterAsYouType: (enabled: boolean) => void;
 } {
   const {
     document,
@@ -176,9 +185,11 @@ export function createPopupApp(options: PopupAppOptions): {
     readBackupFile = (file) => file.text(),
     confirmRestore = (message) => window.confirm(message),
     reload = () => window.location.reload(),
+    filterAsYouType: initialFilterAsYouType = true,
   } = options;
   const elements = getElements(document);
   elements.tagInput.placeholder = translate("tagInputPlaceholder");
+  elements.librarySearch.placeholder = translate("searchPlaceholder");
   let status: PopupStatus | null = null;
   let busy = false;
   let refreshHandle: number | null = null;
@@ -194,6 +205,9 @@ export function createPopupApp(options: PopupAppOptions): {
   let libraryGeneration = 0;
   let libraryBusy = false;
   let libraryRefreshPending = false;
+  let searchQuery = "";
+  let searchHandle: number | null = null;
+  let filterAsYouType = initialFilterAsYouType;
   let captureRefreshPending = false;
   let editRevision = 0;
   let noteSaveHandle: number | null = null;
@@ -362,7 +376,9 @@ export function createPopupApp(options: PopupAppOptions): {
       current: "libraryEmptyCurrent",
       archived: "libraryEmptyArchived",
     };
-    elements.libraryEmpty.textContent = translate(emptyMessageKeys[libraryView]);
+    elements.libraryEmpty.textContent = translate(
+      searchQuery ? "searchEmpty" : emptyMessageKeys[libraryView],
+    );
     elements.libraryEmpty.hidden = bookmarks.length > 0;
     elements.loadMoreBookmarks.hidden = nextBookmarkCursor === null;
     elements.loadMoreBookmarks.disabled = libraryBusy;
@@ -525,7 +541,7 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.libraryStatus.textContent = translate("libraryLoading");
     renderLibraryView();
     if (focus) viewButtons[view].focus();
-    void loadLibrary(undefined, false);
+    void loadActiveLibrary(undefined, false);
   };
 
   const queueDebouncedNote = (): void => {
@@ -668,12 +684,13 @@ export function createPopupApp(options: PopupAppOptions): {
         payload: { view: requestedView, ...(cursor ? { cursor } : {}) },
       });
       if (
+        destroyed ||
         generation !== libraryGeneration ||
         !response.ok ||
         !response.data ||
         !Array.isArray(response.data.items)
       ) {
-        if (generation !== libraryGeneration) return;
+        if (destroyed || generation !== libraryGeneration) return;
         elements.libraryStatus.textContent = translate("libraryLoadError");
         return;
       }
@@ -691,11 +708,11 @@ export function createPopupApp(options: PopupAppOptions): {
         await selectBookmark(bookmarks[0].id);
       }
     } catch {
-      if (generation === libraryGeneration) {
+      if (!destroyed && generation === libraryGeneration) {
         elements.libraryStatus.textContent = translate("libraryLoadError");
       }
     } finally {
-      if (generation === libraryGeneration) {
+      if (!destroyed && generation === libraryGeneration) {
         libraryBusy = false;
         renderBookmarkList();
         if (libraryRefreshPending) {
@@ -706,12 +723,146 @@ export function createPopupApp(options: PopupAppOptions): {
     }
   }
 
+  async function loadSearch(cursor?: string, selectFirst = true): Promise<void> {
+    if (destroyed || libraryBusy || searchQuery.length === 0) return;
+    const generation = libraryGeneration;
+    const requestedView = libraryView;
+    const requestedQuery = searchQuery;
+    libraryBusy = true;
+    elements.librarySearchStatus.textContent = translate("searching");
+    renderBookmarkList();
+    try {
+      const response = await sendMessage<BookmarkSearchPage>({
+        type: "SEARCH_BOOKMARKS",
+        payload: {
+          query: requestedQuery,
+          view: requestedView,
+          ...(cursor ? { cursor } : {}),
+        },
+      });
+      if (
+        destroyed ||
+        generation !== libraryGeneration ||
+        requestedQuery !== searchQuery ||
+        !response.ok ||
+        !response.data ||
+        !Array.isArray(response.data.items)
+      ) {
+        if (
+          destroyed ||
+          generation !== libraryGeneration ||
+          requestedQuery !== searchQuery
+        ) {
+          return;
+        }
+        elements.librarySearchStatus.textContent = translate("searchLoadError");
+        return;
+      }
+      bookmarks = cursor ? [...bookmarks, ...response.data.items] : response.data.items;
+      nextBookmarkCursor = response.data.nextCursor;
+      if (
+        selectedBookmarkId &&
+        !bookmarks.some((bookmark) => bookmark.id === selectedBookmarkId)
+      ) {
+        resetBookmarkSelection();
+      }
+      elements.libraryStatus.textContent = "";
+      elements.librarySearchStatus.textContent = translate(
+        "searchResultsCount",
+        String(response.data.total),
+      );
+      renderBookmarkList();
+      if (selectFirst && !selectedBookmarkId && bookmarks[0]) {
+        await selectBookmark(bookmarks[0].id);
+      }
+    } catch {
+      if (
+        !destroyed &&
+        generation === libraryGeneration &&
+        requestedQuery === searchQuery
+      ) {
+        elements.librarySearchStatus.textContent = translate("searchLoadError");
+      }
+    } finally {
+      if (
+        !destroyed &&
+        generation === libraryGeneration &&
+        requestedQuery === searchQuery
+      ) {
+        libraryBusy = false;
+        renderBookmarkList();
+      }
+    }
+  }
+
+  function loadActiveLibrary(cursor?: string, selectFirst = true): Promise<void> {
+    return searchQuery
+      ? loadSearch(cursor, selectFirst)
+      : loadLibrary(cursor, selectFirst);
+  }
+
+  const cancelPendingSearch = (): void => {
+    if (searchHandle !== null) cancelSchedule(searchHandle);
+    searchHandle = null;
+  };
+
+  const activateSearchQuery = (nextQuery: string): void => {
+    cancelPendingSearch();
+    searchQuery = nextQuery;
+    libraryGeneration += 1;
+    libraryBusy = false;
+    bookmarks = [];
+    nextBookmarkCursor = null;
+    elements.librarySearchStatus.textContent = searchQuery
+      ? translate("searching")
+      : "";
+    renderBookmarkList();
+    if (!searchQuery) {
+      void loadLibrary(undefined, false);
+      return;
+    }
+    void loadSearch(undefined, false);
+  };
+
+  const submitSearch = (): void => {
+    activateSearchQuery(elements.librarySearch.value.trim());
+  };
+
+  const updateSearchQuery = (): void => {
+    cancelPendingSearch();
+    const nextQuery = elements.librarySearch.value.trim();
+    if (!nextQuery) {
+      activateSearchQuery("");
+      return;
+    }
+
+    libraryGeneration += 1;
+    libraryBusy = false;
+    if (!filterAsYouType) {
+      elements.librarySearchStatus.textContent = translate("searchReady");
+      renderBookmarkList();
+      return;
+    }
+
+    elements.librarySearchStatus.textContent = translate("searching");
+    searchHandle = schedule(() => {
+      searchHandle = null;
+      activateSearchQuery(nextQuery);
+    }, 150);
+  };
+
+  const setFilterAsYouType = (enabled: boolean): void => {
+    if (filterAsYouType === enabled) return;
+    filterAsYouType = enabled;
+    updateSearchQuery();
+  };
+
   async function refreshLibraryWhenAvailable(): Promise<void> {
     if (libraryBusy) {
       libraryRefreshPending = true;
       return;
     }
-    await loadLibrary(undefined, false);
+    await loadActiveLibrary(undefined, false);
   }
 
   const render = (): void => {
@@ -824,6 +975,10 @@ export function createPopupApp(options: PopupAppOptions): {
     createDownload,
     readFile: readBackupFile,
     confirmReplace: confirmRestore,
+    onDataRestored: async () => {
+      resetLibrary(true);
+      await loadActiveLibrary(undefined, false);
+    },
     reload,
   });
   elements.openBookmarksButton.addEventListener("click", () => {
@@ -846,7 +1001,7 @@ export function createPopupApp(options: PopupAppOptions): {
   elements.confirmClearButton.addEventListener("click", () => {
     void perform({ type: "CLEAR_ARCHIVE" }, async () => {
       resetLibrary(true);
-      await loadLibrary(undefined, false);
+      await loadActiveLibrary(undefined, false);
     });
   });
   const exportArchive = (format: ExportFormat): void => {
@@ -857,8 +1012,15 @@ export function createPopupApp(options: PopupAppOptions): {
   elements.exportFullButton.addEventListener("click", () => exportArchive("full"));
   elements.exportUrlsButton.addEventListener("click", () => exportArchive("urls"));
   elements.loadMoreBookmarks.addEventListener("click", () => {
-    if (nextBookmarkCursor) void loadLibrary(nextBookmarkCursor);
+    if (nextBookmarkCursor) void loadActiveLibrary(nextBookmarkCursor);
   });
+  elements.librarySearch.addEventListener("input", updateSearchQuery);
+  elements.librarySearch.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.isComposing) return;
+    event.preventDefault();
+    submitSearch();
+  });
+  elements.librarySearchButton.addEventListener("click", submitSearch);
   for (const view of viewOrder) {
     const button = viewButtons[view];
     button.addEventListener("click", () => selectLibraryView(view));
@@ -903,11 +1065,15 @@ export function createPopupApp(options: PopupAppOptions): {
   ]).then(() => undefined);
   return {
     ready,
+    setFilterAsYouType: (enabled) => {
+      if (!destroyed) setFilterAsYouType(enabled);
+    },
     destroy: () => {
       if (destroyed) return;
       flushPendingNoteBeforeDestroy();
       destroyed = true;
       if (refreshHandle !== null) cancelSchedule(refreshHandle);
+      if (searchHandle !== null) cancelSchedule(searchHandle);
     },
   };
 }

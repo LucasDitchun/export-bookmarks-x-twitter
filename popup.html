@@ -109,6 +109,39 @@
               <span id="library-status" class="quiet-status" role="status"></span>
             </div>
 
+            <div class="library-search" role="search">
+              <label for="library-search" data-i18n="searchLabel">
+                Search saved posts
+              </label>
+              <div class="library-search-controls">
+                <input
+                  id="library-search"
+                  type="search"
+                  maxlength="500"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-describedby="library-search-help library-search-status"
+                />
+                <button
+                  id="library-search-button"
+                  type="button"
+                  data-i18n="searchButton"
+                >
+                  Search
+                </button>
+              </div>
+              <p id="library-search-help" class="note-help" data-i18n="searchHelp">
+                Search text, people, notes, tags, and folders. Stored locally.
+              </p>
+              <span
+                id="library-search-status"
+                class="quiet-status library-search-status"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              ></span>
+            </div>
+
             <div
               class="library-view-tabs"
               role="tablist"
