@@ -1,12 +1,13 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { delimiter, resolve } from "node:path";
 
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const DIST_DIRECTORY = resolve(PROJECT_ROOT, "dist");
 const STARTUP_TIMEOUT_MS = 15_000;
+const VISUAL_CHECKPOINT_DIRECTORY = process.env.BOOKMARK_X_VISUAL_DIR;
 
 const delay = (milliseconds) =>
   new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
@@ -139,6 +140,40 @@ async function connectDevTools(webSocketUrl) {
   };
 }
 
+async function captureVisualCheckpoint(devTools, filename, viewport) {
+  if (!VISUAL_CHECKPOINT_DIRECTORY) return;
+  await mkdir(VISUAL_CHECKPOINT_DIRECTORY, { recursive: true });
+  await devTools.send("Page.enable");
+  await devTools.send("Emulation.setDeviceMetricsOverride", {
+    width: viewport.width,
+    height: viewport.height,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await devTools.send("Runtime.evaluate", {
+    expression: String.raw`(async () => {
+      await document.fonts.ready;
+      const deadline = Date.now() + 5000;
+      while (Date.now() < deadline) {
+        const loading = document.getElementById("loading-view");
+        if (!loading || loading.hidden) break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    })()`,
+    awaitPromise: true,
+  });
+  const screenshot = await devTools.send("Page.captureScreenshot", {
+    format: "png",
+    captureBeyondViewport: true,
+    fromSurface: true,
+  });
+  await writeFile(
+    resolve(VISUAL_CHECKPOINT_DIRECTORY, filename),
+    Buffer.from(screenshot.data, "base64"),
+  );
+}
+
 const uiScenario = String.raw`
 (async () => {
   const deadline = Date.now() + 5000;
@@ -155,6 +190,56 @@ const uiScenario = String.raw`
     openBookmarksVisible:
       document.getElementById("open-bookmarks-button")?.hidden === false,
     alertHidden: document.getElementById("alert")?.hidden === true,
+    typography: {
+      root: getComputedStyle(document.documentElement).fontSize,
+      body: getComputedStyle(document.body).fontSize,
+      heading: getComputedStyle(document.getElementById("app-title")).fontSize,
+      guidance: getComputedStyle(document.getElementById("page-guidance")).fontSize,
+    },
+  };
+})()
+`;
+
+const optionsDefaultsScenario = String.raw`
+(async () => {
+  const deadline = Date.now() + 5000;
+  while (
+    Date.now() < deadline &&
+    document.documentElement?.dataset.settingsState !== "ready" &&
+    document.documentElement?.dataset.settingsState !== "error"
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  const ids = [
+    "appearance-large-text",
+    "appearance-high-contrast",
+    "appearance-reduce-motion",
+    "surface-modal",
+    "surface-side-panel",
+    "behavior-prompt",
+    "metadata-summary",
+    "metadata-breadcrumb",
+    "metadata-tags",
+    "metadata-note",
+    "metadata-category",
+    "export-link",
+    "export-text",
+    "export-author",
+    "export-date",
+    "export-images",
+    "export-videos",
+    "export-note",
+    "export-tags",
+    "export-folder",
+    "search-live-filter",
+    "data-keep-archived",
+  ];
+  return {
+    state: document.documentElement?.dataset.settingsState ?? "missing",
+    status: document.getElementById("settings-status")?.textContent ?? "missing",
+    checked: Object.fromEntries(
+      ids.map((id) => [id, document.getElementById(id)?.checked ?? "missing"]),
+    ),
   };
 })()
 `;
@@ -290,6 +375,22 @@ function assertScenario(page, ui, start, result) {
       `The popup did not render its page-guidance state: ${JSON.stringify(ui)}`,
     );
   }
+  const typography = Object.fromEntries(
+    Object.entries(ui.typography ?? {}).map(([key, value]) => [
+      key,
+      Number.parseFloat(value),
+    ]),
+  );
+  if (
+    typography.root < 18 ||
+    typography.body < 18 ||
+    typography.heading <= 25 ||
+    typography.guidance <= 17
+  ) {
+    throw new Error(
+      `The large-text setting did not scale popup typography: ${JSON.stringify(ui.typography)}`,
+    );
+  }
   if (!before.ok) {
     throw new Error("The service worker did not return local archive status.");
   }
@@ -314,6 +415,41 @@ function assertScenario(page, ui, start, result) {
   }
   if (!cleared.ok || !after.ok || after.data.stats.total !== 0) {
     throw new Error("The runtime archive clear flow did not finish.");
+  }
+}
+
+function assertOptionsDefaults(result) {
+  const expectedTrue = [
+    "appearance-large-text",
+    "appearance-high-contrast",
+    "surface-modal",
+    "behavior-prompt",
+    "metadata-summary",
+    "metadata-breadcrumb",
+    "metadata-tags",
+    "metadata-note",
+    "metadata-category",
+    "export-link",
+    "export-text",
+    "export-author",
+    "export-date",
+    "export-images",
+    "export-videos",
+    "export-note",
+    "export-tags",
+    "export-folder",
+    "search-live-filter",
+    "data-keep-archived",
+  ];
+  const expectedFalse = ["appearance-reduce-motion", "surface-side-panel"];
+  const mismatches = [
+    ...expectedTrue.filter((id) => result.checked[id] !== true),
+    ...expectedFalse.filter((id) => result.checked[id] !== false),
+  ];
+  if (result.state !== "ready" || result.status !== "" || mismatches.length > 0) {
+    throw new Error(
+      `The options defaults did not render: ${JSON.stringify({ ...result, mismatches })}`,
+    );
   }
 }
 
@@ -360,6 +496,8 @@ async function main() {
   });
 
   let popupDevTools;
+  let optionsDevTools;
+  let sidePanelDevTools;
   let pageDevTools;
   let workerDevTools;
   try {
@@ -372,6 +510,43 @@ async function main() {
     );
     popupDevTools = await connectDevTools(popupTarget.webSocketDebuggerUrl);
     await popupDevTools.send("Runtime.enable");
+
+    const optionsTarget = await openTarget(
+      port,
+      `chrome-extension://${extensionId}/options.html`,
+    );
+    optionsDevTools = await connectDevTools(optionsTarget.webSocketDebuggerUrl);
+    await optionsDevTools.send("Runtime.enable");
+    const optionsEvaluation = await optionsDevTools.send("Runtime.evaluate", {
+      expression: optionsDefaultsScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (optionsEvaluation.exceptionDetails) {
+      throw new Error(
+        optionsEvaluation.exceptionDetails.exception?.description ??
+          optionsEvaluation.exceptionDetails.text,
+      );
+    }
+    assertOptionsDefaults(optionsEvaluation.result.value);
+
+    if (VISUAL_CHECKPOINT_DIRECTORY) {
+      await captureVisualCheckpoint(optionsDevTools, "options.png", {
+        width: 1180,
+        height: 900,
+      });
+
+      const sidePanelTarget = await openTarget(
+        port,
+        `chrome-extension://${extensionId}/popup.html?surface=side-panel`,
+      );
+      sidePanelDevTools = await connectDevTools(sidePanelTarget.webSocketDebuggerUrl);
+      await sidePanelDevTools.send("Runtime.enable");
+      await captureVisualCheckpoint(sidePanelDevTools, "side-panel.png", {
+        width: 500,
+        height: 900,
+      });
+    }
 
     const pageTarget = await openTarget(port, "about:blank");
     pageDevTools = await connectDevTools(pageTarget.webSocketDebuggerUrl);
@@ -415,6 +590,10 @@ async function main() {
           uiEvaluation.exceptionDetails.text,
       );
     }
+    await captureVisualCheckpoint(popupDevTools, "popup.png", {
+      width: 440,
+      height: 900,
+    });
 
     workerDevTools = await connectDevTools(worker.webSocketDebuggerUrl);
     await workerDevTools.send("Runtime.enable");
@@ -448,8 +627,11 @@ async function main() {
       evaluation.result.value,
     );
     console.log(
-      "Chrome smoke passed: X-page DOM scraping, UI, MV3 worker, IndexedDB, TXT export, and clear.",
+      "Chrome smoke passed: settings defaults, X-page DOM scraping, UI, MV3 worker, IndexedDB, TXT export, and clear.",
     );
+    if (VISUAL_CHECKPOINT_DIRECTORY) {
+      console.log(`Visual checkpoints: ${VISUAL_CHECKPOINT_DIRECTORY}`);
+    }
   } catch (error) {
     const diagnostics = chromeErrors.join("").trim();
     if (diagnostics) {
@@ -458,6 +640,8 @@ async function main() {
     throw error;
   } finally {
     popupDevTools?.close();
+    optionsDevTools?.close();
+    sidePanelDevTools?.close();
     pageDevTools?.close();
     workerDevTools?.close();
     await stopChrome(chromeProcess);

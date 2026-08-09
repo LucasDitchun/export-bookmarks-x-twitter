@@ -14,6 +14,11 @@ import { pipeline } from "node:stream/promises";
 import process from "node:process";
 import { ZipArchive } from "archiver";
 
+import {
+  EXPECTED_MANIFEST_PERMISSIONS,
+  validateExactStringArray,
+} from "./package-policy.mjs";
+
 const rootDirectory = resolve(import.meta.dirname, "..");
 const distDirectory = resolve(rootDirectory, "dist");
 const releaseDirectory = resolve(rootDirectory, "release");
@@ -41,21 +46,6 @@ async function listFiles(directory, prefix = "") {
   }
 
   return files;
-}
-
-function validateExactStringArray(actual, expected, fieldName) {
-  if (!Array.isArray(actual) || actual.some((value) => typeof value !== "string")) {
-    fail(`Manifest ${fieldName} must be an array of strings.`);
-  }
-
-  const sortedActual = [...actual].sort();
-  const sortedExpected = [...expected].sort();
-  if (
-    sortedActual.length !== sortedExpected.length ||
-    sortedActual.some((value, index) => value !== sortedExpected[index])
-  ) {
-    fail(`Manifest ${fieldName} must be exactly: ${sortedExpected.join(", ")}.`);
-  }
 }
 
 async function validateBuild(packageVersion) {
@@ -113,7 +103,7 @@ async function validateBuild(packageVersion) {
 
   validateExactStringArray(
     manifest.permissions,
-    ["activeTab", "storage", "unlimitedStorage"],
+    EXPECTED_MANIFEST_PERMISSIONS,
     "permissions",
   );
   if (Object.hasOwn(manifest, "host_permissions")) {

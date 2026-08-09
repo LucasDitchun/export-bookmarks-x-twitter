@@ -2,7 +2,7 @@
   "libraryTitle": { "message": "ブックマークライブラリ" },
   "libraryHelp": { "message": "ブックマークを選択して非公開メモを追加します。" },
   "libraryViewsLabel": { "message": "ブックマークライブラリの表示" },
-  "libraryViewInbox": { "message": "未分類" },
+  "libraryViewInbox": { "message": "受信箱" },
   "libraryViewCurrent": { "message": "Xで保存中" },
   "libraryViewArchived": { "message": "アーカイブ" },
   "libraryEmptyInbox": { "message": "未分類のブックマークはありません。" },
@@ -214,5 +214,58 @@
   },
   "errorGeneric": {
     "message": "Bookmark Xで操作を完了できませんでした。もう一度お試しください。"
-  }
+  },
+  "openSettingsButton": { "message": "設定を開く" },
+  "settingsTitle": { "message": "Bookmark X の設定" },
+  "skipToSettings": { "message": "設定へ移動" },
+  "settingsEyebrow": { "message": "ローカル設計" },
+  "settingsIntro": {
+    "message": "Bookmark X の表示、開き方、非公開アーカイブの準備方法を選択します。"
+  },
+  "settingsAppearance": { "message": "表示" },
+  "settingLargeText": { "message": "文字を大きくする" },
+  "settingHighContrast": { "message": "高コントラストを使用" },
+  "settingReduceMotion": { "message": "動きを減らす" },
+  "settingsBehavior": { "message": "動作" },
+  "settingSurface": { "message": "ライブラリの開き方" },
+  "settingSurfaceModal": { "message": "コンパクトウィンドウ" },
+  "settingSurfaceSidePanel": { "message": "Chrome サイドパネル" },
+  "settingPrompt": { "message": "ブックマーク後にメモを確認" },
+  "settingMetadataSummary": { "message": "整理状態を表示" },
+  "settingBreadcrumb": { "message": "フォルダー階層を表示" },
+  "settingTags": { "message": "タグを表示" },
+  "settingNote": { "message": "非公開メモを表示" },
+  "settingCategory": { "message": "未分類の表示" },
+  "settingsExport": { "message": "エクスポート" },
+  "settingsExportHelp": {
+    "message": "今後の TXT・Markdown 出力に含める情報を選択します。"
+  },
+  "settingExportLink": { "message": "投稿リンク" },
+  "settingExportText": { "message": "投稿本文" },
+  "settingExportAuthor": { "message": "投稿者" },
+  "settingExportDate": { "message": "日付" },
+  "settingExportImages": { "message": "画像リンク" },
+  "settingExportVideos": { "message": "動画リンク" },
+  "settingExportNote": { "message": "非公開メモ" },
+  "settingExportTags": { "message": "タグ" },
+  "settingExportFolder": { "message": "フォルダー階層" },
+  "settingsSearch": { "message": "検索" },
+  "settingLiveFilter": { "message": "入力中に結果を絞り込む" },
+  "settingsData": { "message": "データ" },
+  "settingKeepArchived": { "message": "X から削除された投稿をアーカイブに保持" },
+  "settingsDataHelp": {
+    "message": "ブックマーク内容はこの端末の IndexedDB に保存されます。"
+  },
+  "settingsSaving": { "message": "保存中…" },
+  "settingsSaved": { "message": "保存しました" },
+  "settingsSaveError": { "message": "設定を保存できませんでした。" },
+  "settingsLoadError": { "message": "設定を読み込めませんでした。" },
+  "bookmarkPromptTitle": { "message": "なぜこの投稿を保存しますか？" },
+  "bookmarkPromptClose": { "message": "閉じる" },
+  "bookmarkPromptSave": { "message": "メモを保存" },
+  "bookmarkPromptTags": { "message": "タグ" },
+  "bookmarkPromptFolder": { "message": "フォルダー" },
+  "bookmarkPromptNote": { "message": "非公開メモ" },
+  "bookmarkCategorized": { "message": "分類済み" },
+  "bookmarkNeedsCategory": { "message": "要分類" }
 }

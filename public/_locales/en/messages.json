@@ -22,7 +22,7 @@
   "libraryTitle": { "message": "Bookmark library" },
   "libraryHelp": { "message": "Select a bookmark to add a private note." },
   "libraryViewsLabel": { "message": "Bookmark library views" },
-  "libraryViewInbox": { "message": "Uncategorized" },
+  "libraryViewInbox": { "message": "Inbox" },
   "libraryViewCurrent": { "message": "On X now" },
   "libraryViewArchived": { "message": "Archived" },
   "libraryEmptyInbox": { "message": "No uncategorized bookmarks." },
@@ -128,5 +128,58 @@
   "errorCaptureRunning": { "message": "A capture is already running." },
   "errorGeneric": {
     "message": "Bookmark X could not complete that action. Try again."
-  }
+  },
+  "openSettingsButton": { "message": "Open settings" },
+  "settingsTitle": { "message": "Bookmark X settings" },
+  "skipToSettings": { "message": "Skip to settings" },
+  "settingsEyebrow": { "message": "Local by design" },
+  "settingsIntro": {
+    "message": "Choose how Bookmark X looks, opens, and prepares your private archive."
+  },
+  "settingsAppearance": { "message": "Appearance" },
+  "settingLargeText": { "message": "Use larger text" },
+  "settingHighContrast": { "message": "Use high contrast" },
+  "settingReduceMotion": { "message": "Reduce motion" },
+  "settingsBehavior": { "message": "Behavior" },
+  "settingSurface": { "message": "Open the library as" },
+  "settingSurfaceModal": { "message": "Compact window" },
+  "settingSurfaceSidePanel": { "message": "Chrome side panel" },
+  "settingPrompt": { "message": "Ask for a note after bookmarking" },
+  "settingMetadataSummary": { "message": "Show mapped status" },
+  "settingBreadcrumb": { "message": "Show folder breadcrumb" },
+  "settingTags": { "message": "Show tags" },
+  "settingNote": { "message": "Show private note" },
+  "settingCategory": { "message": "Show uncategorized indicator" },
+  "settingsExport": { "message": "Export" },
+  "settingsExportHelp": {
+    "message": "Choose which details future TXT and Markdown exports may include."
+  },
+  "settingExportLink": { "message": "Post link" },
+  "settingExportText": { "message": "Post text" },
+  "settingExportAuthor": { "message": "Author" },
+  "settingExportDate": { "message": "Dates" },
+  "settingExportImages": { "message": "Image links" },
+  "settingExportVideos": { "message": "Video links" },
+  "settingExportNote": { "message": "Private note" },
+  "settingExportTags": { "message": "Tags" },
+  "settingExportFolder": { "message": "Folder path" },
+  "settingsSearch": { "message": "Search" },
+  "settingLiveFilter": { "message": "Filter results while typing" },
+  "settingsData": { "message": "Data" },
+  "settingKeepArchived": { "message": "Keep posts removed from X as archived" },
+  "settingsDataHelp": {
+    "message": "Bookmark content stays in IndexedDB on this device."
+  },
+  "settingsSaving": { "message": "Saving…" },
+  "settingsSaved": { "message": "Saved" },
+  "settingsSaveError": { "message": "Could not save settings." },
+  "settingsLoadError": { "message": "Could not load settings." },
+  "bookmarkPromptTitle": { "message": "Why are you saving this?" },
+  "bookmarkPromptClose": { "message": "Close" },
+  "bookmarkPromptSave": { "message": "Save note" },
+  "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptFolder": { "message": "Folder" },
+  "bookmarkPromptNote": { "message": "Private note" },
+  "bookmarkCategorized": { "message": "Categorized" },
+  "bookmarkNeedsCategory": { "message": "Needs category" }
 }

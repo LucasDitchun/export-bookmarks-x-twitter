@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ArchiveStats, BookmarkSnapshot, ScrapeRun } from "../domain/types";
+import {
+  DEFAULT_SETTINGS,
+  type ExtensionSettings,
+  type SettingsPatch,
+} from "../settings/settings-repository";
 import { BackgroundController, isBookmarksUrl } from "./controller";
 
 const EXTENSION_ID = "bookmark-x-extension";
@@ -27,6 +32,7 @@ const bookmark: BookmarkSnapshot = {
 
 function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
   let currentRun: ScrapeRun | null = null;
+  let currentSettings = structuredClone(DEFAULT_SETTINGS) as ExtensionSettings;
   return {
     archive: {
       mergeBookmarks: vi.fn(async () => ({ added: 1, updated: 0 })),
@@ -76,10 +82,29 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
         currentRun = null;
       }),
     },
+    settings: {
+      get: vi.fn(async (): Promise<ExtensionSettings> => currentSettings),
+      save: vi.fn(async (patch: SettingsPatch): Promise<ExtensionSettings> => {
+        currentSettings = {
+          ...currentSettings,
+          behavior: {
+            ...currentSettings.behavior,
+            ...patch.behavior,
+            metadata: {
+              ...currentSettings.behavior.metadata,
+              ...patch.behavior?.metadata,
+            },
+          },
+        };
+        return currentSettings;
+      }),
+    },
     browser: {
       getActiveTab: vi.fn(async () => ({ id: 7, url: activeUrl })),
       openBookmarks: vi.fn(async () => undefined),
       sendToTab: vi.fn(async () => ({ accepted: true })),
+      configureSurface: vi.fn(async () => undefined),
+      openSidePanel: vi.fn(async () => undefined),
     },
     extensionId: EXTENSION_ID,
     now: () => new Date("2026-07-29T13:14:15.123Z"),
@@ -97,6 +122,86 @@ describe("isBookmarksUrl", () => {
 });
 
 describe("BackgroundController", () => {
+  it("loads and saves settings, then applies the selected action surface", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "GET_SETTINGS" }, POPUP_SENDER),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { settings: { behavior: { surface: "modal" } } },
+    });
+    await expect(
+      controller.handle(
+        {
+          type: "SAVE_SETTINGS",
+          payload: { settings: { behavior: { surface: "sidePanel" } } },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { settings: { behavior: { surface: "sidePanel" } } },
+    });
+    expect(dependencies.browser.configureSurface).toHaveBeenCalledWith("sidePanel");
+  });
+
+  it("rejects malformed and unknown settings before storage", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    for (const settings of [
+      { behavior: { surface: "drawer" } },
+      { behavior: { metadata: { note: "yes" } } },
+      { export: { includeStatus: true } },
+      { unknown: true },
+    ]) {
+      await expect(
+        controller.handle(
+          { type: "SAVE_SETTINGS", payload: { settings } },
+          POPUP_SENDER,
+        ),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: { code: "invalid_request" },
+      });
+    }
+    expect(dependencies.settings.save).not.toHaveBeenCalled();
+  });
+
+  it("opens the side panel for a user-initiated X tab request", async () => {
+    const dependencies = createDependencies();
+    dependencies.settings.get.mockResolvedValueOnce({
+      ...(await dependencies.settings.get()),
+      behavior: {
+        ...(await dependencies.settings.get()).behavior,
+        surface: "sidePanel",
+      },
+    });
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "OPEN_SELECTED_SURFACE" }, CONTENT_SENDER),
+    ).resolves.toEqual({
+      ok: true,
+      data: { surface: "sidePanel", opened: true },
+    });
+    expect(dependencies.browser.openSidePanel).toHaveBeenCalledWith(7);
+  });
+
+  it("leaves modal opening to the isolated content-script surface", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "OPEN_SELECTED_SURFACE" }, CONTENT_SENDER),
+    ).resolves.toEqual({
+      ok: true,
+      data: { surface: "modal", opened: false },
+    });
+    expect(dependencies.browser.openSidePanel).not.toHaveBeenCalled();
+  });
   it("lists current bookmarks with a safe default page size", async () => {
     const dependencies = createDependencies();
     const controller = new BackgroundController(dependencies);

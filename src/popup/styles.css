@@ -2,7 +2,7 @@
   color: #14140f;
   background: #f2f0df;
   font-family: Verdana, Geneva, Tahoma, sans-serif;
-  font-size: 16px;
+  font-size: 100%;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --ink: #14140f;
@@ -26,12 +26,53 @@ body {
   min-height: 540px;
 }
 
+html[data-surface="side-panel"],
+html[data-surface="side-panel"] body {
+  width: 100%;
+  min-width: 320px;
+}
+
+html[data-surface="side-panel"] .shell {
+  border-block: 0;
+}
+
+html[data-large-text="true"] {
+  font-size: 112.5%;
+}
+
+html[data-large-text="true"] :is(button, input, select, textarea) {
+  font-size: 1.0625rem;
+}
+
+html[data-metadata-summary="false"] [data-bookmark-metadata="summary"],
+html[data-metadata-breadcrumb="false"] [data-bookmark-metadata="breadcrumb"],
+html[data-metadata-tags="false"] [data-bookmark-metadata="tags"],
+html[data-metadata-note="false"] [data-bookmark-metadata="note"],
+html[data-metadata-category-indicator="false"]
+  [data-bookmark-metadata="categoryIndicator"] {
+  display: none !important;
+}
+
+html[data-high-contrast="false"] {
+  --muted: #5f6158;
+  --line: #45473f;
+}
+
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
 body {
   margin: 0;
   overflow-x: hidden;
   color: var(--ink);
   background: var(--canvas);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.5;
 }
 
@@ -72,21 +113,21 @@ p {
 }
 
 h1 {
-  font-size: 25px;
+  font-size: 1.5625rem;
   font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 1.1;
 }
 
 h2 {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 800;
   letter-spacing: -0.025em;
   line-height: 1.25;
 }
 
 h3 {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 800;
   line-height: 1.3;
 }
@@ -136,7 +177,7 @@ h3 {
   padding: 7px 10px;
   border: 2px solid var(--line);
   background: #fff;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
@@ -170,7 +211,7 @@ h3 {
   border: 2px solid var(--danger);
   color: #6f1009;
   background: #fff0eb;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1.5;
 }
@@ -183,7 +224,7 @@ h3 {
   gap: 18px;
   padding: 30px;
   color: var(--muted);
-  font-size: 17px;
+  font-size: 1.0625rem;
   text-align: center;
 }
 
@@ -219,7 +260,7 @@ h3 {
 .guidance {
   margin-top: 10px;
   color: var(--muted);
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1.55;
 }
 
@@ -238,7 +279,7 @@ h3 {
 }
 
 .capture-state {
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 800;
 }
 
@@ -255,7 +296,7 @@ h3 {
   align-items: center;
   gap: 10px;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 700;
   text-align: right;
 }
@@ -263,7 +304,7 @@ h3 {
 .duplicate-summary {
   margin-left: auto;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 700;
   text-align: right;
 }
@@ -279,7 +320,7 @@ h3 {
   border-radius: 6px;
   background: #fff;
   cursor: pointer;
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 800;
   line-height: 1.25;
 }
@@ -293,7 +334,7 @@ h3 {
   justify-content: space-between;
   background: var(--accent);
   box-shadow: 4px 4px 0 var(--ink);
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 .button-primary:not(:disabled):hover {
@@ -301,7 +342,7 @@ h3 {
 }
 
 .button-arrow {
-  font-size: 24px;
+  font-size: 1.5rem;
   line-height: 1;
 }
 
@@ -331,14 +372,14 @@ h3 {
 }
 
 .archive-total strong {
-  font-size: 46px;
+  font-size: 2.875rem;
   letter-spacing: -0.055em;
   line-height: 1;
 }
 
 .archive-total span {
   color: var(--muted);
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 700;
 }
 
@@ -348,14 +389,14 @@ h3 {
   gap: 6px 10px;
   margin-top: 14px;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .last-sync,
 .empty-note {
   margin-top: 9px;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .library {
@@ -377,7 +418,7 @@ h3 {
 .selected-bookmark p {
   margin-top: 5px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .library-view-tabs {
@@ -395,7 +436,7 @@ h3 {
   background: #fff;
   color: var(--muted);
   cursor: pointer;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 800;
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -413,7 +454,7 @@ h3 {
 .quiet-status {
   flex: 0 0 auto;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 800;
 }
 
@@ -454,7 +495,7 @@ h3 {
 .bookmark-option-title {
   display: -webkit-box;
   overflow: hidden;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 800;
   line-height: 1.35;
   -webkit-box-orient: vertical;
@@ -463,14 +504,14 @@ h3 {
 
 .bookmark-option-author {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .load-more {
   width: 100%;
   min-height: 44px;
   margin-top: 10px;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .note-editor {
@@ -482,13 +523,37 @@ h3 {
 }
 
 .selected-bookmark {
+  flex: 1 1 160px;
   min-width: 0;
+}
+
+.editor-heading-row {
+  flex-wrap: wrap;
+}
+
+.category-indicator {
+  align-self: start;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f1f7d5;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.category-indicator:empty {
+  display: none;
+}
+
+.category-indicator[data-state="incomplete"] {
+  background: #fff4d6;
 }
 
 .selected-bookmark h3 {
   display: -webkit-box;
   overflow: hidden;
-  font-size: 16px;
+  font-size: 1rem;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -496,7 +561,7 @@ h3 {
 .note-editor label {
   display: block;
   margin-top: 16px;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 800;
 }
 
@@ -530,7 +595,7 @@ h3 {
   overflow: hidden;
   border: 1px solid;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 800;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -542,7 +607,7 @@ h3 {
   padding: 4px 8px 4px 10px;
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 800;
 }
 
@@ -551,7 +616,7 @@ h3 {
 }
 
 .tag-remove-icon {
-  font-size: 18px;
+  font-size: 1.125rem;
   line-height: 1;
 }
 
@@ -573,7 +638,7 @@ h3 {
   color: var(--ink);
   background: var(--paper);
   font: inherit;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .tag-editor input:disabled {
@@ -606,7 +671,7 @@ h3 {
   color: var(--ink);
   background: var(--paper);
   font: inherit;
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1.6;
 }
 
@@ -628,7 +693,7 @@ h3 {
   display: block;
   margin-top: 12px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 800;
 }
 
@@ -648,7 +713,7 @@ h3 {
 .folder-breadcrumb {
   margin-top: 8px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .folder-breadcrumb ol {
@@ -677,7 +742,7 @@ h3 {
   min-height: 44px;
   padding: 9px 0;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 800;
 }
 
@@ -690,7 +755,7 @@ h3 {
   min-height: 44px;
   margin-top: 12px;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .folder-list {
@@ -711,7 +776,7 @@ h3 {
 .folder-path-label {
   display: block;
   overflow-wrap: anywhere;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 800;
 }
 
@@ -725,7 +790,7 @@ h3 {
 .folder-action {
   min-height: 36px;
   padding: 5px 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .folder-rename-form,
@@ -746,7 +811,7 @@ h3 {
 
 .folder-delete-confirmation p {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 #folder-status[data-state="error"] {
@@ -793,14 +858,14 @@ h3 {
   padding: 9px 2px;
   cursor: pointer;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
 }
 
 .more-actions p {
   margin: 10px 0 14px;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .language-control {
@@ -811,7 +876,7 @@ h3 {
 
 .language-control label {
   color: var(--muted);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 800;
 }
 
@@ -823,7 +888,7 @@ h3 {
   border-radius: 6px;
   color: var(--ink);
   background: #fff;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -834,7 +899,7 @@ h3 {
   border-bottom: 2px solid currentColor;
   background: transparent;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 800;
 }
 
@@ -857,13 +922,13 @@ dialog::backdrop {
 }
 
 dialog h2 {
-  font-size: 24px;
+  font-size: 1.5rem;
 }
 
 dialog p {
   margin-top: 14px;
   color: var(--muted);
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1.55;
 }
 

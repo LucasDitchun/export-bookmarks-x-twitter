@@ -127,6 +127,9 @@ describe("popup app", () => {
     expect(document.getElementById("selected-bookmark-title")?.textContent).toBe(
       "A useful bookmark",
     );
+    expect(document.getElementById("selected-category-indicator")?.textContent).toBe(
+      "bookmarkNeedsCategory",
+    );
     app.destroy();
   });
 

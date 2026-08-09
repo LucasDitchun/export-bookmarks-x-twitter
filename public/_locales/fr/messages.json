@@ -2,7 +2,7 @@
   "libraryTitle": { "message": "Bibliothèque de favoris" },
   "libraryHelp": { "message": "Sélectionnez un favori pour ajouter une note privée." },
   "libraryViewsLabel": { "message": "Vues de la bibliothèque de favoris" },
-  "libraryViewInbox": { "message": "Non classés" },
+  "libraryViewInbox": { "message": "À classer" },
   "libraryViewCurrent": { "message": "Sur X actuellement" },
   "libraryViewArchived": { "message": "Archivés" },
   "libraryEmptyInbox": { "message": "Aucun favori non classé." },
@@ -218,5 +218,60 @@
   },
   "errorGeneric": {
     "message": "Bookmark X n’a pas pu terminer cette action. Réessayez."
-  }
+  },
+  "openSettingsButton": { "message": "Ouvrir les paramètres" },
+  "settingsTitle": { "message": "Paramètres de Bookmark X" },
+  "skipToSettings": { "message": "Accéder aux paramètres" },
+  "settingsEyebrow": { "message": "Local par conception" },
+  "settingsIntro": {
+    "message": "Choisissez l’apparence, l’ouverture et la préparation de votre archive privée."
+  },
+  "settingsAppearance": { "message": "Apparence" },
+  "settingLargeText": { "message": "Utiliser un texte plus grand" },
+  "settingHighContrast": { "message": "Utiliser un contraste élevé" },
+  "settingReduceMotion": { "message": "Réduire les animations" },
+  "settingsBehavior": { "message": "Comportement" },
+  "settingSurface": { "message": "Ouvrir la bibliothèque comme" },
+  "settingSurfaceModal": { "message": "Fenêtre compacte" },
+  "settingSurfaceSidePanel": { "message": "Panneau latéral de Chrome" },
+  "settingPrompt": { "message": "Demander une note après l’enregistrement" },
+  "settingMetadataSummary": { "message": "Afficher l’état de classement" },
+  "settingBreadcrumb": { "message": "Afficher le chemin du dossier" },
+  "settingTags": { "message": "Afficher les tags" },
+  "settingNote": { "message": "Afficher la note privée" },
+  "settingCategory": { "message": "Afficher l’indicateur sans catégorie" },
+  "settingsExport": { "message": "Exportation" },
+  "settingsExportHelp": {
+    "message": "Choisissez les détails que les futurs exports TXT et Markdown pourront inclure."
+  },
+  "settingExportLink": { "message": "Lien de la publication" },
+  "settingExportText": { "message": "Texte de la publication" },
+  "settingExportAuthor": { "message": "Auteur" },
+  "settingExportDate": { "message": "Dates" },
+  "settingExportImages": { "message": "Liens des images" },
+  "settingExportVideos": { "message": "Liens des vidéos" },
+  "settingExportNote": { "message": "Note privée" },
+  "settingExportTags": { "message": "Tags" },
+  "settingExportFolder": { "message": "Chemin du dossier" },
+  "settingsSearch": { "message": "Recherche" },
+  "settingLiveFilter": { "message": "Filtrer les résultats pendant la saisie" },
+  "settingsData": { "message": "Données" },
+  "settingKeepArchived": {
+    "message": "Conserver comme archivées les publications retirées de X"
+  },
+  "settingsDataHelp": {
+    "message": "Le contenu reste dans IndexedDB sur cet appareil."
+  },
+  "settingsSaving": { "message": "Enregistrement…" },
+  "settingsSaved": { "message": "Enregistré" },
+  "settingsSaveError": { "message": "Impossible d’enregistrer les paramètres." },
+  "settingsLoadError": { "message": "Impossible de charger les paramètres." },
+  "bookmarkPromptTitle": { "message": "Pourquoi enregistrez-vous ceci ?" },
+  "bookmarkPromptClose": { "message": "Fermer" },
+  "bookmarkPromptSave": { "message": "Enregistrer la note" },
+  "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptFolder": { "message": "Dossier" },
+  "bookmarkPromptNote": { "message": "Note privée" },
+  "bookmarkCategorized": { "message": "Classé" },
+  "bookmarkNeedsCategory": { "message": "À classer" }
 }

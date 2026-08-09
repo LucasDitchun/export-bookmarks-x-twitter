@@ -187,10 +187,17 @@
               hidden
             >
               <div class="editor-heading-row">
-                <div class="selected-bookmark">
+                <div class="selected-bookmark" data-bookmark-metadata="summary">
                   <h3 id="selected-bookmark-title"></h3>
                   <p id="selected-bookmark-author"></p>
                 </div>
+                <span
+                  id="selected-category-indicator"
+                  class="category-indicator"
+                  data-bookmark-metadata="categoryIndicator"
+                  role="status"
+                  aria-live="polite"
+                ></span>
                 <span
                   id="note-save-status"
                   class="quiet-status"
@@ -199,7 +206,7 @@
                   aria-atomic="true"
                 ></span>
               </div>
-              <div class="tag-editor">
+              <div class="tag-editor" data-bookmark-metadata="tags">
                 <label for="tag-input" data-i18n="tagsLabel">Tags</label>
                 <div
                   id="selected-tags"
@@ -231,20 +238,22 @@
                   ></span>
                 </div>
               </div>
-              <label id="note-heading" for="note-textarea" data-i18n="noteLabel">
-                Private note
-              </label>
-              <textarea
-                id="note-textarea"
-                rows="7"
-                maxlength="20000"
-                spellcheck="true"
-                disabled
-                aria-describedby="note-help"
-              ></textarea>
-              <p id="note-help" class="note-help" data-i18n="noteHelp">
-                Plain text, saved locally as you type.
-              </p>
+              <div class="note-field" data-bookmark-metadata="note">
+                <label id="note-heading" for="note-textarea" data-i18n="noteLabel">
+                  Private note
+                </label>
+                <textarea
+                  id="note-textarea"
+                  rows="7"
+                  maxlength="20000"
+                  spellcheck="true"
+                  disabled
+                  aria-describedby="note-help"
+                ></textarea>
+                <p id="note-help" class="note-help" data-i18n="noteHelp">
+                  Plain text, saved locally as you type.
+                </p>
+              </div>
 
               <section class="folder-editor" aria-labelledby="folder-heading">
                 <div class="folder-heading-row">
@@ -260,6 +269,7 @@
                 <nav
                   id="folder-breadcrumb"
                   class="folder-breadcrumb"
+                  data-bookmark-metadata="breadcrumb"
                   data-i18n-aria-label="folderBreadcrumbLabel"
                   aria-label="Folder path"
                 >
@@ -325,6 +335,14 @@
                 <option value="it" lang="it">Italiano</option>
               </select>
             </div>
+            <button
+              id="open-settings-button"
+              class="text-button"
+              type="button"
+              data-i18n="openSettingsButton"
+            >
+              Open settings
+            </button>
             <p data-i18n="localOnlyNote">
               Stored locally. Nothing is uploaded by Bookmark X.
             </p>

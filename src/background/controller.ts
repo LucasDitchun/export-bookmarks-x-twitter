@@ -15,6 +15,12 @@ import type {
   BookmarkView,
 } from "../shared/protocol";
 import { BookmarkXError } from "../shared/errors";
+import {
+  isSettingsPatch,
+  type ExtensionSettings,
+  type LibrarySurface,
+  type SettingsPatch,
+} from "../settings/settings-repository";
 import type { ArchiveRepository } from "../storage/archive-repository";
 import type { ExtensionStateRepository } from "../storage/extension-state";
 
@@ -27,6 +33,8 @@ interface BrowserBridge {
   getActiveTab(): Promise<ActiveTab | null>;
   openBookmarks(): Promise<void>;
   sendToTab(tabId: number, request: ContentControlRequest): Promise<unknown>;
+  configureSurface(surface: LibrarySurface): Promise<void>;
+  openSidePanel(tabId: number): Promise<void>;
 }
 
 interface MessageSender {
@@ -64,6 +72,10 @@ interface BackgroundDependencies {
     rename(id: string, name: string): Promise<unknown>;
     delete(id: string): Promise<unknown>;
     assignBookmark(bookmarkId: string, folderId: string | null): Promise<unknown>;
+  };
+  settings: {
+    get(): Promise<ExtensionSettings>;
+    save(patch: SettingsPatch): Promise<ExtensionSettings>;
   };
   browser: BrowserBridge;
   extensionId: string;
@@ -115,6 +127,8 @@ function isUiRequest(value: unknown): value is UiRequest {
   if (!isRecord(value) || typeof value.type !== "string") return false;
   if (
     value.type === "GET_STATUS" ||
+    value.type === "GET_SETTINGS" ||
+    value.type === "OPEN_SELECTED_SURFACE" ||
     value.type === "OPEN_BOOKMARKS" ||
     value.type === "START_SCRAPE" ||
     value.type === "CANCEL_SCRAPE" ||
@@ -123,6 +137,9 @@ function isUiRequest(value: unknown): value is UiRequest {
     value.type === "LIST_FOLDERS"
   ) {
     return true;
+  }
+  if (value.type === "SAVE_SETTINGS") {
+    return isRecord(value.payload) && isSettingsPatch(value.payload.settings);
   }
   if (value.type === "LIST_BOOKMARKS") {
     if (value.payload === undefined) return true;
@@ -299,6 +316,33 @@ export class BackgroundController {
       switch (request.type) {
         case "GET_STATUS":
           return success(await this.getStatus());
+        case "GET_SETTINGS":
+          return success({ settings: await this.dependencies.settings.get() });
+        case "SAVE_SETTINGS": {
+          const settings = await this.dependencies.settings.save(
+            request.payload.settings,
+          );
+          await this.dependencies.browser.configureSurface(settings.behavior.surface);
+          return success({ settings });
+        }
+        case "OPEN_SELECTED_SURFACE": {
+          const settings = await this.dependencies.settings.get();
+          if (settings.behavior.surface === "modal") {
+            return success({ surface: "modal", opened: false });
+          }
+          const tabId = sender.tab?.id;
+          if (
+            typeof tabId !== "number" ||
+            !isBookmarksUrl(sender.tab?.url ?? sender.url)
+          ) {
+            throw new BookmarkXError(
+              "invalid_sender",
+              "The surface request must come from an X bookmarks tab.",
+            );
+          }
+          await this.dependencies.browser.openSidePanel(tabId);
+          return success({ surface: "sidePanel", opened: true });
+        }
         case "LIST_BOOKMARKS": {
           const view = request.payload?.view ?? "current";
           const limit = Math.min(request.payload?.limit ?? 50, 100);

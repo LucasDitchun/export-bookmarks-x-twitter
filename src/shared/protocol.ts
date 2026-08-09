@@ -8,6 +8,11 @@ import type {
   ScrapeRun,
   SupportedLocale,
 } from "../domain/types";
+import type {
+  ExtensionSettings,
+  LibrarySurface,
+  SettingsPatch,
+} from "../settings/settings-repository";
 
 export interface PopupStatus {
   pageReady: boolean;
@@ -54,8 +59,20 @@ export interface FolderDeleteResult {
   uncategorizedBookmarkCount: number;
 }
 
+export interface SettingsResult {
+  settings: ExtensionSettings;
+}
+
+export interface OpenSurfaceResult {
+  surface: LibrarySurface;
+  opened: boolean;
+}
+
 export type UiRequest =
   | { type: "GET_STATUS" }
+  | { type: "GET_SETTINGS" }
+  | { type: "SAVE_SETTINGS"; payload: { settings: SettingsPatch } }
+  | { type: "OPEN_SELECTED_SURFACE" }
   | { type: "OPEN_BOOKMARKS" }
   | { type: "START_SCRAPE" }
   | { type: "CANCEL_SCRAPE" }
