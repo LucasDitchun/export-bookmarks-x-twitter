@@ -133,6 +133,9 @@ The extension requests only the capabilities needed for capture:
 - `activeTab` checks the current tab after you open the extension;
 - `storage` saves capture state and the language preference locally;
 - `unlimitedStorage` allows a larger local bookmark archive;
+- `https://api.github.com/*` reads only this project's public star count for the
+  open-source card in Settings. The result is cached locally for 24 hours, and
+  no bookmark data or GitHub credentials are included;
 - the content script is restricted to `https://x.com/i/bookmarks*` and
   `https://www.x.com/i/bookmarks*`.
 
@@ -247,6 +250,7 @@ Chrome profiles do not automatically share this archive with one another.
 
 ## Documentation and support
 
+- [Bookmark X source code](https://github.com/LucasDitchun/export-bookmarks-x-twitter)
 - [How X bookmark capture and page scraping work](docs/SCRAPING.md)
 - [Chrome Web Store release checklist](docs/CHROME_WEB_STORE_CHECKLIST.md)
 - [Contributing guide](CONTRIBUTING.md)

@@ -307,6 +307,16 @@
   "settingsSaved": { "message": "Guardado" },
   "settingsSaveError": { "message": "No se pudo guardar la configuración." },
   "settingsLoadError": { "message": "No se pudo cargar la configuración." },
+  "githubProjectEyebrow": { "message": "Independiente y abierto" },
+  "githubProjectTitle": { "message": "Código abierto en GitHub" },
+  "githubProjectDescription": {
+    "message": "Consulta el código, sigue el progreso o apoya el proyecto si te resulta útil."
+  },
+  "githubStarAction": { "message": "Dar una estrella en GitHub" },
+  "githubStarCount": {
+    "message": "$COUNT$ estrellas en GitHub",
+    "placeholders": { "count": { "content": "$1" } }
+  },
   "bookmarkPromptTitle": { "message": "¿Por qué guardas esto?" },
   "bookmarkPromptClose": { "message": "Cerrar" },
   "bookmarkPromptSave": { "message": "Guardar nota" },

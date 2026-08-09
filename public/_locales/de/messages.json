@@ -307,6 +307,16 @@
   "settingsSaved": { "message": "Gespeichert" },
   "settingsSaveError": { "message": "Einstellungen konnten nicht gespeichert werden." },
   "settingsLoadError": { "message": "Einstellungen konnten nicht geladen werden." },
+  "githubProjectEyebrow": { "message": "Unabhängig und offen" },
+  "githubProjectTitle": { "message": "Open Source auf GitHub" },
+  "githubProjectDescription": {
+    "message": "Sieh dir den Code an, verfolge den Fortschritt oder unterstütze das Projekt, wenn es dir hilft."
+  },
+  "githubStarAction": { "message": "Stern auf GitHub geben" },
+  "githubStarCount": {
+    "message": "$COUNT$ GitHub-Sterne",
+    "placeholders": { "count": { "content": "$1" } }
+  },
   "bookmarkPromptTitle": { "message": "Warum speicherst du das?" },
   "bookmarkPromptClose": { "message": "Schließen" },
   "bookmarkPromptSave": { "message": "Notiz speichern" },

@@ -229,6 +229,16 @@
   "settingsSaved": { "message": "Salvo" },
   "settingsSaveError": { "message": "Não foi possível salvar as configurações." },
   "settingsLoadError": { "message": "Não foi possível carregar as configurações." },
+  "githubProjectEyebrow": { "message": "Independente e aberto" },
+  "githubProjectTitle": { "message": "Código aberto no GitHub" },
+  "githubProjectDescription": {
+    "message": "Confira o código, acompanhe o progresso ou apoie o projeto se ele for útil para você."
+  },
+  "githubStarAction": { "message": "Dar uma estrela no GitHub" },
+  "githubStarCount": {
+    "message": "$COUNT$ estrelas no GitHub",
+    "placeholders": { "count": { "content": "$1" } }
+  },
   "bookmarkPromptTitle": { "message": "Por que você está salvando isto?" },
   "bookmarkPromptClose": { "message": "Fechar" },
   "bookmarkPromptSave": { "message": "Salvar nota" },

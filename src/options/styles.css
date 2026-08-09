@@ -117,6 +117,67 @@ legend {
   color: var(--quiet);
   margin: 4px 0 14px;
 }
+.github-project {
+  align-items: center;
+  background: linear-gradient(120deg, #ffffff 0%, #fbfff0 100%);
+  border: 1px solid var(--ink);
+  border-left: 7px solid var(--accent);
+  border-radius: 12px;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 34px;
+  padding: 20px 22px;
+}
+.github-project__eyebrow {
+  color: var(--quiet);
+  font:
+    700 0.72rem/1.2 ui-monospace,
+    monospace;
+  letter-spacing: 0.08em;
+  margin: 0 0 5px;
+  text-transform: uppercase;
+}
+.github-project h2 {
+  font-size: 1.25rem;
+  line-height: 1.2;
+  margin: 0;
+}
+.github-project__description {
+  color: var(--quiet);
+  margin: 8px 0 0;
+  max-width: 54ch;
+}
+.github-project__actions {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.github-project__stars {
+  color: var(--quiet);
+  font:
+    700 0.78rem/1.2 ui-monospace,
+    monospace;
+}
+.github-project__link {
+  align-items: center;
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 9px;
+  color: white;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 12px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  text-decoration: none;
+}
+.github-project__link:hover {
+  background: var(--accent);
+  color: var(--ink);
+}
 .save-status {
   background: var(--ink);
   bottom: 18px;
@@ -146,6 +207,16 @@ legend {
   main {
     padding-inline: 20px;
   }
+  .github-project {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+  .github-project__actions {
+    align-items: stretch;
+  }
+  .github-project__stars {
+    text-align: right;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -157,7 +228,8 @@ legend {
 }
 @media (forced-colors: active) {
   fieldset,
-  legend {
+  legend,
+  .github-project {
     box-shadow: none;
   }
 }

@@ -25,13 +25,20 @@ Data is used only to build and display your local archive and create the TXT
 export you request. Bookmark records are stored in IndexedDB; small capture
 checkpoints are stored in `chrome.storage.local`. Exported files are created
 only on request and are then managed by Chrome and the operating system.
-The selected interface language is stored in `chrome.storage.local`.
+The selected interface language and a public GitHub star-count cache are stored
+in `chrome.storage.local`.
 
 ## Network access and sharing
 
 Bookmark X does not send captured data to its developer or any extension-owned
 server. It does not sell, rent, share, or use bookmark data for advertising,
 profiling, or credit decisions.
+
+The Settings page can make an unauthenticated request to the fixed public
+GitHub repository endpoint to display its star count. This request uses no
+cookies or credentials, contains no bookmark data, and is made at most once per
+24 hours while a valid local cache is available. If the request fails, only the
+number is hidden; the extension continues to work normally.
 
 X itself controls the page and network requests in the signed-in tab. Bookmark
 X reads the resulting page DOM but does not make X API calls or extract
@@ -49,6 +56,8 @@ files must be deleted separately.
 - `activeTab`: lets the popup verify the current user-invoked tab.
 - `storage`: stores capture state and the interface language preference locally.
 - `unlimitedStorage`: supports a durable local archive.
+- `https://api.github.com/*`: reads the project's public star count for the
+  open-source card in Settings.
 - The content script match is restricted to `https://x.com/i/bookmarks*` and
   `https://www.x.com/i/bookmarks*`.
 

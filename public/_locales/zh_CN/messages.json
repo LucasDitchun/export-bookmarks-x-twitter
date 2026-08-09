@@ -291,6 +291,16 @@
   "settingsSaved": { "message": "已保存" },
   "settingsSaveError": { "message": "无法保存设置。" },
   "settingsLoadError": { "message": "无法加载设置。" },
+  "githubProjectEyebrow": { "message": "独立且开放" },
+  "githubProjectTitle": { "message": "GitHub 上的开源项目" },
+  "githubProjectDescription": {
+    "message": "查看代码、关注进展，若对您有用，可以为项目点亮星标。"
+  },
+  "githubStarAction": { "message": "在 GitHub 上加星" },
+  "githubStarCount": {
+    "message": "GitHub 上有 $COUNT$ 个星标",
+    "placeholders": { "count": { "content": "$1" } }
+  },
   "bookmarkPromptTitle": { "message": "为什么要收藏这个内容？" },
   "bookmarkPromptClose": { "message": "关闭" },
   "bookmarkPromptSave": { "message": "保存笔记" },

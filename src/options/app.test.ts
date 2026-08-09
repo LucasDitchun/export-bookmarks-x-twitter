@@ -19,6 +19,53 @@ beforeEach(() => {
 });
 
 describe("options app", () => {
+  it("keeps the GitHub project card useful when the public star count fails", async () => {
+    const sendMessage = vi.fn(async () => ({
+      ok: true as const,
+      data: { settings: DEFAULT_SETTINGS },
+    })) as SendMessage;
+    const loadGithubStars = vi.fn(async () => null);
+    const app = createOptionsApp({
+      document,
+      sendMessage,
+      translate,
+      loadGithubStars,
+    });
+
+    await app.githubReady;
+
+    const link = document.getElementById("github-project-link");
+    const count = document.getElementById("github-star-count");
+    expect(link?.getAttribute("href")).toBe(
+      "https://github.com/LucasDitchun/export-bookmarks-x-twitter",
+    );
+    expect(link?.getAttribute("rel")).toBe("noopener noreferrer external");
+    expect(link?.querySelector("[data-i18n='githubStarAction']")).not.toBeNull();
+    expect(count?.hasAttribute("hidden")).toBe(true);
+    expect(loadGithubStars).toHaveBeenCalledOnce();
+    app.destroy();
+  });
+
+  it("shows a localized, formatted public star count when available", async () => {
+    const sendMessage = vi.fn(async () => ({
+      ok: true as const,
+      data: { settings: DEFAULT_SETTINGS },
+    })) as SendMessage;
+    const app = createOptionsApp({
+      document,
+      sendMessage,
+      translate: (key, substitution) => `${key}:${String(substitution ?? "")}`,
+      loadGithubStars: async () => 1_234,
+    });
+
+    await app.githubReady;
+
+    const count = document.getElementById("github-star-count");
+    expect(count?.hasAttribute("hidden")).toBe(false);
+    expect(count?.textContent).toBe("githubStarCount:1,234");
+    app.destroy();
+  });
+
   it("loads every settings group and saves a changed surface", async () => {
     const requests: UiRequest[] = [];
     const sendMessage = vi.fn(async (request: UiRequest) => {

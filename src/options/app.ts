@@ -6,6 +6,7 @@ interface OptionsAppOptions {
   document: Document;
   sendMessage: SendMessage;
   translate: Translator;
+  loadGithubStars?: () => Promise<number | null>;
 }
 
 function input(document: Document, id: string): HTMLInputElement {
@@ -18,6 +19,7 @@ function input(document: Document, id: string): HTMLInputElement {
 
 export function createOptionsApp(options: OptionsAppOptions): {
   ready: Promise<void>;
+  githubReady: Promise<void>;
   destroy(): void;
 } {
   const { document, sendMessage, translate } = options;
@@ -216,8 +218,24 @@ export function createOptionsApp(options: OptionsAppOptions): {
     },
   );
 
+  const githubStarCount = document.getElementById("github-star-count");
+  if (!githubStarCount) throw new Error("Missing GitHub star count");
+  const githubReady = (options.loadGithubStars?.() ?? Promise.resolve(null)).then(
+    (stars) => {
+      if (destroyed || stars === null) return;
+      const locale = document.documentElement.lang || "en";
+      const formattedStars = new Intl.NumberFormat(locale).format(stars);
+      githubStarCount.textContent = translate("githubStarCount", formattedStars);
+      githubStarCount.hidden = false;
+    },
+    () => {
+      // The project link remains useful; a network failure only hides the number.
+    },
+  );
+
   return {
     ready,
+    githubReady,
     destroy() {
       destroyed = true;
       for (const [control, listener] of listeners) {
