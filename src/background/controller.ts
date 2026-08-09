@@ -104,6 +104,9 @@ interface BackgroundDependencies {
     listDocuments(): Promise<unknown>;
     invalidate(): void;
   };
+  semantic: {
+    clearArchiveData(): Promise<void>;
+  };
   tags: {
     list(): Promise<unknown>;
     add(bookmarkId: string, name: string): Promise<unknown>;
@@ -683,6 +686,7 @@ export class BackgroundController {
         case "CANCEL_SCRAPE":
           return success(await this.cancelScrape());
         case "CLEAR_ARCHIVE":
+          await this.dependencies.semantic.clearArchiveData();
           await this.dependencies.archive.clear();
           await Promise.all([
             this.dependencies.state.clearScrapeRun(),
