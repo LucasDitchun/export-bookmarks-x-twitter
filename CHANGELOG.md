@@ -30,6 +30,7 @@ All notable changes to Bookmark X are documented in this file.
 - ignore squashed release preparation commits (#25) (`09a9790`)
 - allow same-version release preparation (#27) (`18c8980`)
 - preserve live bookmark metadata state (#28) (`c5d803e`)
+- clear semantic data with archive (#30) (`0a75693`)
 
 ### Performance
 
