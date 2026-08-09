@@ -18,7 +18,10 @@ import {
   EXPECTED_CONTENT_SCRIPT_MATCHES,
   EXPECTED_MANIFEST_HOST_PERMISSIONS,
   EXPECTED_MANIFEST_PERMISSIONS,
+  EXPECTED_OPTIONS_PAGE,
+  EXPECTED_SIDE_PANEL_PATH,
   validateExactStringArray,
+  validateManifestEntrypoints,
 } from "./package-policy.mjs";
 
 const rootDirectory = resolve(import.meta.dirname, "..");
@@ -67,8 +70,10 @@ async function validateBuild(packageVersion) {
   const requiredFiles = [
     "LICENSE",
     "manifest.json",
+    EXPECTED_OPTIONS_PAGE,
     "popup.html",
     "service-worker.js",
+    EXPECTED_SIDE_PANEL_PATH,
     "content-script.js",
   ];
   for (const fileName of requiredFiles) {
@@ -102,6 +107,7 @@ async function validateBuild(packageVersion) {
   if (manifest.default_locale !== "en") {
     fail("Manifest default_locale must be en.");
   }
+  validateManifestEntrypoints(manifest);
 
   validateExactStringArray(
     manifest.permissions,

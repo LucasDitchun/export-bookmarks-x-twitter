@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   EXPECTED_CONTENT_SCRIPT_MATCHES,
+  EXPECTED_MINIMUM_CHROME_VERSION,
   EXPECTED_MANIFEST_HOST_PERMISSIONS,
   EXPECTED_MANIFEST_PERMISSIONS,
+  EXPECTED_OPTIONS_PAGE,
+  EXPECTED_SIDE_PANEL_PATH,
+  validateManifestEntrypoints,
   validateExactStringArray,
 } from "./package-policy.mjs";
 
@@ -122,4 +126,31 @@ describe("extension package permission policy", () => {
       );
     },
   );
+});
+
+describe("extension package entrypoint policy", () => {
+  const validManifest = {
+    minimum_chrome_version: "116",
+    side_panel: { default_path: "sidepanel.html" },
+    options_ui: { page: "options.html", open_in_tab: true },
+  };
+
+  it("pins Chrome 116 and the shared options and Side Panel pages", () => {
+    expect(EXPECTED_MINIMUM_CHROME_VERSION).toBe("116");
+    expect(EXPECTED_SIDE_PANEL_PATH).toBe("sidepanel.html");
+    expect(EXPECTED_OPTIONS_PAGE).toBe("options.html");
+    expect(() => validateManifestEntrypoints(validManifest)).not.toThrow();
+  });
+
+  it.each([
+    ["minimum Chrome", { ...validManifest, minimum_chrome_version: "102" }],
+    ["Side Panel", { ...validManifest, side_panel: { default_path: "popup.html" } }],
+    ["options page", { ...validManifest, options_ui: { page: "missing.html" } }],
+    [
+      "options tab behavior",
+      { ...validManifest, options_ui: { page: "options.html", open_in_tab: false } },
+    ],
+  ])("rejects an invalid %s contract", (_label, manifest) => {
+    expect(() => validateManifestEntrypoints(manifest)).toThrow();
+  });
 });
