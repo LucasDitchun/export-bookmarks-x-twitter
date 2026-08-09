@@ -185,6 +185,43 @@ describe("SemanticSearchClient", () => {
     expect(fallback.requests[1]).toMatchObject({ type: "SYNC" });
   });
 
+  it("rejects sibling requests when a contaminated worker is restarted", async () => {
+    const failed = new FakeWorker();
+    failed.postMessage = (request) => {
+      failed.requests.push(request);
+    };
+    const fallback = new FakeWorker();
+    const workers = [failed, fallback];
+    const client = new SemanticSearchClient(
+      new SemanticStateRepository(new MemoryStorage()),
+      async () => corpus,
+      () => workers.shift()!,
+    );
+
+    const installing = client.installWithConsent();
+    const sibling = client.installWithConsent();
+    await vi.waitFor(() => expect(failed.requests).toHaveLength(2));
+    const firstRequest = failed.requests[0];
+    expect(firstRequest).toBeDefined();
+    failed.emit({
+      kind: "result",
+      requestId: firstRequest!.requestId,
+      ok: false,
+      error: { code: "semantic_webgpu_failed" },
+    });
+
+    await expect(sibling).rejects.toThrow("restarted");
+    await expect(installing).resolves.toMatchObject({
+      backend: "wasm",
+      modelStatus: "ready",
+    });
+    expect(failed.terminated).toBe(true);
+    expect(fallback.requests[0]).toMatchObject({
+      type: "LOAD",
+      forceWasm: true,
+    });
+  });
+
   it("terminates the worker to cancel an active model download", async () => {
     const worker = new FakeWorker();
     const postMessage = vi.fn();
