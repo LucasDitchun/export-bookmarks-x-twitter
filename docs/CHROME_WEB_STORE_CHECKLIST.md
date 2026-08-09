@@ -26,8 +26,9 @@
 - [ ] `https://huggingface.co/*` and `https://*.cdn.hf.co/*` are justified as
       pinned model-data downloads after consent; no remote code is loaded.
 - [ ] The only content-script matches are `https://x.com/*` and
-      `https://www.x.com/*`; outside `/i/bookmarks`, post processing requires
-      an explicit bookmark-button click.
+      `https://www.x.com/*`; outside `/i/bookmarks`, only visible numeric post ID
+      matching is automatic, and full post processing requires an explicit
+      bookmark-button click.
 - [ ] There are no broad host permissions, cookie/history permissions,
       externally connectable origins, or web-accessible resources.
 
@@ -68,6 +69,11 @@
       save adds it, and a stable confirmed remove archives it.
 - [ ] X failure/reversal changes no local record; rebookmark restores note,
       folder, and tags.
+- [ ] Only locally known posts receive one isolated metadata card after the X
+      action group; pending, mapped, archived, and uncategorized states update
+      without duplicate hosts as X virtualizes the timeline.
+- [ ] Metadata toggles, large text, high contrast, reduced motion, all eight
+      locales, long labels, and plain-text/XSS fixtures are manually checked.
 - [ ] Arbitrary non-X sites cannot be captured.
 - [ ] Before consent, semantic search creates no worker download and text search
       remains fully functional.

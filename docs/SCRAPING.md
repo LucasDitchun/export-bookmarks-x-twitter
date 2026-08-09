@@ -3,7 +3,8 @@
 Bookmark X runs a content script on `https://x.com/*`. Full DOM capture and
 scrolling start only on `/i/bookmarks` after the user presses the capture
 button. On other X routes, the script remains passive until the user explicitly
-clicks a bookmark button.
+clicks a bookmark button, apart from comparing visible numeric post IDs with the
+local library for the metadata card described below.
 
 For each visible `article[data-testid="tweet"]`, it locates a canonical
 `/<username>/status/<numeric-id>` link and reads the post text, author area, and
@@ -69,6 +70,21 @@ record. A confirmed rebookmark refreshes public post fields while retaining the
 original note, folder, tags, first-saved date, and metadata timestamp. All
 content-script payloads and X sender URLs are validated again in the service
 worker before IndexedDB writes.
+
+## Local metadata decoration
+
+Visible X articles are observed in animation-frame batches. The content script
+sends at most 100 numeric post IDs per local lookup; the service worker reads the
+matching bookmarks, tags, folder breadcrumbs, settings, and selected locale in
+one batch. Only local matches receive a `bookmark-x-metadata` host immediately
+after the post action group.
+
+The card uses an open Shadow DOM and constructs every node with `createElement`,
+`createTextNode`, and `textContent`; stored notes, folder names, and tags are
+never parsed as HTML. It updates after confirmed live actions and metadata or
+settings changes. Mutation records are batched, stale async results are ignored,
+recycled articles are rebound to their new status ID, disconnected hosts are
+discarded, and mutations caused by the component itself are ignored.
 
 ## Limitations
 

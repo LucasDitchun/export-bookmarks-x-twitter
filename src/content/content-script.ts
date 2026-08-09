@@ -1,10 +1,16 @@
-import type { ContentControlRequest, ContentEvent } from "../shared/protocol";
+import type {
+  BookmarkDecorationLookupResult,
+  ContentControlRequest,
+  ContentEvent,
+  RuntimeResponse,
+} from "../shared/protocol";
 import { extractBookmarks } from "./extract-bookmarks";
 import { hasReachedPageEnd, isPageLoading } from "./page-state";
 import { runScrape } from "./scrape-runner";
 import { advanceTimeline } from "./timeline-navigation";
 import { waitForTimelineUpdate } from "./timeline-waiter";
 import { startLiveBookmarkObserver } from "./live-bookmark-observer";
+import { startBookmarkMetadataDecorator } from "./bookmark-metadata-decorator";
 
 let activeCapture: { runId: string; controller: AbortController } | undefined;
 
@@ -129,15 +135,48 @@ async function capture(runId: string, controller: AbortController): Promise<void
 function isControlRequest(value: unknown): value is ContentControlRequest {
   if (typeof value !== "object" || value === null) return false;
   const request = value as Record<string, unknown>;
+  if (request.type === "START_SCRAPE" || request.type === "CANCEL_SCRAPE") {
+    return typeof request.runId === "string";
+  }
   return (
-    (request.type === "START_SCRAPE" || request.type === "CANCEL_SCRAPE") &&
-    typeof request.runId === "string"
+    request.type === "REFRESH_BOOKMARK_METADATA" &&
+    (request.bookmarkIds === undefined ||
+      (Array.isArray(request.bookmarkIds) &&
+        request.bookmarkIds.length <= 100 &&
+        request.bookmarkIds.every(
+          (bookmarkId) => typeof bookmarkId === "string" && /^\d+$/.test(bookmarkId),
+        )))
   );
 }
+
+const metadataDecorator = startBookmarkMetadataDecorator({
+  document,
+  async lookup(ids) {
+    const response: RuntimeResponse<BookmarkDecorationLookupResult> =
+      await chrome.runtime.sendMessage({
+        type: "GET_BOOKMARK_DECORATIONS",
+        payload: { ids },
+      });
+    if (!response.ok) throw new Error(response.error.message);
+    return response.data;
+  },
+});
 
 chrome.runtime.onMessage.addListener((request: unknown, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !isControlRequest(request)) {
     sendResponse({ accepted: false });
+    return false;
+  }
+
+  if (request.type === "REFRESH_BOOKMARK_METADATA") {
+    if (request.bookmarkIds) {
+      for (const bookmarkId of request.bookmarkIds) {
+        metadataDecorator.refresh(bookmarkId);
+      }
+    } else {
+      metadataDecorator.refresh();
+    }
+    sendResponse({ accepted: true });
     return false;
   }
 
@@ -165,6 +204,8 @@ const liveBookmarkObserver = startLiveBookmarkObserver({
   document,
   send: (event) => chrome.runtime.sendMessage(event),
   translate: (key) => chrome.i18n.getMessage(key) || key,
+  onPending: (article, bookmarkId) => metadataDecorator.setPending(article, bookmarkId),
+  onChanged: (bookmarkId) => metadataDecorator.refresh(bookmarkId),
 });
 
 window.addEventListener(
@@ -172,6 +213,7 @@ window.addEventListener(
   () => {
     activeCapture?.controller.abort();
     liveBookmarkObserver.stop();
+    metadataDecorator.stop();
   },
   { once: true },
 );

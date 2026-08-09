@@ -325,6 +325,9 @@
   "bookmarkPromptNote": { "message": "非公開メモ" },
   "bookmarkCategorized": { "message": "分類済み" },
   "bookmarkNeedsCategory": { "message": "要分類" },
+  "bookmarkMetadataLabel": { "message": "Bookmark X に保存した投稿の詳細" },
+  "bookmarkMetadataMapped": { "message": "Bookmark X で整理済み" },
+  "bookmarkMetadataArchived": { "message": "ローカルアーカイブに保存済み" },
   "liveBookmarkPending": { "message": "X の確認を待っています…" },
   "liveBookmarkSaved": {
     "message": "ローカルに保存しました。メモ、フォルダー、タグを追加できます。"

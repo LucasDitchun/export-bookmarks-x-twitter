@@ -133,4 +133,17 @@ describe("BookmarkRepository", () => {
     );
     await expect(repository.saveNote("missing", "note")).rejects.toThrow(/not found/i);
   });
+
+  it("gets multiple requested bookmarks once and preserves request order", async () => {
+    const databaseName = `many-${crypto.randomUUID()}`;
+    const first = record("100", "2026-01-01T00:00:00.000Z");
+    const second = record("200", "2026-02-01T00:00:00.000Z");
+    await seed(databaseName, [first, second]);
+    const repository = new BookmarkRepository(databaseName);
+
+    await expect(repository.getMany(["200", "missing", "100", "200"])).resolves.toEqual(
+      [second, first],
+    );
+    await expect(repository.getMany([])).resolves.toEqual([]);
+  });
 });

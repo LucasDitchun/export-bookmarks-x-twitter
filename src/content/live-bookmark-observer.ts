@@ -25,6 +25,8 @@ export interface LiveBookmarkObserverOptions {
   translate: Translate;
   stableForMs?: number;
   timeoutMs?: number;
+  onPending?: (article: Element, bookmarkId: string) => void;
+  onChanged?: (bookmarkId: string) => void;
 }
 
 export interface LiveBookmarkObserverController {
@@ -175,6 +177,7 @@ export function startLiveBookmarkObserver(
       action,
       bookmark,
     };
+    options.onPending?.(article, bookmark.id);
 
     const pendingResponse = options.send(pendingEvent);
     const confirmation = waitForStableAction({
@@ -233,6 +236,7 @@ export function startLiveBookmarkObserver(
           active.modal?.setState("pending", options.translate("liveBookmarkPending"));
           try {
             await persistValues(values);
+            options.onChanged?.(bookmark.id);
             active.modal?.setState("ready", options.translate("liveBookmarkSaved"));
           } catch {
             if (!active.controller.signal.aborted) {
@@ -270,6 +274,7 @@ export function startLiveBookmarkObserver(
         .send({ type: "LIVE_BOOKMARK_CANCELLED", intentId: active.intentId })
         .catch(() => undefined);
       active.modal?.setState("error", options.translate("liveBookmarkFailed"));
+      options.onChanged?.(bookmark.id);
       activeByBookmark.delete(bookmark.id);
       return;
     }
@@ -305,6 +310,7 @@ export function startLiveBookmarkObserver(
     } else {
       active.modal?.setState("error", options.translate("liveBookmarkFailed"));
     }
+    options.onChanged?.(bookmark.id);
     activeByBookmark.delete(bookmark.id);
   };
 

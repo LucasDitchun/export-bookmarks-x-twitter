@@ -17,7 +17,10 @@ URLs are not retained. It also stores capture
 timestamps, counts, status metadata, and the selected interface language.
 When you click X's bookmark button on another X page, the extension reads only
 that post's rendered public fields and the button state needed to mirror the
-confirmed action in the local archive.
+confirmed action in the local archive. On X pages, it also compares the numeric
+IDs of visible posts with your local library so it can show your own note, tags,
+and folder beside matching posts. Unknown posts receive no injected card, and
+this lookup never leaves the device.
 
 Bookmarks can contain private or sensitive information. Treat exported files
 as private files.
@@ -89,8 +92,9 @@ JSON backups.
 - `https://huggingface.co/*` and `https://*.cdn.hf.co/*`: download only pinned
   semantic-model data after explicit user consent.
 - The content script match is restricted to `https://x.com/*` and
-  `https://www.x.com/*`. Outside `/i/bookmarks`, it processes post content only
-  after an explicit bookmark-button click.
+  `https://www.x.com/*`. Outside `/i/bookmarks`, it compares visible numeric post
+  IDs locally; it reads the remaining post content only after an explicit
+  bookmark-button click.
 
 Bookmark X does not request cookies, browsing history, downloads, or access to
 arbitrary websites.

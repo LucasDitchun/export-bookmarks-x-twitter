@@ -4,7 +4,10 @@ import type {
   ArchiveStats,
   BookmarkRecord,
   BookmarkSnapshot,
+  BookmarkTag,
+  FolderRecord,
   ScrapeRun,
+  SupportedLocale,
 } from "../domain/types";
 import type { LiveBookmarkContext } from "../shared/protocol";
 import {
@@ -27,6 +30,10 @@ const stats: ArchiveStats = {
   current: 1,
   archived: 1,
   lastSuccessfulSyncAt: "2026-07-29T12:00:00.000Z",
+};
+const metadataMessages = {
+  bookmarkMetadataLabel: "Bookmark X saved-post details",
+  bookmarkMetadataMapped: "Mapped by Bookmark X",
 };
 
 const bookmark: BookmarkSnapshot = {
@@ -58,6 +65,7 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
     bookmarks: {
       list: vi.fn(async (): Promise<unknown> => ({ items: [], nextCursor: null })),
       get: vi.fn(async (): Promise<unknown> => null),
+      getMany: vi.fn(async (): Promise<BookmarkRecord[]> => []),
       saveNote: vi.fn(async (): Promise<unknown> => null),
     },
     search: {
@@ -72,12 +80,12 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       invalidate: vi.fn(),
     },
     tags: {
-      list: vi.fn(async (): Promise<unknown> => []),
+      list: vi.fn(async (): Promise<BookmarkTag[]> => []),
       add: vi.fn(async (): Promise<unknown> => null),
       remove: vi.fn(async (): Promise<unknown> => null),
     },
     folders: {
-      list: vi.fn(async () => []),
+      list: vi.fn(async (): Promise<FolderRecord[]> => []),
       create: vi.fn(async () => ({
         id: "folder-1",
         name: "Research",
@@ -136,6 +144,14 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
         };
         return currentSettings;
       }),
+    },
+    locale: {
+      get: vi.fn(
+        async (): Promise<{
+          locale: SupportedLocale;
+          messages: Record<string, string>;
+        }> => ({ locale: "en", messages: metadataMessages }),
+      ),
     },
     liveState: {
       get: vi.fn(
@@ -449,6 +465,68 @@ describe("BackgroundController", () => {
     expect(dependencies.search.listDocuments).toHaveBeenCalledOnce();
     await expect(
       controller.handle({ type: "GET_SEMANTIC_CORPUS" }, { id: "another-extension" }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
+  });
+
+  it("loads local post decorations in one bounded lookup with tags and breadcrumb", async () => {
+    const dependencies = createDependencies("https://x.com/home");
+    const local: BookmarkRecord = {
+      ...bookmark,
+      media: bookmark.media ?? { images: [], videos: [] },
+      note: "Private context",
+      folderId: "folder-ai",
+      tagIds: ["tag-ai", "tag-other"],
+      firstSavedAt: "2026-07-29T13:14:15.123Z",
+      lastSeenAt: "2026-07-29T13:14:15.123Z",
+      archivedAt: null,
+      metadataUpdatedAt: "2026-07-29T13:14:15.123Z",
+      status: "current",
+    };
+    dependencies.bookmarks.getMany.mockResolvedValue([local]);
+    dependencies.tags.list.mockResolvedValue([
+      { id: "tag-ai", name: "AI", normalizedName: "ai" },
+      { id: "tag-other", name: "Other", normalizedName: "other" },
+      { id: "unused", name: "Unused", normalizedName: "unused" },
+    ]);
+    dependencies.folders.list.mockResolvedValue([
+      { id: "folder-research", name: "Research", parentId: null },
+      { id: "folder-ai", name: "AI", parentId: "folder-research" },
+    ]);
+    dependencies.locale.get.mockResolvedValue({
+      locale: "pt_BR",
+      messages: metadataMessages,
+    });
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        { type: "GET_BOOKMARK_DECORATIONS", payload: { ids: ["123", "999"] } },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: {
+        locale: "pt_BR",
+        settings: DEFAULT_SETTINGS,
+        items: [
+          {
+            bookmark: { id: "123" },
+            breadcrumb: ["Research", "AI"],
+            tags: [{ id: "tag-ai" }, { id: "tag-other" }],
+          },
+        ],
+      },
+    });
+    expect(dependencies.bookmarks.getMany).toHaveBeenCalledWith(["123", "999"]);
+
+    await expect(
+      controller.handle(
+        {
+          type: "GET_BOOKMARK_DECORATIONS",
+          payload: { ids: Array.from({ length: 101 }, (_, index) => String(index)) },
+        },
+        CONTENT_SENDER,
+      ),
     ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
   });
 

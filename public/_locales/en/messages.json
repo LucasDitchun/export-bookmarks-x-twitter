@@ -237,6 +237,9 @@
   "bookmarkPromptNote": { "message": "Private note" },
   "bookmarkCategorized": { "message": "Categorized" },
   "bookmarkNeedsCategory": { "message": "Needs category" },
+  "bookmarkMetadataLabel": { "message": "Bookmark X saved-post details" },
+  "bookmarkMetadataMapped": { "message": "Mapped by Bookmark X" },
+  "bookmarkMetadataArchived": { "message": "Archived locally" },
   "liveBookmarkPending": { "message": "Waiting for X to confirm…" },
   "liveBookmarkSaved": { "message": "Saved locally. Add a note, folder, or tags." },
   "liveBookmarkArchived": {

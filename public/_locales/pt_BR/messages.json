@@ -247,6 +247,9 @@
   "bookmarkPromptNote": { "message": "Nota privada" },
   "bookmarkCategorized": { "message": "Categorizado" },
   "bookmarkNeedsCategory": { "message": "Precisa de categoria" },
+  "bookmarkMetadataLabel": { "message": "Detalhes da postagem salva no Bookmark X" },
+  "bookmarkMetadataMapped": { "message": "Mapeado pelo Bookmark X" },
+  "bookmarkMetadataArchived": { "message": "Arquivado localmente" },
   "liveBookmarkPending": { "message": "Aguardando a confirmação do X…" },
   "liveBookmarkSaved": {
     "message": "Salvo localmente. Adicione uma nota, pasta ou tags."
