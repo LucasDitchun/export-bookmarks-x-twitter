@@ -37,6 +37,15 @@ describe("release preparation diff policy", () => {
     ).not.toThrow();
   });
 
+  it("allows a same-version re-preparation to update only changelog and ZIP", () => {
+    expect(() =>
+      assertReleasePreparationChanges([
+        { path: "CHANGELOG.md", status: "M" },
+        { path: "download/bookmark-x.zip", status: "M" },
+      ]),
+    ).not.toThrow();
+  });
+
   it("rejects source changes and destructive statuses", () => {
     expect(() =>
       assertReleasePreparationChanges([
@@ -57,7 +66,7 @@ describe("release preparation diff policy", () => {
     ).toThrow("Release preparation may only add or modify files");
   });
 
-  it("requires changelog, stable ZIP, package, and manifest changes", () => {
+  it("requires changelog and stable ZIP changes", () => {
     expect(() =>
       assertReleasePreparationChanges([
         { path: "CHANGELOG.md", status: "A" },
