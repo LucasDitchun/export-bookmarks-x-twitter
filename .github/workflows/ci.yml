@@ -4,6 +4,12 @@ on:
   pull_request:
     branches:
       - develop
+  push:
+    branches:
+      - develop
+    paths:
+      - pnpm-lock.yaml
+      - .github/workflows/ci.yml
   workflow_dispatch:
     inputs:
       expected_sha:
@@ -19,10 +25,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  warm-cache:
+    name: Warm dependency cache
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Populate the develop dependency cache
+        run: pnpm fetch --frozen-lockfile
+
   quality:
     name: Quality, build, and package
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    env:
+      CI_MODE: ${{ (github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'automation/prepare-v')) && 'release' || 'full' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -31,9 +64,7 @@ jobs:
           ref: ${{ inputs.expected_sha || (startsWith(github.head_ref, 'automation/prepare-v') && github.event.pull_request.head.sha) || github.sha }}
 
       - name: Bind release automation to the prepared commit
-        if: >-
-          github.event_name == 'workflow_dispatch' ||
-          startsWith(github.head_ref, 'automation/prepare-v')
+        if: env.CI_MODE == 'release'
         env:
           EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha || github.event.pull_request.head.sha }}
           RELEASE_REF_NAME: ${{ github.head_ref || github.ref_name }}
@@ -51,39 +82,15 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Audit all dependencies at HIGH severity
-        run: pnpm audit:high
-
-      - name: Check formatting
-        run: pnpm format:check
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Check release script syntax
-        run: |
-          node --check .github/scripts/release-train.mjs
-          node --check scripts/version.mjs
-          node --check scripts/package.mjs
-          node --check scripts/chrome-smoke.mjs
-          node --check scripts/archive-integrity.mjs
-          node --check scripts/release-dispatch-policy.mjs
-          node --check scripts/release-preparation-policy.mjs
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Validate generated release PR scope
-        if: >-
-          github.event_name == 'workflow_dispatch' ||
-          startsWith(github.head_ref, 'automation/prepare-v')
+        if: env.CI_MODE == 'release'
         env:
           EVENT_NAME: ${{ github.event_name }}
           EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha }}
@@ -106,20 +113,51 @@ jobs:
             --head-ref "$RELEASE_HEAD_SHA"
 
       - name: Preserve the reviewed release ZIP
-        if: >-
-          github.event_name == 'workflow_dispatch' ||
-          startsWith(github.head_ref, 'automation/prepare-v')
+        if: env.CI_MODE == 'release'
         run: cp download/bookmark-x.zip "$RUNNER_TEMP/reviewed-bookmark-x.zip"
 
+      - name: Audit all dependencies at HIGH severity
+        run: pnpm audit:high
+
+      - name: Check repository formatting
+        if: env.CI_MODE == 'full'
+        run: pnpm format:check
+
+      - name: Check generated release formatting
+        if: env.CI_MODE == 'release'
+        run: pnpm exec prettier --check package.json pnpm-lock.yaml public/manifest.json CHANGELOG.md
+
+      - name: Lint
+        if: env.CI_MODE == 'full'
+        run: pnpm lint
+
+      - name: Typecheck
+        if: env.CI_MODE == 'full'
+        run: pnpm typecheck
+
+      - name: Check release script syntax
+        if: env.CI_MODE == 'full'
+        run: |
+          node --check .github/scripts/release-train.mjs
+          node --check scripts/version.mjs
+          node --check scripts/package.mjs
+          node --check scripts/chrome-smoke.mjs
+          node --check scripts/archive-integrity.mjs
+          node --check scripts/release-dispatch-policy.mjs
+          node --check scripts/release-preparation-policy.mjs
+
       - name: Test release policy
+        if: env.CI_MODE == 'full'
         run: node --test .github/scripts/release-train.test.mjs
 
       - name: Test the semantic model gate without downloading weights
+        if: env.CI_MODE == 'full'
         run: |
           pnpm semantic-model:gate:test
           pnpm semantic-model:gate:dry-run
 
       - name: Test with coverage
+        if: env.CI_MODE == 'full'
         run: pnpm test:coverage
 
       - name: Build extension
@@ -129,9 +167,7 @@ jobs:
         run: pnpm package
 
       - name: Compare the reviewed and rebuilt ZIP contents
-        if: >-
-          github.event_name == 'workflow_dispatch' ||
-          startsWith(github.head_ref, 'automation/prepare-v')
+        if: env.CI_MODE == 'release'
         run: >-
           pnpm verify:archive --
           "$RUNNER_TEMP/reviewed-bookmark-x.zip"

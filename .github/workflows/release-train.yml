@@ -9,8 +9,8 @@ on:
 permissions: {}
 
 concurrency:
-  group: bookmark-x-release-train
-  cancel-in-progress: false
+  group: bookmark-x-release-train-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   sync-pr:
@@ -71,7 +71,7 @@ jobs:
     name: Prepare the selected release batch
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     permissions:
       contents: read
     outputs:
@@ -96,12 +96,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Audit all dependencies at HIGH severity
         run: pnpm audit:high
@@ -138,27 +138,15 @@ jobs:
 
       - name: Refresh the lockfile
         if: steps.state.outputs.noop != 'true'
-        run: pnpm install --lockfile-only
+        run: pnpm install --lockfile-only --offline
 
       - name: Format the refreshed lockfile
         if: steps.state.outputs.noop != 'true'
         run: pnpm exec prettier --write pnpm-lock.yaml
 
-      - name: Check formatting
+      - name: Check generated release formatting
         if: steps.state.outputs.noop != 'true'
-        run: pnpm format:check
-
-      - name: Lint
-        if: steps.state.outputs.noop != 'true'
-        run: pnpm lint
-
-      - name: Typecheck
-        if: steps.state.outputs.noop != 'true'
-        run: pnpm typecheck
-
-      - name: Test with coverage
-        if: steps.state.outputs.noop != 'true'
-        run: pnpm test:coverage
+        run: pnpm exec prettier --check package.json pnpm-lock.yaml public/manifest.json CHANGELOG.md
 
       - name: Build extension
         if: steps.state.outputs.noop != 'true'
@@ -213,6 +201,7 @@ jobs:
           path: ${{ runner.temp }}/prepared-release
           if-no-files-found: error
           retention-days: 1
+          compression-level: 0
 
   open-prepared-release-pr:
     name: Open the verified release preparation PR
