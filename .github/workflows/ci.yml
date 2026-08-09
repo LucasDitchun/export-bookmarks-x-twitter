@@ -4,12 +4,6 @@ on:
   pull_request:
     branches:
       - develop
-    paths-ignore:
-      - CHANGELOG.md
-      - download/bookmark-x.zip
-      - package.json
-      - pnpm-lock.yaml
-      - public/manifest.json
   workflow_dispatch:
     inputs:
       expected_sha:
@@ -21,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ inputs.expected_sha || github.sha }}
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -34,18 +28,21 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-          ref: ${{ inputs.expected_sha || github.sha }}
+          ref: ${{ inputs.expected_sha || (startsWith(github.head_ref, 'automation/prepare-v') && github.event.pull_request.head.sha) || github.sha }}
 
-      - name: Bind a manual run to the prepared release commit
-        if: github.event_name == 'workflow_dispatch'
+      - name: Bind release automation to the prepared commit
+        if: >-
+          github.event_name == 'workflow_dispatch' ||
+          startsWith(github.head_ref, 'automation/prepare-v')
         env:
-          DISPATCH_EVENT_SHA: ${{ github.sha }}
-          EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha }}
+          EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha || github.event.pull_request.head.sha }}
+          RELEASE_REF_NAME: ${{ github.head_ref || github.ref_name }}
+          TRIGGER_RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.head.sha }}
         run: |
           node scripts/release-dispatch-policy.mjs validate \
-            --ref-name "$GITHUB_REF_NAME" \
+            --ref-name "$RELEASE_REF_NAME" \
             --expected-sha "$EXPECTED_RELEASE_SHA" \
-            --event-sha "$DISPATCH_EVENT_SHA" \
+            --event-sha "$TRIGGER_RELEASE_SHA" \
             --actual-sha "$(git rev-parse HEAD)"
 
       - name: Install pnpm

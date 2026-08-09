@@ -37,37 +37,43 @@ describe("release workflow permissions and gates", () => {
     expect(dispatch).toContain('--field expected_sha="$PREPARED_SHA"');
   });
 
-  it("binds manual CI to the prepared ref and exact SHA", async () => {
+  it("binds dispatched CI to the prepared ref and exact SHA", async () => {
     const workflow = await readWorkflow("ci.yml");
 
     expect(workflow).toContain("expected_sha:");
     expect(workflow).toContain("scripts/release-dispatch-policy.mjs validate");
-    expect(workflow).toContain('--event-sha "$DISPATCH_EVENT_SHA"');
-    expect(workflow).toContain("ref: ${{ inputs.expected_sha || github.sha }}");
+    expect(workflow).toContain('--event-sha "$TRIGGER_RELEASE_SHA"');
   });
 
-  it("keeps prepared release PR runs from racing their exact-SHA dispatch", async () => {
+  it("runs CI for ordinary PRs that only change package metadata", async () => {
     const workflow = await readWorkflow("ci.yml");
     const pullRequestTrigger = workflow.slice(
       workflow.indexOf("  pull_request:\n"),
       workflow.indexOf("  workflow_dispatch:\n"),
     );
 
-    const ignoredPaths = pullRequestTrigger
-      .slice(pullRequestTrigger.indexOf("    paths-ignore:\n"))
-      .match(/^      - (.+)$/gmu)
-      ?.map((line) => line.slice("      - ".length));
-    expect(ignoredPaths).toEqual([
-      "CHANGELOG.md",
-      "download/bookmark-x.zip",
-      "package.json",
-      "pnpm-lock.yaml",
-      "public/manifest.json",
-    ]);
+    expect(pullRequestTrigger).not.toContain("paths-ignore:");
+  });
+
+  it("makes automation PR and dispatch runs validate the same head SHA", async () => {
+    const workflow = await readWorkflow("ci.yml");
+
     expect(workflow).toContain(
-      "group: ci-${{ github.workflow }}-${{ inputs.expected_sha || github.sha }}",
+      "group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}",
     );
-    expect(workflow).not.toContain("github.head_ref || github.ref_name");
+    expect(workflow).toContain("cancel-in-progress: true");
+    expect(workflow).toContain(
+      "ref: ${{ inputs.expected_sha || (startsWith(github.head_ref, 'automation/prepare-v') && github.event.pull_request.head.sha) || github.sha }}",
+    );
+    expect(workflow).toContain(
+      "EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha || github.event.pull_request.head.sha }}",
+    );
+    expect(workflow).toContain(
+      "RELEASE_REF_NAME: ${{ github.head_ref || github.ref_name }}",
+    );
+    expect(workflow).toContain(
+      "TRIGGER_RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.head.sha }}",
+    );
   });
 
   it("runs Chrome smoke once at preparation and never rebuilds main", async () => {
