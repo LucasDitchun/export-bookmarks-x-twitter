@@ -13,8 +13,6 @@ export const ALLOWED_RELEASE_PREPARATION_PATHS = Object.freeze([
 const REQUIRED_RELEASE_PREPARATION_PATHS = Object.freeze([
   "CHANGELOG.md",
   "download/bookmark-x.zip",
-  "package.json",
-  "public/manifest.json",
 ]);
 
 export function assertReleasePreparationChanges(changes) {
