@@ -580,6 +580,149 @@ h3 {
   line-height: 1.6;
 }
 
+.folder-editor {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 2px solid #c9c8bb;
+}
+
+.folder-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.folder-editor > label,
+.folder-form label {
+  display: block;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.folder-editor select,
+.folder-editor input {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 2px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+}
+
+.folder-breadcrumb {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.folder-breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.folder-breadcrumb li:not(:last-child)::after {
+  margin-left: 4px;
+  content: "/";
+}
+
+.folder-manager {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 2px solid #b8b7aa;
+  border-radius: 5px;
+  background: #faf9ef;
+}
+
+.folder-manager summary {
+  min-height: 44px;
+  padding: 9px 0;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.folder-form {
+  padding-bottom: 16px;
+  border-bottom: 2px solid #d8d7ca;
+}
+
+.compact-button {
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.folder-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.folder-list-item {
+  padding: 10px;
+  border: 1px solid #b8b7aa;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.folder-path-label {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.folder-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.folder-action {
+  min-height: 36px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+
+.folder-rename-form,
+.folder-delete-confirmation {
+  display: grid;
+  gap: 8px;
+}
+
+.folder-rename-form input {
+  margin-top: 0;
+}
+
+.folder-delete-confirmation {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #b8b7aa;
+}
+
+.folder-delete-confirmation p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+#folder-status[data-state="error"] {
+  color: var(--danger);
+}
+
 .empty-note {
   padding: 12px 14px;
   border-left: 5px solid var(--accent);

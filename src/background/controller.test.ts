@@ -45,6 +45,28 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       add: vi.fn(async (): Promise<unknown> => null),
       remove: vi.fn(async (): Promise<unknown> => null),
     },
+    folders: {
+      list: vi.fn(async () => []),
+      create: vi.fn(async () => ({
+        id: "folder-1",
+        name: "Research",
+        parentId: null,
+      })),
+      rename: vi.fn(async () => ({
+        id: "folder-1",
+        name: "Reading",
+        parentId: null,
+      })),
+      delete: vi.fn(async () => ({
+        deletedFolderIds: ["folder-1"],
+        uncategorizedBookmarkCount: 1,
+      })),
+      assignBookmark: vi.fn(async () => ({
+        ...bookmark,
+        note: "",
+        folderId: "folder-1",
+      })),
+    },
     state: {
       getScrapeRun: vi.fn(async () => currentRun),
       setScrapeRun: vi.fn(async (run: ScrapeRun) => {
@@ -222,6 +244,100 @@ describe("BackgroundController", () => {
     }
     expect(dependencies.tags.add).not.toHaveBeenCalled();
     expect(dependencies.tags.remove).not.toHaveBeenCalled();
+  });
+
+  it("routes validated hierarchical folder operations", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "LIST_FOLDERS" }, POPUP_SENDER),
+    ).resolves.toEqual({ ok: true, data: { folders: [] } });
+    await controller.handle(
+      {
+        type: "CREATE_FOLDER",
+        payload: { name: "Research", parentId: null },
+      },
+      POPUP_SENDER,
+    );
+    await controller.handle(
+      {
+        type: "CREATE_FOLDER",
+        payload: { name: "AI", parentId: "folder-1" },
+      },
+      POPUP_SENDER,
+    );
+    await controller.handle(
+      {
+        type: "RENAME_FOLDER",
+        payload: { id: "folder-1", name: "Reading" },
+      },
+      POPUP_SENDER,
+    );
+    await controller.handle(
+      { type: "DELETE_FOLDER", payload: { id: "folder-1" } },
+      POPUP_SENDER,
+    );
+    await controller.handle(
+      {
+        type: "ASSIGN_BOOKMARK_FOLDER",
+        payload: { bookmarkId: "123", folderId: "folder-1" },
+      },
+      POPUP_SENDER,
+    );
+    await controller.handle(
+      {
+        type: "ASSIGN_BOOKMARK_FOLDER",
+        payload: { bookmarkId: "123", folderId: null },
+      },
+      POPUP_SENDER,
+    );
+
+    expect(dependencies.folders.create).toHaveBeenNthCalledWith(1, {
+      name: "Research",
+      parentId: null,
+    });
+    expect(dependencies.folders.create).toHaveBeenNthCalledWith(2, {
+      name: "AI",
+      parentId: "folder-1",
+    });
+    expect(dependencies.folders.rename).toHaveBeenCalledWith("folder-1", "Reading");
+    expect(dependencies.folders.delete).toHaveBeenCalledWith("folder-1");
+    expect(dependencies.folders.assignBookmark).toHaveBeenNthCalledWith(
+      1,
+      "123",
+      "folder-1",
+    );
+    expect(dependencies.folders.assignBookmark).toHaveBeenNthCalledWith(2, "123", null);
+  });
+
+  it("rejects malformed folder operations before storage", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    const requests = [
+      { type: "CREATE_FOLDER", payload: { name: " ", parentId: null } },
+      {
+        type: "CREATE_FOLDER",
+        payload: { name: "Valid", parentId: "../../folder" },
+      },
+      { type: "RENAME_FOLDER", payload: { id: "folder-1", name: "x".repeat(101) } },
+      { type: "DELETE_FOLDER", payload: { id: "<script>" } },
+      {
+        type: "ASSIGN_BOOKMARK_FOLDER",
+        payload: { bookmarkId: "123", folderId: "<script>" },
+      },
+    ];
+
+    for (const request of requests) {
+      await expect(controller.handle(request, POPUP_SENDER)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "invalid_request" },
+      });
+    }
+    expect(dependencies.folders.create).not.toHaveBeenCalled();
+    expect(dependencies.folders.rename).not.toHaveBeenCalled();
+    expect(dependencies.folders.delete).not.toHaveBeenCalled();
+    expect(dependencies.folders.assignBookmark).not.toHaveBeenCalled();
   });
 
   it("rejects invalid bookmark IDs and notes over 20,000 characters", async () => {

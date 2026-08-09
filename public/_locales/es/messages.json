@@ -27,6 +27,34 @@
   "noteSaving": { "message": "Guardando…" },
   "noteSaved": { "message": "Guardado" },
   "noteSaveError": { "message": "No guardado" },
+  "folderTitle": { "message": "Carpeta" },
+  "folderBreadcrumbLabel": { "message": "Ruta de la carpeta" },
+  "folderAssignmentLabel": { "message": "Guardar en la carpeta" },
+  "uncategorizedFolder": { "message": "Sin categoría" },
+  "manageFolders": { "message": "Administrar carpetas" },
+  "newFolderName": { "message": "Nombre" },
+  "parentFolderLabel": { "message": "Carpeta superior" },
+  "rootFolder": { "message": "Sin carpeta superior (nivel principal)" },
+  "createFolderButton": { "message": "Crear carpeta" },
+  "renameFolder": { "message": "Cambiar nombre" },
+  "renameFolderInputLabel": {
+    "message": "Cambiar el nombre de $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "Guardar nombre" },
+  "deleteFolder": { "message": "Eliminar" },
+  "deleteFolderConfirmation": {
+    "message": "¿Eliminar $NAME$ y todas sus subcarpetas? Los marcadores quedarán sin categoría.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "Eliminar carpeta" },
+  "folderSaving": { "message": "Guardando…" },
+  "folderSaved": { "message": "Guardado" },
+  "folderDeleting": { "message": "Eliminando…" },
+  "folderDeleted": { "message": "Carpeta eliminada" },
+  "folderCreated": { "message": "Carpeta creada" },
+  "folderActionError": { "message": "No se pudieron actualizar las carpetas." },
+  "folderLoadError": { "message": "No se pudieron cargar las carpetas." },
   "extensionName": {
     "message": "Bookmark X"
   },

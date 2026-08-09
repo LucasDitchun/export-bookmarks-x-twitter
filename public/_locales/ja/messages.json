@@ -25,6 +25,34 @@
   "noteSaving": { "message": "保存中…" },
   "noteSaved": { "message": "保存済み" },
   "noteSaveError": { "message": "保存できませんでした" },
+  "folderTitle": { "message": "フォルダー" },
+  "folderBreadcrumbLabel": { "message": "フォルダーのパス" },
+  "folderAssignmentLabel": { "message": "保存先フォルダー" },
+  "uncategorizedFolder": { "message": "未分類" },
+  "manageFolders": { "message": "フォルダーを管理" },
+  "newFolderName": { "message": "名前" },
+  "parentFolderLabel": { "message": "親フォルダー" },
+  "rootFolder": { "message": "親なし（最上位）" },
+  "createFolderButton": { "message": "フォルダーを作成" },
+  "renameFolder": { "message": "名前を変更" },
+  "renameFolderInputLabel": {
+    "message": "$NAME$ の名前を変更",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "名前を保存" },
+  "deleteFolder": { "message": "削除" },
+  "deleteFolderConfirmation": {
+    "message": "$NAME$ とすべてのサブフォルダーを削除しますか？ブックマークは未分類になります。",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "フォルダーを削除" },
+  "folderSaving": { "message": "保存中…" },
+  "folderSaved": { "message": "保存済み" },
+  "folderDeleting": { "message": "削除中…" },
+  "folderDeleted": { "message": "フォルダーを削除しました" },
+  "folderCreated": { "message": "フォルダーを作成しました" },
+  "folderActionError": { "message": "フォルダーを更新できませんでした。" },
+  "folderLoadError": { "message": "フォルダーを読み込めませんでした。" },
   "extensionName": {
     "message": "Bookmark X"
   },

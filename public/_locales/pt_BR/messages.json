@@ -27,6 +27,34 @@
   "noteSaving": { "message": "Salvando…" },
   "noteSaved": { "message": "Salvo" },
   "noteSaveError": { "message": "Não salvo" },
+  "folderTitle": { "message": "Pasta" },
+  "folderBreadcrumbLabel": { "message": "Caminho da pasta" },
+  "folderAssignmentLabel": { "message": "Salvar na pasta" },
+  "uncategorizedFolder": { "message": "Sem categoria" },
+  "manageFolders": { "message": "Gerenciar pastas" },
+  "newFolderName": { "message": "Nome" },
+  "parentFolderLabel": { "message": "Pasta principal" },
+  "rootFolder": { "message": "Sem pasta principal (nível superior)" },
+  "createFolderButton": { "message": "Criar pasta" },
+  "renameFolder": { "message": "Renomear" },
+  "renameFolderInputLabel": {
+    "message": "Renomear $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "Salvar nome" },
+  "deleteFolder": { "message": "Excluir" },
+  "deleteFolderConfirmation": {
+    "message": "Excluir $NAME$ e todas as subpastas? Os bookmarks ficarão sem categoria.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "Excluir pasta" },
+  "folderSaving": { "message": "Salvando…" },
+  "folderSaved": { "message": "Salvo" },
+  "folderDeleting": { "message": "Excluindo…" },
+  "folderDeleted": { "message": "Pasta excluída" },
+  "folderCreated": { "message": "Pasta criada" },
+  "folderActionError": { "message": "Não foi possível atualizar as pastas." },
+  "folderLoadError": { "message": "Não foi possível carregar as pastas." },
   "extensionName": { "message": "Bookmark X" },
   "extensionDescription": {
     "message": "Capture seus bookmarks do X pela página aberta e exporte um arquivo TXT local e privado."

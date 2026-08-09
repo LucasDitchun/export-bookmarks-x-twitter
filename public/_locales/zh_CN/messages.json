@@ -23,6 +23,34 @@
   "noteSaving": { "message": "正在保存…" },
   "noteSaved": { "message": "已保存" },
   "noteSaveError": { "message": "未保存" },
+  "folderTitle": { "message": "文件夹" },
+  "folderBreadcrumbLabel": { "message": "文件夹路径" },
+  "folderAssignmentLabel": { "message": "保存到文件夹" },
+  "uncategorizedFolder": { "message": "未分类" },
+  "manageFolders": { "message": "管理文件夹" },
+  "newFolderName": { "message": "名称" },
+  "parentFolderLabel": { "message": "上级文件夹" },
+  "rootFolder": { "message": "无上级文件夹（顶层）" },
+  "createFolderButton": { "message": "创建文件夹" },
+  "renameFolder": { "message": "重命名" },
+  "renameFolderInputLabel": {
+    "message": "重命名 $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "保存名称" },
+  "deleteFolder": { "message": "删除" },
+  "deleteFolderConfirmation": {
+    "message": "删除 $NAME$ 及其所有子文件夹？书签将变为未分类。",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "删除文件夹" },
+  "folderSaving": { "message": "正在保存…" },
+  "folderSaved": { "message": "已保存" },
+  "folderDeleting": { "message": "正在删除…" },
+  "folderDeleted": { "message": "文件夹已删除" },
+  "folderCreated": { "message": "文件夹已创建" },
+  "folderActionError": { "message": "无法更新文件夹。" },
+  "folderLoadError": { "message": "无法加载文件夹。" },
   "extensionName": {
     "message": "Bookmark X"
   },
