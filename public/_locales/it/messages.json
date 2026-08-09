@@ -159,7 +159,7 @@
     "message": "Nessun segnalibro acquisito."
   },
   "lastCaptureAt": {
-    "message": "Acquisito il $DATE$",
+    "message": "Ultima revisione completa: $DATE$",
     "placeholders": {
       "date": {
         "content": "$1"
@@ -167,7 +167,7 @@
     }
   },
   "neverCaptured": {
-    "message": "Mai acquisito"
+    "message": "Nessuna revisione completa"
   },
   "unknownDate": {
     "message": "Data sconosciuta"
@@ -178,6 +178,30 @@
   "captureDescription": {
     "message": "Bookmark X scorre la pagina dei segnalibri aperta e salva localmente ogni post visibile."
   },
+  "captureModeLabel": { "message": "Modalità di revisione" },
+  "captureModeQuick": { "message": "Aggiornamento rapido" },
+  "captureModeFull": { "message": "Revisione completa" },
+  "captureModeQuickHelp": {
+    "message": "Trova i nuovi elementi e si ferma dopo aver riconosciuto i segnalibri recenti."
+  },
+  "captureModeFullHelp": {
+    "message": "Controlla l’intero elenco e riconcilia i segnalibri rimossi su un altro dispositivo."
+  },
+  "captureModeFirstFullHelp": {
+    "message": "La prima acquisizione deve controllare in sicurezza l’intero elenco."
+  },
+  "fullReviewReminder": {
+    "message": "Sono trascorsi più di 30 giorni dall’ultima revisione completa. Valuta di eseguirne una ora."
+  },
+  "captureRunningQuick": { "message": "Aggiornamento rapido in corso" },
+  "captureRunningFull": { "message": "Revisione completa in corso" },
+  "captureCompleteQuick": { "message": "Aggiornamento rapido completato" },
+  "captureCompleteFull": { "message": "Revisione completa completata" },
+  "captureCompleteFallback": {
+    "message": "Checkpoint cambiati; revisione completa completata"
+  },
+  "captureButtonQuick": { "message": "Esegui aggiornamento rapido" },
+  "captureButtonFull": { "message": "Esegui revisione completa" },
   "captureIdle": {
     "message": "Pronto"
   },

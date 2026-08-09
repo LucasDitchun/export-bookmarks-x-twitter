@@ -159,7 +159,7 @@
     "message": "Aún no has capturado ningún marcador."
   },
   "lastCaptureAt": {
-    "message": "Capturado el $DATE$",
+    "message": "Última revisión completa: $DATE$",
     "placeholders": {
       "date": {
         "content": "$1"
@@ -167,7 +167,7 @@
     }
   },
   "neverCaptured": {
-    "message": "Nunca capturado"
+    "message": "Aún no hay una revisión completa"
   },
   "unknownDate": {
     "message": "Fecha desconocida"
@@ -178,6 +178,30 @@
   "captureDescription": {
     "message": "Bookmark X desplaza la página abierta de marcadores y guarda localmente cada publicación visible."
   },
+  "captureModeLabel": { "message": "Modo de revisión" },
+  "captureModeQuick": { "message": "Actualización rápida" },
+  "captureModeFull": { "message": "Revisión completa" },
+  "captureModeQuickHelp": {
+    "message": "Encuentra elementos nuevos y se detiene al reconocer tus marcadores recientes."
+  },
+  "captureModeFullHelp": {
+    "message": "Comprueba toda la lista y concilia marcadores eliminados en otro dispositivo."
+  },
+  "captureModeFirstFullHelp": {
+    "message": "La primera captura debe revisar toda la lista de forma segura."
+  },
+  "fullReviewReminder": {
+    "message": "Han pasado más de 30 días desde la última revisión completa. Considera ejecutar una ahora."
+  },
+  "captureRunningQuick": { "message": "Actualización rápida en curso" },
+  "captureRunningFull": { "message": "Revisión completa en curso" },
+  "captureCompleteQuick": { "message": "Actualización rápida completada" },
+  "captureCompleteFull": { "message": "Revisión completa completada" },
+  "captureCompleteFallback": {
+    "message": "Los puntos de control cambiaron; revisión completa completada"
+  },
+  "captureButtonQuick": { "message": "Ejecutar actualización rápida" },
+  "captureButtonFull": { "message": "Ejecutar revisión completa" },
   "captureIdle": {
     "message": "Listo"
   },

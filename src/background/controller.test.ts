@@ -6,6 +6,7 @@ import type {
   BookmarkSnapshot,
   BookmarkTag,
   FolderRecord,
+  ScrapeCheckpointState,
   ScrapeRun,
   SupportedLocale,
 } from "../domain/types";
@@ -50,6 +51,7 @@ const bookmark: BookmarkSnapshot = {
 
 function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
   let currentRun: ScrapeRun | null = null;
+  let checkpoints: ScrapeCheckpointState | null = null;
   const liveBookmarkContexts = new Map<string, LiveBookmarkContext>();
   let currentSettings = structuredClone(DEFAULT_SETTINGS) as ExtensionSettings;
   return {
@@ -126,6 +128,13 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       }),
       clearScrapeRun: vi.fn(async () => {
         currentRun = null;
+      }),
+      getScrapeCheckpoints: vi.fn(async () => checkpoints),
+      setScrapeCheckpoints: vi.fn(async (next: ScrapeCheckpointState) => {
+        checkpoints = next;
+      }),
+      clearScrapeCheckpoints: vi.fn(async () => {
+        checkpoints = null;
       }),
     },
     settings: {
@@ -640,6 +649,11 @@ describe("BackgroundController", () => {
       startedAt: "2026-07-29T13:00:00.000Z",
       updatedAt: "2026-07-29T13:01:00.000Z",
       errorCode: null,
+      mode: "full",
+      checkpointIds: [],
+      checkpointCandidates: ["2", "1"],
+      checkpointMatchIds: [],
+      completionReason: "stable_end",
     });
 
     await controller.handle(
@@ -672,6 +686,7 @@ describe("BackgroundController", () => {
       "replace",
     );
     expect(dependencies.state.clearScrapeRun).toHaveBeenCalledTimes(2);
+    expect(dependencies.state.clearScrapeCheckpoints).toHaveBeenCalledTimes(2);
     expect(dependencies.search.invalidate).toHaveBeenCalledTimes(2);
     await expect(
       controller.handle({ type: "GET_STATUS" }, POPUP_SENDER),
@@ -728,6 +743,11 @@ describe("BackgroundController", () => {
       startedAt: "2026-07-29T13:00:00.000Z",
       updatedAt: "2026-07-29T13:00:00.000Z",
       errorCode: null,
+      mode: "full",
+      checkpointIds: [],
+      checkpointCandidates: ["1"],
+      checkpointMatchIds: [],
+      completionReason: null,
     });
     await expect(
       controller.handle(
@@ -756,6 +776,11 @@ describe("BackgroundController", () => {
       startedAt: "2026-07-29T13:00:00.000Z",
       updatedAt: "2026-07-29T13:01:00.000Z",
       errorCode: null,
+      mode: "full",
+      checkpointIds: [],
+      checkpointCandidates: ["2", "1"],
+      checkpointMatchIds: [],
+      completionReason: "stable_end",
     });
     dependencies.backup.restore.mockRejectedValueOnce(new BackupSettingsWriteError());
     const controller = new BackgroundController(dependencies);
@@ -1090,7 +1115,13 @@ describe("BackgroundController", () => {
       controller.handle({ type: "GET_STATUS" }, POPUP_SENDER),
     ).resolves.toEqual({
       ok: true,
-      data: { pageReady: true, stats, scrape: null },
+      data: {
+        pageReady: true,
+        stats,
+        scrape: null,
+        fullReviewDue: false,
+        quickUpdateAvailable: false,
+      },
     });
   });
 
@@ -1107,6 +1138,8 @@ describe("BackgroundController", () => {
     expect(dependencies.browser.sendToTab).toHaveBeenCalledWith(7, {
       type: "START_SCRAPE",
       runId: "run-1",
+      mode: "full",
+      checkpointIds: [],
     });
 
     const wrongPage = new BackgroundController(
@@ -1118,6 +1151,247 @@ describe("BackgroundController", () => {
       ok: false,
       error: { code: "bookmarks_page_required" },
     });
+  });
+
+  it("runs quick only when saved checkpoints exist and ignores them for explicit full", async () => {
+    const dependencies = createDependencies();
+    await dependencies.state.setScrapeCheckpoints({
+      ids: ["30", "29", "28"],
+      updatedAt: "2026-07-28T12:00:00.000Z",
+    });
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        { type: "START_SCRAPE", payload: { mode: "quick" } },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: true, data: { mode: "quick" } });
+    expect(dependencies.browser.sendToTab).toHaveBeenLastCalledWith(7, {
+      type: "START_SCRAPE",
+      runId: "run-1",
+      mode: "quick",
+      checkpointIds: ["30", "29", "28"],
+    });
+
+    await controller.handle({ type: "CANCEL_SCRAPE" }, POPUP_SENDER);
+    await expect(
+      controller.handle(
+        { type: "START_SCRAPE", payload: { mode: "full" } },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: true, data: { mode: "full" } });
+    expect(dependencies.browser.sendToTab).toHaveBeenLastCalledWith(7, {
+      type: "START_SCRAPE",
+      runId: "run-1",
+      mode: "full",
+      checkpointIds: [],
+    });
+  });
+
+  it("commits a checkpoint-stopped quick update without reconciling absences", async () => {
+    const dependencies = createDependencies();
+    await dependencies.state.setScrapeCheckpoints({
+      ids: ["6", "5", "4"],
+      updatedAt: "2026-07-28T12:00:00.000Z",
+    });
+    const controller = new BackgroundController(dependencies);
+    await controller.handle(
+      { type: "START_SCRAPE", payload: { mode: "quick" } },
+      POPUP_SENDER,
+    );
+    const bookmarks = ["9", "8", "7", "6", "5", "4"].map((id) => ({
+      ...bookmark,
+      id,
+      url: `https://x.com/person/status/${id}`,
+    }));
+    await controller.handle(
+      { type: "SCRAPE_BATCH", runId: "run-1", bookmarks },
+      CONTENT_SENDER,
+    );
+
+    await expect(
+      controller.handle(
+        {
+          type: "SCRAPE_COMPLETE",
+          runId: "run-1",
+          status: "completed",
+          fetched: 6,
+          completionReason: "checkpoint_stop",
+        },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: {
+        status: "completed",
+        mode: "quick",
+        completionReason: "checkpoint_stop",
+      },
+    });
+
+    expect(dependencies.archive.discardCapture).toHaveBeenCalledWith("run-1");
+    expect(dependencies.archive.finalizeCapture).not.toHaveBeenCalled();
+    expect(dependencies.settings.get).not.toHaveBeenCalled();
+    expect(dependencies.state.setScrapeCheckpoints).toHaveBeenLastCalledWith({
+      ids: ["9", "8", "7", "6", "5", "4"],
+      updatedAt: "2026-07-29T13:14:15.123Z",
+    });
+  });
+
+  it("rejects checkpoint completion without three distinct known IDs", async () => {
+    const dependencies = createDependencies();
+    await dependencies.state.setScrapeCheckpoints({
+      ids: ["6", "5", "4"],
+      updatedAt: "2026-07-28T12:00:00.000Z",
+    });
+    const controller = new BackgroundController(dependencies);
+    await controller.handle(
+      { type: "START_SCRAPE", payload: { mode: "quick" } },
+      POPUP_SENDER,
+    );
+    await controller.handle(
+      {
+        type: "SCRAPE_BATCH",
+        runId: "run-1",
+        bookmarks: ["6", "5"].map((id) => ({
+          ...bookmark,
+          id,
+          url: `https://x.com/person/status/${id}`,
+        })),
+      },
+      CONTENT_SENDER,
+    );
+
+    await expect(
+      controller.handle(
+        {
+          type: "SCRAPE_COMPLETE",
+          runId: "run-1",
+          status: "completed",
+          fetched: 2,
+          completionReason: "checkpoint_stop",
+        },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_capture_completion" },
+    });
+    expect(dependencies.archive.finalizeCapture).not.toHaveBeenCalled();
+    expect(dependencies.archive.discardCapture).not.toHaveBeenCalled();
+    expect(dependencies.state.setScrapeCheckpoints).toHaveBeenCalledOnce();
+  });
+
+  it("preserves the previous checkpoints when a quick update is cancelled", async () => {
+    const dependencies = createDependencies();
+    await dependencies.state.setScrapeCheckpoints({
+      ids: ["6", "5", "4"],
+      updatedAt: "2026-07-28T12:00:00.000Z",
+    });
+    const controller = new BackgroundController(dependencies);
+    await controller.handle(
+      { type: "START_SCRAPE", payload: { mode: "quick" } },
+      POPUP_SENDER,
+    );
+
+    await controller.handle({ type: "CANCEL_SCRAPE" }, POPUP_SENDER);
+
+    expect(dependencies.state.clearScrapeCheckpoints).not.toHaveBeenCalled();
+    expect(dependencies.state.setScrapeCheckpoints).toHaveBeenCalledOnce();
+    await expect(
+      controller.handle({ type: "GET_STATUS" }, POPUP_SENDER),
+    ).resolves.toMatchObject({ ok: true, data: { quickUpdateAvailable: true } });
+  });
+
+  it("falls back to a safe full review when quick checkpoints are not found", async () => {
+    const dependencies = createDependencies();
+    await dependencies.state.setScrapeCheckpoints({
+      ids: ["3", "2", "1"],
+      updatedAt: "2026-07-28T12:00:00.000Z",
+    });
+    const controller = new BackgroundController(dependencies);
+    await controller.handle(
+      { type: "START_SCRAPE", payload: { mode: "quick" } },
+      POPUP_SENDER,
+    );
+    await controller.handle(
+      { type: "SCRAPE_BATCH", runId: "run-1", bookmarks: [bookmark] },
+      CONTENT_SENDER,
+    );
+
+    await expect(
+      controller.handle(
+        {
+          type: "SCRAPE_COMPLETE",
+          runId: "run-1",
+          status: "completed",
+          fetched: 1,
+          completionReason: "stable_end",
+        },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: {
+        mode: "full",
+        completionReason: "full_fallback",
+      },
+    });
+
+    expect(dependencies.archive.finalizeCapture).toHaveBeenCalledOnce();
+    expect(dependencies.archive.discardCapture).not.toHaveBeenCalled();
+    expect(dependencies.state.setScrapeCheckpoints).toHaveBeenLastCalledWith({
+      ids: ["123"],
+      updatedAt: "2026-07-29T13:14:15.123Z",
+    });
+  });
+
+  it("keeps only the ten newest unique candidates after a full review", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    await controller.handle(
+      { type: "START_SCRAPE", payload: { mode: "full" } },
+      POPUP_SENDER,
+    );
+    const bookmarks = Array.from({ length: 12 }, (_, index) => {
+      const id = String(index + 1);
+      return { ...bookmark, id, url: `https://x.com/person/status/${id}` };
+    });
+    await controller.handle(
+      { type: "SCRAPE_BATCH", runId: "run-1", bookmarks },
+      CONTENT_SENDER,
+    );
+    await controller.handle(
+      {
+        type: "SCRAPE_COMPLETE",
+        runId: "run-1",
+        status: "completed",
+        fetched: 12,
+        completionReason: "stable_end",
+      },
+      CONTENT_SENDER,
+    );
+
+    expect(dependencies.state.setScrapeCheckpoints).toHaveBeenLastCalledWith({
+      ids: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+      updatedAt: "2026-07-29T13:14:15.123Z",
+    });
+  });
+
+  it("marks a full review reminder due after thirty elapsed days", async () => {
+    const dependencies = createDependencies();
+    dependencies.archive.getStats.mockResolvedValue({
+      ...stats,
+      lastSuccessfulSyncAt: "2026-06-29T13:14:15.123Z",
+    });
+
+    await expect(
+      new BackgroundController(dependencies).handle(
+        { type: "GET_STATUS" },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: true, data: { fullReviewDue: true } });
   });
 
   it("archives validated content-script batches and finalizes complete captures", async () => {
@@ -1376,6 +1650,7 @@ describe("BackgroundController", () => {
     expect(dependencies.browser.openBookmarks).toHaveBeenCalledOnce();
     expect(dependencies.archive.clear).toHaveBeenCalledOnce();
     expect(dependencies.state.clearScrapeRun).toHaveBeenCalledOnce();
+    expect(dependencies.state.clearScrapeCheckpoints).toHaveBeenCalledOnce();
     expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
   });
 

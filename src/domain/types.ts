@@ -101,6 +101,13 @@ export interface ArchiveStats {
 }
 
 export type ScrapeStatus = "idle" | "running" | "completed" | "cancelled" | "error";
+export type ScrapeMode = "quick" | "full";
+export type ScrapeCompletionReason = "checkpoint_stop" | "stable_end" | "full_fallback";
+
+export interface ScrapeCheckpointState {
+  ids: string[];
+  updatedAt: string;
+}
 
 export interface ScrapeRun {
   id: string;
@@ -112,4 +119,9 @@ export interface ScrapeRun {
   startedAt: string;
   updatedAt: string;
   errorCode: string | null;
+  mode: ScrapeMode;
+  checkpointIds: string[];
+  checkpointCandidates: string[];
+  checkpointMatchIds: string[];
+  completionReason: ScrapeCompletionReason | null;
 }

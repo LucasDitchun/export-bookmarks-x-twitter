@@ -124,15 +124,39 @@
   "folderActionError": { "message": "Could not update folders." },
   "folderLoadError": { "message": "Could not load folders." },
   "lastCaptureAt": {
-    "message": "Captured $DATE$",
+    "message": "Last full review $DATE$",
     "placeholders": { "date": { "content": "$1" } }
   },
-  "neverCaptured": { "message": "Never captured" },
+  "neverCaptured": { "message": "No full review yet" },
   "unknownDate": { "message": "Unknown date" },
   "captureTitle": { "message": "Capture bookmarks" },
   "captureDescription": {
     "message": "Bookmark X scrolls your open bookmarks page and saves each visible post locally."
   },
+  "captureModeLabel": { "message": "Review mode" },
+  "captureModeQuick": { "message": "Quick update" },
+  "captureModeFull": { "message": "Full review" },
+  "captureModeQuickHelp": {
+    "message": "Finds new items, then stops after recognizing your recent bookmarks."
+  },
+  "captureModeFullHelp": {
+    "message": "Checks the entire list and reconciles bookmarks removed on another device."
+  },
+  "captureModeFirstFullHelp": {
+    "message": "Your first capture must safely review the entire list."
+  },
+  "fullReviewReminder": {
+    "message": "It has been over 30 days since the last full review. Consider running one now."
+  },
+  "captureRunningQuick": { "message": "Quick update in progress" },
+  "captureRunningFull": { "message": "Full review in progress" },
+  "captureCompleteQuick": { "message": "Quick update complete" },
+  "captureCompleteFull": { "message": "Full review complete" },
+  "captureCompleteFallback": {
+    "message": "Checkpoints changed; full review complete"
+  },
+  "captureButtonQuick": { "message": "Run quick update" },
+  "captureButtonFull": { "message": "Run full review" },
   "captureIdle": { "message": "Ready" },
   "captureRunning": { "message": "Capturing" },
   "captureComplete": { "message": "Complete" },

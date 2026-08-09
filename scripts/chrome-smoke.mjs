@@ -548,17 +548,98 @@ const startContentCaptureScenario = String.raw`
     startedAt: now,
     updatedAt: now,
     errorCode: null,
+    mode: "full",
+    checkpointIds: [],
+    checkpointCandidates: [],
+    checkpointMatchIds: [],
+    completionReason: null,
   };
   await chrome.storage.local.set({ scrapeRun: run });
   const response = await chrome.tabs.sendMessage(tab.id, {
     type: "START_SCRAPE",
     runId: run.id,
+    mode: "full",
+    checkpointIds: [],
   });
   return { tabId: tab.id, ...response };
 })()
 `;
 
-function assertScenario(page, ui, start, delayedLoader, result, livePage, finalResult) {
+const startQuickCaptureScenario = String.raw`
+(async () => {
+  const tabs = await chrome.tabs.query({});
+  let tab;
+  for (const candidate of tabs) {
+    if (typeof candidate.id !== "number") continue;
+    try {
+      const probe = await chrome.tabs.sendMessage(candidate.id, {
+        type: "CANCEL_SCRAPE",
+        runId: "chrome-smoke-quick-probe",
+      });
+      if (probe?.accepted === true) {
+        tab = candidate;
+        break;
+      }
+    } catch {
+      // Tabs without Bookmark X's restricted content script are expected.
+    }
+  }
+  const { scrapeCheckpoints } = await chrome.storage.local.get("scrapeCheckpoints");
+  if (typeof tab?.id !== "number" || scrapeCheckpoints?.ids?.length < 3) {
+    return { accepted: false, reason: "checkpoints_missing", scrapeCheckpoints };
+  }
+  const now = new Date().toISOString();
+  const run = {
+    id: "chrome-smoke-quick-run",
+    tabId: tab.id,
+    status: "running",
+    fetched: 0,
+    added: 0,
+    updated: 0,
+    startedAt: now,
+    updatedAt: now,
+    errorCode: null,
+    mode: "quick",
+    checkpointIds: scrapeCheckpoints.ids,
+    checkpointCandidates: [],
+    checkpointMatchIds: [],
+    completionReason: null,
+  };
+  await chrome.storage.local.set({ scrapeRun: run });
+  const response = await chrome.tabs.sendMessage(tab.id, {
+    type: "START_SCRAPE",
+    runId: run.id,
+    mode: "quick",
+    checkpointIds: scrapeCheckpoints.ids,
+  });
+  return { ...response, checkpointIds: scrapeCheckpoints.ids };
+})()
+`;
+
+const waitForQuickCaptureScenario = String.raw`
+(async () => {
+  let status;
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
+    status = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
+    if (status?.data?.scrape?.status !== "running") break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return status;
+})()
+`;
+
+function assertScenario(
+  page,
+  ui,
+  start,
+  delayedLoader,
+  result,
+  quickStart,
+  quickResult,
+  livePage,
+  finalResult,
+) {
   const { before, completed, exported, note } = result;
   const {
     bookmark,
@@ -613,11 +694,26 @@ function assertScenario(page, ui, start, delayedLoader, result, livePage, finalR
     start.accepted !== true ||
     !completed.ok ||
     completed.data.scrape?.status !== "completed" ||
+    completed.data.scrape?.completionReason !== "stable_end" ||
     completed.data.scrape?.fetched !== 3 ||
-    completed.data.stats.total !== 3
+    completed.data.stats.total !== 3 ||
+    completed.data.quickUpdateAvailable !== true
   ) {
     throw new Error(
       `The DOM capture did not complete: ${JSON.stringify({ start, completed })}`,
+    );
+  }
+  if (
+    quickStart.accepted !== true ||
+    quickStart.checkpointIds?.length !== 3 ||
+    !quickResult?.ok ||
+    quickResult.data.scrape?.status !== "completed" ||
+    quickResult.data.scrape?.mode !== "quick" ||
+    quickResult.data.scrape?.completionReason !== "checkpoint_stop" ||
+    quickResult.data.scrape?.fetched !== 3
+  ) {
+    throw new Error(
+      `The checkpoint quick update did not complete safely: ${JSON.stringify({ quickStart, quickResult })}`,
     );
   }
   if (
@@ -679,6 +775,7 @@ function assertScenario(page, ui, start, delayedLoader, result, livePage, finalR
     !restoredStatus.ok ||
     restoredStatus.data.stats.total !== 3 ||
     restoredStatus.data.scrape !== null ||
+    restoredStatus.data.quickUpdateAvailable !== false ||
     !clearedAgain.ok
   ) {
     throw new Error("The runtime JSON backup round-trip did not finish.");
@@ -790,7 +887,6 @@ async function main() {
   let optionsDevTools;
   let sidePanelDevTools;
   let pageDevTools;
-  let workerDevTools;
   try {
     const port = await waitForDevToolsPort(profileDirectory);
     const worker = await waitForServiceWorker(port);
@@ -1017,6 +1113,28 @@ async function main() {
     ) {
       throw new Error("The injected pending state did not settle as archived.");
     }
+    const quickStartEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: startQuickCaptureScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (quickStartEvaluation.exceptionDetails) {
+      throw new Error(
+        quickStartEvaluation.exceptionDetails.exception?.description ??
+          quickStartEvaluation.exceptionDetails.text,
+      );
+    }
+    const quickEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: waitForQuickCaptureScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (quickEvaluation.exceptionDetails) {
+      throw new Error(
+        quickEvaluation.exceptionDetails.exception?.description ??
+          quickEvaluation.exceptionDetails.text,
+      );
+    }
     const livePageEvaluation = await pageDevTools.send("Runtime.evaluate", {
       expression: liveBookmarkPageScenario,
       awaitPromise: true,
@@ -1045,11 +1163,13 @@ async function main() {
       startEvaluation.result.value,
       delayedLoaderEvaluation.result.value,
       evaluation.result.value,
+      quickStartEvaluation.result.value,
+      quickEvaluation.result.value,
       livePageEvaluation.result.value,
       finalEvaluation.result.value,
     );
     console.log(
-      "Chrome smoke passed: settings, semantic-search consent defaults, delayed-loader X-page scraping, injected metadata states/localization, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, TXT export, JSON backup round-trip, and clear.",
+      "Chrome smoke passed: settings, semantic-search consent defaults, delayed-loader full review, checkpoint quick update, injected metadata states/localization, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, TXT export, JSON backup round-trip, and clear.",
     );
     if (VISUAL_CHECKPOINT_DIRECTORY) {
       console.log(`Visual checkpoints: ${VISUAL_CHECKPOINT_DIRECTORY}`);
@@ -1065,7 +1185,6 @@ async function main() {
     optionsDevTools?.close();
     sidePanelDevTools?.close();
     pageDevTools?.close();
-    workerDevTools?.close();
     await stopChrome(chromeProcess);
     await rm(profileDirectory, {
       recursive: true,

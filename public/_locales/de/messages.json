@@ -161,7 +161,7 @@
     "message": "Noch keine Lesezeichen erfasst."
   },
   "lastCaptureAt": {
-    "message": "Erfasst am $DATE$",
+    "message": "Letzte vollständige Prüfung: $DATE$",
     "placeholders": {
       "date": {
         "content": "$1"
@@ -169,7 +169,7 @@
     }
   },
   "neverCaptured": {
-    "message": "Noch nie erfasst"
+    "message": "Noch keine vollständige Prüfung"
   },
   "unknownDate": {
     "message": "Unbekanntes Datum"
@@ -180,6 +180,30 @@
   "captureDescription": {
     "message": "Bookmark X scrollt durch deine geöffnete Lesezeichenseite und speichert jeden sichtbaren Beitrag lokal."
   },
+  "captureModeLabel": { "message": "Prüfmodus" },
+  "captureModeQuick": { "message": "Schnellaktualisierung" },
+  "captureModeFull": { "message": "Vollständige Prüfung" },
+  "captureModeQuickHelp": {
+    "message": "Findet neue Einträge und stoppt, sobald deine letzten Lesezeichen erkannt wurden."
+  },
+  "captureModeFullHelp": {
+    "message": "Prüft die gesamte Liste und gleicht auf anderen Geräten entfernte Lesezeichen ab."
+  },
+  "captureModeFirstFullHelp": {
+    "message": "Die erste Erfassung muss die gesamte Liste sicher prüfen."
+  },
+  "fullReviewReminder": {
+    "message": "Die letzte vollständige Prüfung ist über 30 Tage her. Erwäge, sie jetzt auszuführen."
+  },
+  "captureRunningQuick": { "message": "Schnellaktualisierung läuft" },
+  "captureRunningFull": { "message": "Vollständige Prüfung läuft" },
+  "captureCompleteQuick": { "message": "Schnellaktualisierung abgeschlossen" },
+  "captureCompleteFull": { "message": "Vollständige Prüfung abgeschlossen" },
+  "captureCompleteFallback": {
+    "message": "Prüfpunkte geändert; vollständige Prüfung abgeschlossen"
+  },
+  "captureButtonQuick": { "message": "Schnell aktualisieren" },
+  "captureButtonFull": { "message": "Vollständig prüfen" },
   "captureIdle": {
     "message": "Bereit"
   },

@@ -56,6 +56,38 @@ the batches already captured but discard their temporary seen markers and
 never reconcile missing posts. Live bookmark events use their own intent state
 and never participate in a full-review run ID or finalization.
 
+## Quick updates and checkpoints
+
+The capture card offers two modes. **Quick update** is the normal fast path for
+new bookmarks; **Full review** deliberately traverses the whole list and is the
+only mode that reconciles posts removed on another device. The first capture is
+always a full review because there is no trustworthy stopping point yet.
+
+After a successful capture, Bookmark X stores the first ten unique post IDs as
+local checkpoints. A quick update scans from the newest items and stops only
+after it sees three known checkpoint IDs consecutively. A repeated virtualized
+DOM node is ignored, while any unknown ID resets the consecutive-match count.
+This makes reordered or partly removed checkpoints safe without turning a
+single coincidental match into an early stop.
+
+At a checkpoint stop, every delivered batch is already committed to IndexedDB.
+The worker saves the new checkpoint window and discards only that run's
+temporary `seen` rows. It does not finalize the run, archive or delete absent
+posts, apply the keep-archived setting, or change the timestamp of the last
+successful full review.
+
+If three consecutive checkpoints are never found, the runner continues with
+the same loader, retry, route, and stable-end safeguards used by a full review.
+Only after reaching a proven stable end does the worker convert it into a full
+review and reconcile absences. Cancellation, navigation, delivery failure, and
+loading timeout still keep partial batches but preserve the previous
+checkpoints and never reconcile.
+
+The popup shows a small reminder after 30 elapsed days without a successful
+full review. The calculation compares absolute timestamps, so daylight-saving
+and local-timezone boundaries cannot make the reminder early or late. Running a
+quick update does not reset it.
+
 ## Live bookmark confirmation
 
 The live observer listens in the capture phase without calling

@@ -5,6 +5,7 @@ import type {
   BookmarkTag,
   ExportFormat,
   FolderRecord,
+  ScrapeMode,
   ScrapeRun,
   SupportedLocale,
 } from "../domain/types";
@@ -19,6 +20,8 @@ export interface PopupStatus {
   pageReady: boolean;
   stats: ArchiveStats;
   scrape: ScrapeRun | null;
+  fullReviewDue: boolean;
+  quickUpdateAvailable: boolean;
 }
 
 export type BookmarkView = "current" | "inbox" | "archived";
@@ -125,7 +128,7 @@ export type UiRequest =
   | { type: "SAVE_SETTINGS"; payload: { settings: SettingsPatch } }
   | { type: "OPEN_SELECTED_SURFACE" }
   | { type: "OPEN_BOOKMARKS" }
-  | { type: "START_SCRAPE" }
+  | { type: "START_SCRAPE"; payload?: { mode: ScrapeMode } }
   | { type: "CANCEL_SCRAPE" }
   | { type: "CLEAR_ARCHIVE" }
   | { type: "EXPORT_BACKUP" }
@@ -177,7 +180,12 @@ export type UiRequest =
 export type PopupRequest = UiRequest;
 
 export type ContentControlRequest =
-  | { type: "START_SCRAPE"; runId: string }
+  | {
+      type: "START_SCRAPE";
+      runId: string;
+      mode: ScrapeMode;
+      checkpointIds: string[];
+    }
   | { type: "CANCEL_SCRAPE"; runId: string }
   | {
       type: "REFRESH_BOOKMARK_METADATA";
@@ -196,7 +204,7 @@ export type ContentEvent =
       runId: string;
       status: "completed";
       fetched: number;
-      completionReason: "stable_end";
+      completionReason: "stable_end" | "checkpoint_stop";
     }
   | {
       type: "SCRAPE_COMPLETE";
