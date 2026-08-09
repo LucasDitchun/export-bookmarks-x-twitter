@@ -5,6 +5,7 @@ import {
   SETTINGS_SCHEMA_VERSION,
   SETTINGS_STORAGE_KEY,
   SettingsRepository,
+  isStoredSettingsEnvelope,
 } from "./settings-repository";
 
 class MemoryStorageArea {
@@ -85,5 +86,41 @@ describe("SettingsRepository", () => {
       },
     });
     expect(JSON.parse(JSON.stringify(storage.values))).toEqual(storage.values);
+  });
+
+  it("strictly validates complete versioned envelopes at import boundaries", () => {
+    const valid = {
+      schemaVersion: SETTINGS_SCHEMA_VERSION,
+      settings: structuredClone(DEFAULT_SETTINGS),
+    };
+
+    expect(isStoredSettingsEnvelope(valid)).toBe(true);
+    for (const invalid of [
+      { ...valid, extra: true },
+      { ...valid, schemaVersion: 2 },
+      {
+        ...valid,
+        settings: { ...valid.settings, unknown: true },
+      },
+      {
+        ...valid,
+        settings: {
+          ...valid.settings,
+          behavior: {
+            ...valid.settings.behavior,
+            metadata: { ...valid.settings.behavior.metadata, note: "yes" },
+          },
+        },
+      },
+      {
+        ...valid,
+        settings: {
+          ...valid.settings,
+          export: { ...valid.settings.export, includeVideos: undefined },
+        },
+      },
+    ]) {
+      expect(isStoredSettingsEnvelope(invalid)).toBe(false);
+    }
   });
 });

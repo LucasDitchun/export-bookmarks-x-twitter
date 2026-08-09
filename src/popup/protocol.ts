@@ -3,6 +3,8 @@ export type {
   FolderDeleteResult,
   FolderDetailResult,
   FolderListResult,
+  JsonBackupExportResult,
+  JsonBackupRestoreResult,
   BookmarkDetailResult,
   BookmarkListPage,
   BookmarkView,

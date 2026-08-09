@@ -1141,4 +1141,186 @@ describe("popup app", () => {
     expect(textarea.disabled).toBe(true);
     app.destroy();
   });
+
+  it("downloads a complete JSON backup through the local download path", async () => {
+    const createDownload = vi.fn();
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: emptyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [], nextCursor: null },
+        });
+      }
+      if (request.type === "LIST_TAGS") {
+        return Promise.resolve({ ok: true as const, data: { tags: [] } });
+      }
+      if (request.type === "LIST_FOLDERS") {
+        return Promise.resolve({ ok: true as const, data: { folders: [] } });
+      }
+      if (request.type === "EXPORT_BACKUP") {
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            content: '{"schemaVersion":1}',
+            filename: "bookmark-x-backup.json",
+          },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      createDownload,
+    });
+    await app.ready;
+
+    document.getElementById("export-backup-button")?.click();
+
+    await vi.waitFor(() =>
+      expect(createDownload).toHaveBeenCalledWith({
+        content: '{"schemaVersion":1}',
+        filename: "bookmark-x-backup.json",
+      }),
+    );
+    app.destroy();
+  });
+
+  it("requires explicit replace confirmation before reading or restoring a file", async () => {
+    const requests: string[] = [];
+    const readBackupFile = vi.fn(async () => '{"schemaVersion":1}');
+    const confirmRestore = vi
+      .fn<(message: string) => boolean>()
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+    const reload = vi.fn();
+    const sendMessage = ((request) => {
+      requests.push(request.type);
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: emptyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [], nextCursor: null },
+        });
+      }
+      if (request.type === "LIST_TAGS") {
+        return Promise.resolve({ ok: true as const, data: { tags: [] } });
+      }
+      if (request.type === "LIST_FOLDERS") {
+        return Promise.resolve({ ok: true as const, data: { folders: [] } });
+      }
+      if (request.type === "RESTORE_BACKUP") {
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            bookmarks: 2,
+            folders: 1,
+            tags: 1,
+            mode: "replace" as const,
+            reloadRequired: true as const,
+          },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      readBackupFile,
+      confirmRestore,
+      reload,
+    });
+    await app.ready;
+    const file = new File(["{}"], '<img src=x onerror="alert(1)">.json', {
+      type: "application/json",
+    });
+    const input = document.getElementById("backup-file-input") as HTMLInputElement;
+    Object.defineProperty(input, "files", { configurable: true, value: [file] });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    const mode = document.getElementById("backup-restore-mode") as HTMLSelectElement;
+    mode.value = "replace";
+    const restore = document.getElementById(
+      "restore-backup-button",
+    ) as HTMLButtonElement;
+
+    restore.click();
+    expect(confirmRestore).toHaveBeenCalledWith("confirmReplaceBackup");
+    expect(readBackupFile).not.toHaveBeenCalled();
+    expect(requests).not.toContain("RESTORE_BACKUP");
+
+    restore.click();
+    await vi.waitFor(() => expect(requests).toContain("RESTORE_BACKUP"));
+    expect(readBackupFile).toHaveBeenCalledWith(file);
+    expect(reload).toHaveBeenCalledOnce();
+    expect(document.querySelector("#backup-status img")).toBeNull();
+    app.destroy();
+  });
+
+  it("reloads after a settings-only restore failure because library data committed", async () => {
+    const reload = vi.fn();
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: emptyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [], nextCursor: null },
+        });
+      }
+      if (request.type === "LIST_TAGS") {
+        return Promise.resolve({ ok: true as const, data: { tags: [] } });
+      }
+      if (request.type === "LIST_FOLDERS") {
+        return Promise.resolve({ ok: true as const, data: { folders: [] } });
+      }
+      if (request.type === "RESTORE_BACKUP") {
+        return Promise.resolve({
+          ok: false as const,
+          error: {
+            code: "restore_settings_failed",
+            message: "safe background detail",
+            recovery: { dataRestored: true as const, reloadRequired: true as const },
+          },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      readBackupFile: async () => '{"schemaVersion":1}',
+      reload,
+    });
+    await app.ready;
+    const file = new File(["{}"], "backup.json", { type: "application/json" });
+    const input = document.getElementById("backup-file-input") as HTMLInputElement;
+    Object.defineProperty(input, "files", { configurable: true, value: [file] });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+
+    document.getElementById("restore-backup-button")?.click();
+
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
+    expect(document.getElementById("backup-status")?.textContent).toBe(
+      "backupRestorePartial",
+    );
+    expect(document.getElementById("alert")?.textContent).toBe(
+      "errorRestoreSettingsFailed",
+    );
+    expect(document.getElementById("alert")?.textContent).not.toContain(
+      "safe background detail",
+    );
+    app.destroy();
+  });
 });

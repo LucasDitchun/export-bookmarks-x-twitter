@@ -1,4 +1,35 @@
 {
+  "backupRestorePartial": {
+    "message": "Libreria ripristinata. Alcune impostazioni non sono state applicate."
+  },
+  "backupTitle": { "message": "Backup e ripristino" },
+  "backupDescription": {
+    "message": "Scarica o ripristina la libreria locale, le cartelle, i tag, le note e le impostazioni in formato JSON."
+  },
+  "exportBackupButton": { "message": "Scarica backup JSON" },
+  "backupFileLabel": { "message": "File di backup JSON" },
+  "restoreModeLabel": { "message": "Modalità di ripristino" },
+  "restoreModeMerge": { "message": "Unisci a questa libreria" },
+  "restoreModeReplace": { "message": "Sostituisci questa libreria" },
+  "restoreBackupButton": { "message": "Ripristina backup" },
+  "backupTooLarge": { "message": "Questo backup è troppo grande." },
+  "backupFileReady": { "message": "Backup pronto per il ripristino." },
+  "backupReading": { "message": "Verifica del backup…" },
+  "confirmReplaceBackup": {
+    "message": "Sostituire tutti i bookmark, le cartelle, i tag, le note e le impostazioni locali con questo backup? L’operazione non può essere annullata."
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$ bookmark ripristinati.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X non ha potuto leggere il file." },
+  "errorInvalidBackup": { "message": "Scegli un backup JSON di Bookmark X valido." },
+  "errorRestoreCaptureRunning": {
+    "message": "Attendi il termine dell’acquisizione attiva prima di ripristinare."
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "La libreria è stata ripristinata, ma alcune impostazioni non sono state applicate. Bookmark X verrà ricaricato per mostrare i dati ripristinati."
+  },
   "libraryTitle": { "message": "Libreria dei segnalibri" },
   "libraryHelp": {
     "message": "Seleziona un segnalibro per aggiungere una nota privata."

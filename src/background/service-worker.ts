@@ -4,6 +4,7 @@ import { ExtensionStateRepository } from "../storage/extension-state";
 import { TagRepository } from "../storage/tag-repository";
 import { FolderRepository } from "../storage/folder-repository";
 import { SettingsRepository } from "../settings/settings-repository";
+import { BackupRepository } from "../storage/backup-repository";
 import { BackgroundController } from "./controller";
 
 const state = new ExtensionStateRepository({
@@ -27,12 +28,20 @@ async function configureSurface(surface: "modal" | "sidePanel"): Promise<void> {
     chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: sidePanel }),
   ]);
 }
+const backup = new BackupRepository("bookmark-x", {
+  storage: {
+    get: (keys) => chrome.storage.local.get(keys),
+    set: (items) => chrome.storage.local.set(items),
+  },
+  settings,
+});
 const controller = new BackgroundController({
   archive,
   bookmarks,
   tags,
   folders,
   settings,
+  backup,
   state,
   extensionId: chrome.runtime.id,
   browser: {

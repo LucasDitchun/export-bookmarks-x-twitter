@@ -343,6 +343,50 @@
             >
               Open settings
             </button>
+            <section class="backup-tools" aria-labelledby="backup-heading">
+              <h3 id="backup-heading" data-i18n="backupTitle">Backup &amp; restore</h3>
+              <p data-i18n="backupDescription">
+                Download or restore your local library, folders, tags, notes, and
+                settings as JSON.
+              </p>
+              <button
+                id="export-backup-button"
+                class="button button-secondary"
+                type="button"
+                data-i18n="exportBackupButton"
+              >
+                Download JSON backup
+              </button>
+              <label for="backup-file-input" data-i18n="backupFileLabel">
+                JSON backup file
+              </label>
+              <input
+                id="backup-file-input"
+                type="file"
+                accept="application/json,.json"
+              />
+              <label for="backup-restore-mode" data-i18n="restoreModeLabel">
+                Restore mode
+              </label>
+              <select id="backup-restore-mode">
+                <option value="merge" data-i18n="restoreModeMerge">
+                  Merge with this library
+                </option>
+                <option value="replace" data-i18n="restoreModeReplace">
+                  Replace this library
+                </option>
+              </select>
+              <button
+                id="restore-backup-button"
+                class="button button-secondary"
+                type="button"
+                disabled
+                data-i18n="restoreBackupButton"
+              >
+                Restore backup
+              </button>
+              <p id="backup-status" class="quiet-status" role="status"></p>
+            </section>
             <p data-i18n="localOnlyNote">
               Stored locally. Nothing is uploaded by Bookmark X.
             </p>

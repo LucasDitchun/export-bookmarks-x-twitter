@@ -5,6 +5,7 @@ import type {
   ScrapeRun,
   SupportedLocale,
 } from "../domain/types";
+import { createBackupUi } from "./backup-ui";
 import { getLocaleTag, type Translator } from "./i18n";
 import { createFolderUi } from "./folder-ui";
 import type {
@@ -31,6 +32,9 @@ interface PopupAppOptions {
   createDownload?: (result: ExportResult) => void;
   schedule?: typeof window.setTimeout;
   cancelSchedule?: typeof window.clearTimeout;
+  readBackupFile?: (file: File) => Promise<string>;
+  confirmRestore?: (message: string) => boolean;
+  reload?: () => void;
 }
 
 interface RequiredElements {
@@ -145,7 +149,10 @@ function getElements(document: Document): RequiredElements {
 }
 
 function defaultDownload(result: ExportResult): void {
-  const blob = new Blob([result.content], { type: "text/plain;charset=utf-8" });
+  const type = result.filename.endsWith(".json")
+    ? "application/json;charset=utf-8"
+    : "text/plain;charset=utf-8";
+  const blob = new Blob([result.content], { type });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -166,6 +173,9 @@ export function createPopupApp(options: PopupAppOptions): {
     createDownload = defaultDownload,
     schedule = window.setTimeout.bind(window),
     cancelSchedule = window.clearTimeout.bind(window),
+    readBackupFile = (file) => file.text(),
+    confirmRestore = (message) => window.confirm(message),
+    reload = () => window.location.reload(),
   } = options;
   const elements = getElements(document);
   elements.tagInput.placeholder = translate("tagInputPlaceholder");
@@ -191,6 +201,7 @@ export function createPopupApp(options: PopupAppOptions): {
   let pendingNoteSave: PendingNoteSave | null = null;
   let noteSaveInFlight = false;
   let folderUi: ReturnType<typeof createFolderUi> | null = null;
+  let backupUi: ReturnType<typeof createBackupUi> | null = null;
 
   const formatDate = (isoDate: string): string => {
     const date = new Date(isoDate);
@@ -217,6 +228,9 @@ export function createPopupApp(options: PopupAppOptions): {
       capture_timeout: "errorCapture",
       stale_capture: "errorCapture",
       scrape_in_progress: "errorCaptureRunning",
+      invalid_backup: "errorInvalidBackup",
+      restore_capture_running: "errorRestoreCaptureRunning",
+      restore_settings_failed: "errorRestoreSettingsFailed",
     };
     return translate(keys[error.code] ?? "errorGeneric");
   };
@@ -241,6 +255,7 @@ export function createPopupApp(options: PopupAppOptions): {
     const archiveEmpty = (status?.stats.total ?? 0) === 0;
     elements.exportFullButton.disabled = busy || archiveEmpty;
     elements.exportUrlsButton.disabled = busy || archiveEmpty;
+    backupUi?.setDisabled(busy, running);
     document.body.toggleAttribute("aria-busy", busy);
   };
 
@@ -779,6 +794,7 @@ export function createPopupApp(options: PopupAppOptions): {
   async function perform(
     request: UiRequest,
     afterSuccess?: (data: unknown) => void | Promise<void>,
+    afterError?: (error: RuntimeError) => void | Promise<void>,
   ): Promise<void> {
     if (busy) return;
     busy = true;
@@ -788,6 +804,7 @@ export function createPopupApp(options: PopupAppOptions): {
       const response = await sendMessage<unknown>(request);
       if (!response.ok) {
         showAlert(errorMessage(response.error));
+        await afterError?.(response.error);
         return;
       }
       await afterSuccess?.(response.data);
@@ -800,6 +817,15 @@ export function createPopupApp(options: PopupAppOptions): {
     }
   }
 
+  backupUi = createBackupUi({
+    document,
+    translate,
+    perform,
+    createDownload,
+    readFile: readBackupFile,
+    confirmReplace: confirmRestore,
+    reload,
+  });
   elements.openBookmarksButton.addEventListener("click", () => {
     void perform({ type: "OPEN_BOOKMARKS" });
   });

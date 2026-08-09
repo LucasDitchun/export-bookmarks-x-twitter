@@ -1,4 +1,5 @@
 import { exportBookmarks } from "../domain/export-bookmarks";
+import { BackupValidationError } from "../domain/backup";
 import {
   isSupportedLocale,
   type BookmarkRecord,
@@ -23,6 +24,10 @@ import {
 } from "../settings/settings-repository";
 import type { ArchiveRepository } from "../storage/archive-repository";
 import type { ExtensionStateRepository } from "../storage/extension-state";
+import {
+  BackupSettingsWriteError,
+  type BackupRepository,
+} from "../storage/backup-repository";
 
 interface ActiveTab {
   id: number;
@@ -77,6 +82,7 @@ interface BackgroundDependencies {
     get(): Promise<ExtensionSettings>;
     save(patch: SettingsPatch): Promise<ExtensionSettings>;
   };
+  backup: Pick<BackupRepository, "export" | "restore">;
   browser: BrowserBridge;
   extensionId: string;
   now?: () => Date;
@@ -133,6 +139,7 @@ function isUiRequest(value: unknown): value is UiRequest {
     value.type === "START_SCRAPE" ||
     value.type === "CANCEL_SCRAPE" ||
     value.type === "CLEAR_ARCHIVE" ||
+    value.type === "EXPORT_BACKUP" ||
     value.type === "LIST_TAGS" ||
     value.type === "LIST_FOLDERS"
   ) {
@@ -140,6 +147,16 @@ function isUiRequest(value: unknown): value is UiRequest {
   }
   if (value.type === "SAVE_SETTINGS") {
     return isRecord(value.payload) && isSettingsPatch(value.payload.settings);
+  }
+  if (value.type === "RESTORE_BACKUP") {
+    if (!isRecord(value.payload) || typeof value.payload.content !== "string") {
+      return false;
+    }
+    return (
+      (value.payload.mode === "merge" &&
+        (value.payload.confirmed === undefined || value.payload.confirmed === false)) ||
+      (value.payload.mode === "replace" && value.payload.confirmed === true)
+    );
   }
   if (value.type === "LIST_BOOKMARKS") {
     if (value.payload === undefined) return true;
@@ -270,6 +287,22 @@ function success<T>(data: T): RuntimeResponse<T> {
 }
 
 function failure(error: unknown): RuntimeResponse<never> {
+  if (error instanceof BackupValidationError) {
+    return {
+      ok: false,
+      error: { code: "invalid_backup", message: error.message },
+    };
+  }
+  if (error instanceof BackupSettingsWriteError) {
+    return {
+      ok: false,
+      error: {
+        code: error.code,
+        message: error.message,
+        recovery: { dataRestored: true, reloadRequired: true },
+      },
+    };
+  }
   if (error instanceof BookmarkXError) {
     return { ok: false, error: { code: error.code, message: error.message } };
   }
@@ -412,6 +445,40 @@ export class BackgroundController {
           await this.dependencies.archive.clear();
           await this.dependencies.state.clearScrapeRun();
           return success(null);
+        case "EXPORT_BACKUP":
+          return success(await this.dependencies.backup.export());
+        case "RESTORE_BACKUP": {
+          const run = await this.dependencies.state.getScrapeRun();
+          if (run?.status === "running") {
+            throw new BookmarkXError(
+              "restore_capture_running",
+              "Wait for the active capture to finish before restoring a backup.",
+            );
+          }
+          try {
+            const restored = await this.dependencies.backup.restore(
+              request.payload.content,
+              request.payload.mode,
+            );
+            await this.dependencies.state.clearScrapeRun();
+            try {
+              const settings = await this.dependencies.settings.get();
+              await this.dependencies.browser.configureSurface(
+                settings.behavior.surface,
+              );
+            } catch {
+              // The canonical setting is already stored. The reload signal lets
+              // Chrome rehydrate the surface without making a committed restore
+              // look retryable because a disposable UI refresh failed.
+            }
+            return success(restored);
+          } catch (error) {
+            if (error instanceof BackupSettingsWriteError) {
+              await this.dependencies.state.clearScrapeRun();
+            }
+            throw error;
+          }
+        }
         case "EXPORT_BOOKMARKS":
           return success(await this.createExport(request));
       }
