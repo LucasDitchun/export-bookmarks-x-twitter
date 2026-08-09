@@ -204,8 +204,9 @@ describe("startBookmarkMetadataDecorator", () => {
     expect(host.dataset.largeText).toBe("false");
     expect(host.dataset.highContrast).toBe("false");
     expect(host.dataset.reduceMotion).toBe("true");
-    expect(host.shadowRoot?.textContent).toContain("bookmarkNeedsCategory");
+    expect(host.dataset.state).toBe("mapped");
     expect(host.shadowRoot?.textContent).not.toContain("bookmarkMetadataMapped");
+    expect(host.shadowRoot?.textContent).not.toContain("bookmarkNeedsCategory");
     expect(host.shadowRoot?.textContent).not.toContain("uncategorizedFolder");
 
     current = {

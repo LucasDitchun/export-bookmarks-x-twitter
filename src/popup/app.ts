@@ -6,6 +6,11 @@ import type {
   SupportedLocale,
 } from "../domain/types";
 import { reciprocalRankFusion } from "../domain/semantic-search";
+import {
+  DEFAULT_BOOKMARK_CATEGORIZATION_FIELDS,
+  isBookmarkCategorized,
+  type BookmarkCategorizationFields,
+} from "../domain/bookmark-categorization";
 import { createBackupUi } from "./backup-ui";
 import { getLocaleTag, type Translator } from "./i18n";
 import { createFolderUi } from "./folder-ui";
@@ -45,6 +50,7 @@ interface PopupAppOptions {
     view: BookmarkView,
     limit: number,
   ) => Promise<NotedBookmark[] | null>;
+  categorizationFields?: BookmarkCategorizationFields;
 }
 
 interface RequiredElements {
@@ -187,6 +193,7 @@ export function createPopupApp(options: PopupAppOptions): {
   destroy: () => void;
   handleLiveBookmarkContext: (context: LiveBookmarkContext) => Promise<void>;
   ready: Promise<void>;
+  setCategorizationFields: (fields: BookmarkCategorizationFields) => void;
   setFilterAsYouType: (enabled: boolean) => void;
 } {
   const {
@@ -202,6 +209,8 @@ export function createPopupApp(options: PopupAppOptions): {
     reload = () => window.location.reload(),
     filterAsYouType: initialFilterAsYouType = true,
     semanticSearch,
+    categorizationFields:
+      initialCategorizationFields = DEFAULT_BOOKMARK_CATEGORIZATION_FIELDS,
   } = options;
   const elements = getElements(document);
   elements.tagInput.placeholder = translate("tagInputPlaceholder");
@@ -215,6 +224,7 @@ export function createPopupApp(options: PopupAppOptions): {
   let nextBookmarkCursor: string | null = null;
   let selectedBookmarkId: string | null = null;
   let selectedBookmark: NotedBookmark | null = null;
+  let categorizationFields = initialCategorizationFields;
   let tags: BookmarkTag[] = [];
   let tagBusy = false;
   let selectionVersion = 0;
@@ -369,13 +379,29 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.tagInput.disabled = selectedBookmark === null || tagBusy;
   };
 
-  const updateBookmarkTags = (updated: NotedBookmark): void => {
+  const renderSelectedCategoryIndicator = (): void => {
+    if (selectedBookmark === null) {
+      elements.selectedCategoryIndicator.textContent = "";
+      elements.selectedCategoryIndicator.dataset.state = "empty";
+      return;
+    }
+    const categorized = isBookmarkCategorized(selectedBookmark, categorizationFields);
+    elements.selectedCategoryIndicator.textContent = translate(
+      categorized ? "bookmarkCategorized" : "bookmarkNeedsCategory",
+    );
+    elements.selectedCategoryIndicator.dataset.state = categorized
+      ? "categorized"
+      : "incomplete";
+  };
+
+  const updateBookmark = (updated: NotedBookmark): void => {
     bookmarks = bookmarks.map((bookmark) =>
       bookmark.id === updated.id ? updated : bookmark,
     );
     if (selectedBookmarkId === updated.id) selectedBookmark = updated;
     renderBookmarkList();
     renderSelectedTags();
+    renderSelectedCategoryIndicator();
   };
 
   const setTagStatus = (
@@ -442,7 +468,7 @@ export function createPopupApp(options: PopupAppOptions): {
         tags = [...tags, response.data.tag];
       }
       exportUi?.setTags(tags);
-      updateBookmarkTags(response.data.bookmark);
+      updateBookmark(response.data.bookmark);
       renderTagSuggestions();
       if (selectedBookmarkId === bookmarkId) {
         elements.tagInput.value = "";
@@ -471,7 +497,7 @@ export function createPopupApp(options: PopupAppOptions): {
         setTagStatus("tagSaveError");
         return;
       }
-      updateBookmarkTags(response.data.bookmark);
+      updateBookmark(response.data.bookmark);
       if (selectedBookmarkId === bookmarkId) setTagStatus("tagRemoved");
     } catch {
       setTagStatus("tagSaveError");
@@ -614,6 +640,9 @@ export function createPopupApp(options: PopupAppOptions): {
         !pendingNoteSave &&
         !debouncedNoteSave;
       if (isLatestVisibleDraft) {
+        if (response.ok && response.data?.bookmark) {
+          updateBookmark(response.data.bookmark);
+        }
         setNoteSaveStatus(response.ok ? "noteSaved" : "noteSaveError");
       }
     } catch {
@@ -693,16 +722,7 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.noteEditor.hidden = false;
     elements.selectedBookmarkTitle.textContent = bookmark.text || bookmark.url;
     elements.selectedBookmarkAuthor.textContent = `@${bookmark.author.username}`;
-    const isCategorized =
-      bookmark.note.trim().length > 0 &&
-      bookmark.folderId !== null &&
-      bookmark.tagIds.length > 0;
-    elements.selectedCategoryIndicator.textContent = translate(
-      isCategorized ? "bookmarkCategorized" : "bookmarkNeedsCategory",
-    );
-    elements.selectedCategoryIndicator.dataset.state = isCategorized
-      ? "categorized"
-      : "incomplete";
+    renderSelectedCategoryIndicator();
     elements.noteTextarea.value = bookmark.note;
     folderUi?.setBookmark(bookmark);
     editRevision += 1;
@@ -1185,7 +1205,7 @@ export function createPopupApp(options: PopupAppOptions): {
     sendMessage,
     translate,
     onBookmarkUpdated: (updatedBookmark) => {
-      updateBookmarkTags(updatedBookmark);
+      updateBookmark(updatedBookmark);
     },
     onFoldersChanged: (folders: readonly FolderRecord[]) => {
       exportUi?.setFolders(folders);
@@ -1202,6 +1222,11 @@ export function createPopupApp(options: PopupAppOptions): {
   ]).then(() => undefined);
   return {
     ready,
+    setCategorizationFields: (fields) => {
+      if (destroyed) return;
+      categorizationFields = fields;
+      renderSelectedCategoryIndicator();
+    },
     setFilterAsYouType: (enabled) => {
       if (!destroyed) setFilterAsYouType(enabled);
     },

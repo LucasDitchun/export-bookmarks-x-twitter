@@ -232,6 +232,75 @@ describe("BookmarkDatabase", () => {
     database.close();
   });
 
+  it("migrates more than five hundred version 1 bookmarks without loss or duplication", async () => {
+    const databaseName = `migrate-v1-volume-${crypto.randomUUID()}`;
+    const versionOne = await openVersionOne(databaseName);
+    const legacyRecords = Array.from({ length: 512 }, (_, index) => {
+      const id = `post-${String(index).padStart(4, "0")}`;
+      const savedAt = new Date(Date.UTC(2025, 0, 1, 0, 0, index)).toISOString();
+      return {
+        id,
+        text: `Legacy post ${index}`,
+        url: `https://x.com/author/status/${index + 1}`,
+        author: { id: "author-1", username: "author", name: "Author" },
+        postCreatedAt: "2024-12-31T00:00:00.000Z",
+        folders: [],
+        firstArchivedAt: savedAt,
+        lastSeenAt: savedAt,
+        isCurrent: index % 2 === 0,
+      };
+    });
+    const seed = versionOne.transaction("bookmarks", "readwrite");
+    for (const record of legacyRecords) seed.objectStore("bookmarks").put(record);
+    await transactionDone(seed);
+    versionOne.close();
+
+    const database = await new BookmarkDatabase(databaseName).open();
+    const transaction = database.transaction("bookmarks", "readonly");
+    const request = transaction.objectStore("bookmarks").getAll();
+    const migrated = await new Promise<Record<string, unknown>[]>((resolve, reject) => {
+      request.addEventListener(
+        "success",
+        () => resolve(request.result as Record<string, unknown>[]),
+        { once: true },
+      );
+      request.addEventListener("error", () => reject(indexedDbError(request.error)), {
+        once: true,
+      });
+    });
+    await transactionDone(transaction);
+
+    expect(migrated).toHaveLength(legacyRecords.length);
+    expect(new Set(migrated.map(({ id }) => id)).size).toBe(legacyRecords.length);
+    expect(
+      migrated.map(({ id, firstSavedAt, lastSeenAt, status }) => ({
+        id,
+        firstSavedAt,
+        lastSeenAt,
+        status,
+      })),
+    ).toEqual(
+      legacyRecords.map(({ id, firstArchivedAt, lastSeenAt, isCurrent }) => ({
+        id,
+        firstSavedAt: firstArchivedAt,
+        lastSeenAt,
+        status: isCurrent ? "current" : "archived",
+      })),
+    );
+    expect(
+      migrated.every(
+        ({ note, folderId, tagIds, media }) =>
+          note === "" &&
+          folderId === null &&
+          Array.isArray(tagIds) &&
+          tagIds.length === 0 &&
+          JSON.stringify(media) === '{"images":[],"videos":[]}',
+      ),
+    ).toBe(true);
+
+    database.close();
+  }, 15_000);
+
   it("normalizes version 2 folders and legacy memberships to one valid assignment", async () => {
     const databaseName = `migrate-v2-${crypto.randomUUID()}`;
     const versionTwo = await openVersionTwo(databaseName);

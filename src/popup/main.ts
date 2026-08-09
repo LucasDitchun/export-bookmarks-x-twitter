@@ -101,6 +101,7 @@ async function startPopup(): Promise<void> {
   );
   applyLibraryUiSettings(document, DEFAULT_SETTINGS);
   let filterAsYouType = DEFAULT_SETTINGS.search.filterAsYouType;
+  let categorizationFields = DEFAULT_SETTINGS.behavior.metadata;
   let app: ReturnType<typeof createPopupApp> | null = null;
   const settingsUi = createSettingsUiController({
     document,
@@ -110,7 +111,9 @@ async function startPopup(): Promise<void> {
     },
     onApply(settings) {
       filterAsYouType = settings.search.filterAsYouType;
+      categorizationFields = settings.behavior.metadata;
       app?.setFilterAsYouType(filterAsYouType);
+      app?.setCategorizationFields(categorizationFields);
     },
   });
   await settingsUi.refresh();
@@ -139,6 +142,7 @@ async function startPopup(): Promise<void> {
     sendMessage,
     translate,
     filterAsYouType,
+    categorizationFields,
     semanticSearch: (query, view, limit) => semanticSearch.search(query, view, limit),
   });
   window.addEventListener(

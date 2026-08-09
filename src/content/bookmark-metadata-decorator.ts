@@ -3,6 +3,7 @@ import type {
   BookmarkDecorationLookupResult,
 } from "../shared/protocol";
 import type { ExtensionSettings } from "../settings/settings-repository";
+import { isBookmarkCategorized } from "../domain/bookmark-categorization";
 
 export type {
   BookmarkDecorationItem,
@@ -200,14 +201,6 @@ function appendTextElement(
   return element;
 }
 
-function isCategorized(item: BookmarkDecorationItem): boolean {
-  return (
-    item.bookmark.note.trim().length > 0 &&
-    item.bookmark.folderId !== null &&
-    item.tags.length > 0
-  );
-}
-
 function hasVisibleMetadataSetting(settings: ExtensionSettings): boolean {
   return Object.values(settings.behavior.metadata).some(Boolean);
 }
@@ -235,7 +228,7 @@ function renderDecoration(options: {
     ? "pending"
     : item.bookmark.status === "archived"
       ? "archived"
-      : isCategorized(item)
+      : isBookmarkCategorized(item.bookmark, settings.behavior.metadata)
         ? "mapped"
         : "uncategorized";
   host.setAttribute("aria-label", translate("bookmarkMetadataLabel"));
@@ -268,7 +261,7 @@ function renderDecoration(options: {
     if (
       !options.pending &&
       settings.behavior.metadata.categoryIndicator &&
-      !isCategorized(item)
+      !isBookmarkCategorized(item.bookmark, settings.behavior.metadata)
     ) {
       appendTextElement(
         document,
