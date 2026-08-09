@@ -169,17 +169,26 @@ messaging, TXT export, and archive clearing.
 
 ## Versioning and releases
 
-Bookmark X follows [Semantic Versioning](https://semver.org/):
+Bookmark X deliberately releases in batches. Features and fixes merge into
+`develop` without creating a tag, so a busy development day still produces at
+most the release selected by the maintainers.
 
-- **patch** for backward-compatible fixes;
-- **minor** for backward-compatible features;
-- **major** for incompatible changes.
+Before `1.0.0`, Bookmark X follows a conservative
+[ZeroVer](https://0ver.org/) policy: any non-empty backward-compatible batch
+increments the patch once, while an incompatible batch increments the minor
+once. From `1.0.0` onward, normal
+[Semantic Versioning](https://semver.org/) applies: fixes increment patch,
+features increment minor, and incompatible changes increment major. Commit
+counts never become version numbers.
 
-Maintainers publish a release from the manual **Release** workflow in GitHub
-Actions. The workflow accepts a patch, minor, or major bump, or an explicit
-semantic version. It synchronizes the package and Chrome manifest versions,
-runs validation and build steps, creates the release commit and `vX.Y.Z` tag,
-then publishes a GitHub Release with the versioned ZIP.
+The **Release train** workflow builds the chosen batch with read-only
+permissions, then opens a small preparation pull request containing the
+version, changelog, lockfile, manifest, and ZIP. After that PR passes CI and is
+squash-merged into `develop`, the workflow refreshes the single draft
+`develop` to `main` pull request. Only merging that reviewed final pull request
+can create the `vX.Y.Z` tag and GitHub Release. Publication is retry-safe and
+validates the already reviewed archive before granting write access to the
+publishing job.
 
 The stable `download/bookmark-x.zip` file provides a simple link to the latest
 ready-to-install build.

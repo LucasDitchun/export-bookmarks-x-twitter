@@ -9,6 +9,7 @@ export default tseslint.config(
       "release/**",
       "node_modules/**",
       "scripts/**/*.mjs",
+      ".github/scripts/**/*.mjs",
       "eslint.config.js",
     ],
   },

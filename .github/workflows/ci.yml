@@ -1,10 +1,9 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
+    branches:
+      - develop
   workflow_dispatch:
 
 permissions:
@@ -22,6 +21,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -47,9 +48,13 @@ jobs:
 
       - name: Check release script syntax
         run: |
+          node --check .github/scripts/release-train.mjs
           node --check scripts/version.mjs
           node --check scripts/package.mjs
           node --check scripts/chrome-smoke.mjs
+
+      - name: Test release policy
+        run: node --test .github/scripts/release-train.test.mjs
 
       - name: Test with coverage
         run: pnpm test:coverage

@@ -1,0 +1,168 @@
+name: Release promotion
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - closed
+
+permissions: {}
+
+concurrency:
+  group: bookmark-x-release-promotion-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  policy:
+    name: Validate the proposed release
+    if: github.event.action != 'closed' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Require the same-repository develop release train
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          if [[ "$BASE_REF" != "main" || "$HEAD_REF" != "develop" || "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
+            echo "::error::Only the same-repository develop release train may target main."
+            exit 1
+          fi
+
+      - name: Check out the validated develop revision
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Fetch the published baseline
+        run: git fetch --force origin main --tags
+
+      - name: Validate release metadata and reviewed ZIP
+        run: |
+          node --check .github/scripts/release-train.mjs
+          node .github/scripts/release-train.mjs verify \
+            --base-ref origin/main \
+            --head-ref HEAD
+          version="$(jq -r '.version' package.json)"
+          manifest_version="$(jq -r '.version' public/manifest.json)"
+          archive_version="$(unzip -p download/bookmark-x.zip manifest.json | jq -r '.version')"
+          test "$manifest_version" = "$version"
+          test "$archive_version" = "$version"
+          unzip -t download/bookmark-x.zip
+
+  publish:
+    name: Tag and publish the reviewed release
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.ref == 'develop' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the merged release revision
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Fetch release tags
+        run: git fetch --force origin --tags
+
+      - name: Resolve the reviewed release
+        id: release
+        env:
+          EXPECTED_DEVELOP_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "$actual_sha" != "$EXPECTED_MERGE_SHA" ]]; then
+            echo "::error::Checked out $actual_sha instead of merged revision $EXPECTED_MERGE_SHA."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$EXPECTED_DEVELOP_SHA" HEAD; then
+            echo "::error::The validated develop revision is not part of the release merge."
+            exit 1
+          fi
+
+          version="$(jq -r '.version' package.json)"
+          manifest_version="$(jq -r '.version' public/manifest.json)"
+          archive_version="$(unzip -p download/bookmark-x.zip manifest.json | jq -r '.version')"
+          if [[ "$manifest_version" != "$version" || "$archive_version" != "$version" ]]; then
+            echo "::error::The reviewed package, manifest, and ZIP versions differ."
+            exit 1
+          fi
+          unzip -t download/bookmark-x.zip
+
+          tag="v$version"
+          archive="$RUNNER_TEMP/bookmark-x-$version.zip"
+          cp download/bookmark-x.zip "$archive"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+
+      - name: Create or validate the release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          expected_sha="$(git rev-parse HEAD)"
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            tagged_sha="$(git rev-list -n 1 "$RELEASE_TAG")"
+            if [[ "$tagged_sha" != "$expected_sha" ]]; then
+              echo "::error::Tag $RELEASE_TAG points to $tagged_sha instead of $expected_sha."
+              exit 1
+            fi
+            echo "Tag $RELEASE_TAG already points to the merged release."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag --annotate "$RELEASE_TAG" --message "Bookmark X $RELEASE_TAG"
+            gh auth setup-git
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
+
+      - name: Create or validate the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ARCHIVE: ${{ steps.release.outputs.archive }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          asset_name="$(basename "$RELEASE_ARCHIVE")"
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            existing="$(mktemp -d)"
+            if gh release download "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --pattern "$asset_name" \
+              --dir "$existing" >/dev/null 2>&1; then
+              if ! cmp --silent "$RELEASE_ARCHIVE" "$existing/$asset_name"; then
+                echo "::error::Release asset $asset_name differs from the reviewed ZIP."
+                exit 1
+              fi
+              echo "Release and asset already match the reviewed ZIP."
+            else
+              gh release upload "$RELEASE_TAG" \
+                "$RELEASE_ARCHIVE#Bookmark X $RELEASE_TAG" \
+                --repo "$GITHUB_REPOSITORY"
+            fi
+          else
+            gh release create "$RELEASE_TAG" \
+              "$RELEASE_ARCHIVE#Bookmark X $RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --generate-notes \
+              --title "Bookmark X $RELEASE_TAG" \
+              --verify-tag
+          fi
