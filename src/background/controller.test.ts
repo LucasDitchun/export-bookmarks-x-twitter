@@ -88,6 +88,9 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       ]),
       invalidate: vi.fn(),
     },
+    semantic: {
+      clearArchiveData: vi.fn(async () => undefined),
+    },
     tags: {
       list: vi.fn(async (): Promise<BookmarkTag[]> => []),
       add: vi.fn(async (): Promise<unknown> => null),
@@ -1661,7 +1664,11 @@ describe("BackgroundController", () => {
     await controller.handle({ type: "CLEAR_ARCHIVE" }, POPUP_SENDER);
 
     expect(dependencies.browser.openBookmarks).toHaveBeenCalledOnce();
+    expect(dependencies.semantic.clearArchiveData).toHaveBeenCalledOnce();
     expect(dependencies.archive.clear).toHaveBeenCalledOnce();
+    expect(
+      dependencies.semantic.clearArchiveData.mock.invocationCallOrder[0],
+    ).toBeLessThan(dependencies.archive.clear.mock.invocationCallOrder[0]!);
     expect(dependencies.state.clearScrapeRun).toHaveBeenCalledOnce();
     expect(dependencies.state.clearScrapeCheckpoints).toHaveBeenCalledOnce();
     expect(dependencies.search.invalidate).toHaveBeenCalledOnce();

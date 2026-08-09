@@ -12,6 +12,8 @@ import { ExportRepository } from "../storage/export-repository";
 import { BackgroundController } from "./controller";
 import type { ContentControlRequest } from "../shared/protocol";
 import { metadataRefreshRequest } from "./metadata-refresh";
+import { SemanticIndexRepository } from "../semantic/semantic-index-repository";
+import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 
 const state = new ExtensionStateRepository({
   get: (keys) => chrome.storage.local.get(keys),
@@ -23,6 +25,17 @@ const bookmarks = new BookmarkRepository();
 const tags = new TagRepository();
 const folders = new FolderRepository();
 const search = new SearchRepository();
+const semanticIndex = new SemanticIndexRepository();
+const semanticState = new SemanticStateRepository({
+  get: (key) => chrome.storage.local.get(key),
+  set: (items) => chrome.storage.local.set(items),
+});
+const semantic = {
+  async clearArchiveData(): Promise<void> {
+    await semanticIndex.clear();
+    await semanticState.reset();
+  },
+};
 const exports = new ExportRepository();
 const settings = new SettingsRepository({
   get: (keys) => chrome.storage.local.get(keys),
@@ -100,6 +113,7 @@ const controller = new BackgroundController({
   tags,
   folders,
   search,
+  semantic,
   settings,
   locale,
   backup,
