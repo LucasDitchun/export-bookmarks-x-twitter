@@ -1,5 +1,6 @@
 import type { BookmarkRecord, BookmarkTag, FolderRecord } from "../domain/types";
 import type {
+  BookmarkDetailResult,
   FolderDetailResult,
   FolderListResult,
   RuntimeResponse,
@@ -106,6 +107,21 @@ function isTagListResult(value: unknown): value is TagListResult {
   );
 }
 
+function isCurrentBookmarkResult(
+  value: unknown,
+  bookmarkId: string,
+): value is BookmarkDetailResult & { bookmark: BookmarkRecord } {
+  if (typeof value !== "object" || value === null) return false;
+  const bookmark = (value as Partial<BookmarkDetailResult>).bookmark;
+  return (
+    typeof bookmark === "object" &&
+    bookmark !== null &&
+    bookmark.id === bookmarkId &&
+    Array.isArray(bookmark.tagIds) &&
+    bookmark.tagIds.every((tagId) => typeof tagId === "string")
+  );
+}
+
 function isFolderListResult(value: unknown): value is FolderListResult {
   return (
     typeof value === "object" &&
@@ -155,14 +171,20 @@ async function reconcileTags(
   options: SaveBookmarkMetadataOptions,
   names: string[],
 ): Promise<void> {
-  const data = await sendChecked<unknown>(
-    options.send,
-    { type: "LIST_TAGS" },
-    options.signal,
-  );
-  if (!isTagListResult(data)) throw new Error("Invalid tag response.");
-  const byId = new Map(data.tags.map((tag) => [tag.id, tag]));
-  const assigned = options.bookmark.tagIds
+  const [tagData, bookmarkData] = await Promise.all([
+    sendChecked<unknown>(options.send, { type: "LIST_TAGS" }, options.signal),
+    sendChecked<unknown>(
+      options.send,
+      { type: "GET_BOOKMARK", payload: { id: options.bookmark.id } },
+      options.signal,
+    ),
+  ]);
+  if (!isTagListResult(tagData)) throw new Error("Invalid tag response.");
+  if (!isCurrentBookmarkResult(bookmarkData, options.bookmark.id)) {
+    throw new Error("Invalid bookmark response.");
+  }
+  const byId = new Map(tagData.tags.map((tag) => [tag.id, tag]));
+  const assigned = bookmarkData.bookmark.tagIds
     .map((id) => byId.get(id))
     .filter((tag): tag is BookmarkTag => tag !== undefined);
   const desired = new Map(names.map((name) => [comparableName(name), name]));
