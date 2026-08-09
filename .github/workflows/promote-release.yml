@@ -10,27 +10,49 @@ on:
       - reopened
       - ready_for_review
       - closed
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: Release pull request number to validate
+        required: true
+        type: string
 
 permissions: {}
 
 concurrency:
-  group: bookmark-x-release-promotion-${{ github.event.pull_request.number }}
+  group: bookmark-x-release-promotion-${{ github.event.pull_request.number || inputs.pull_request_number }}
   cancel-in-progress: false
 
 jobs:
   policy:
     name: Validate the proposed release
-    if: github.event.action != 'closed' && github.event.pull_request.draft == false
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
       contents: read
+      pull-requests: read
     steps:
+      - name: Resolve the release PR metadata
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number || github.event.pull_request.number }}
+        run: |
+          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER")"
+          echo "number=$PULL_REQUEST_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "base_ref=$(jq -r '.base.ref' <<< "$pr_json")" >> "$GITHUB_OUTPUT"
+          echo "head_ref=$(jq -r '.head.ref' <<< "$pr_json")" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$(jq -r '.head.sha' <<< "$pr_json")" >> "$GITHUB_OUTPUT"
+          echo "head_repository=$(jq -r '.head.repo.full_name' <<< "$pr_json")" >> "$GITHUB_OUTPUT"
+
       - name: Require the same-repository develop release train
         env:
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REF: ${{ steps.pr.outputs.base_ref }}
+          HEAD_REF: ${{ steps.pr.outputs.head_ref }}
+          HEAD_REPOSITORY: ${{ steps.pr.outputs.head_repository }}
         run: |
           if [[ "$BASE_REF" != "main" || "$HEAD_REF" != "develop" || "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
             echo "::error::Only the same-repository develop release train may target main."
@@ -42,7 +64,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ steps.pr.outputs.head_sha }}
 
       - name: Fetch release references
         run: git fetch --force origin main develop --tags
@@ -70,6 +92,9 @@ jobs:
           archive_version="$(unzip -p download/bookmark-x.zip manifest.json | jq -r '.version')"
           test "$archive_version" = "$version"
 
+      - name: Preserve the reviewed release archive
+        run: cp download/bookmark-x.zip "$RUNNER_TEMP/reviewed-bookmark-x.zip"
+
       - name: Check formatting
         run: pnpm format:check
 
@@ -87,6 +112,13 @@ jobs:
           pnpm build
           pnpm package
 
+      - name: Verify the reviewed ZIP matches the rebuilt ZIP
+        run: |
+          mkdir -p "$RUNNER_TEMP/reviewed-archive" "$RUNNER_TEMP/built-archive"
+          unzip -q "$RUNNER_TEMP/reviewed-bookmark-x.zip" -d "$RUNNER_TEMP/reviewed-archive"
+          unzip -q download/bookmark-x.zip -d "$RUNNER_TEMP/built-archive"
+          diff -ru "$RUNNER_TEMP/reviewed-archive" "$RUNNER_TEMP/built-archive"
+
       - name: Verify release archives
         run: |
           plan="$(node .github/scripts/release-train.mjs verify \
@@ -99,6 +131,7 @@ jobs:
   build_release:
     name: Build and verify merged release
     if: >-
+      github.event_name == 'pull_request' &&
       github.event.action == 'closed' &&
       github.event.pull_request.merged == true &&
       github.event.pull_request.base.ref == 'main' &&
@@ -184,17 +217,29 @@ jobs:
           pnpm test:coverage
           pnpm build
           pnpm package
+
+      - name: Verify the reviewed ZIP matches the rebuilt ZIP
+        run: |
+          mkdir -p "$RUNNER_TEMP/reviewed-archive" "$RUNNER_TEMP/built-archive"
+          unzip -q "$RUNNER_TEMP/reviewed-bookmark-x.zip" -d "$RUNNER_TEMP/reviewed-archive"
+          unzip -q download/bookmark-x.zip -d "$RUNNER_TEMP/built-archive"
+          diff -ru "$RUNNER_TEMP/reviewed-archive" "$RUNNER_TEMP/built-archive"
+
+      - name: Re-stage the reviewed release archive
+        run: |
           cp "$RUNNER_TEMP/reviewed-bookmark-x.zip" "${{ steps.release.outputs.archive }}"
           cp "$RUNNER_TEMP/reviewed-bookmark-x.zip" download/bookmark-x.zip
+
+      - name: Verify release archive identity
+        env:
+          BASE_TAG: ${{ steps.release.outputs.base_tag }}
+          RELEASE_ARCHIVE: ${{ steps.release.outputs.archive }}
+        run: |
           node .github/scripts/release-train.mjs verify \
             --base-ref "$BASE_TAG" \
             --head-ref HEAD \
             --require-archive
-
-      - name: Verify release archive identity
-        env:
-          RELEASE_ARCHIVE: ${{ steps.release.outputs.archive }}
-        run: cmp --silent "$RELEASE_ARCHIVE" download/bookmark-x.zip
+          cmp --silent "$RELEASE_ARCHIVE" download/bookmark-x.zip
 
       - name: Upload the verified release archive
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -217,6 +262,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
           ref: ${{ github.event.pull_request.merge_commit_sha }}
 
       - name: Download the verified release archive
@@ -230,6 +276,7 @@ jobs:
 
       - name: Create or validate the release tag
         env:
+          GH_TOKEN: ${{ github.token }}
           EXPECTED_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
           RELEASE_TAG: ${{ needs.build_release.outputs.tag }}
         run: |
@@ -249,7 +296,8 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git tag --annotate "$RELEASE_TAG" --message "Bookmark X $RELEASE_TAG"
-            git push origin "refs/tags/$RELEASE_TAG"
+            git -c http.extraheader="AUTHORIZATION: bearer $GH_TOKEN" \
+              push origin "refs/tags/$RELEASE_TAG"
           fi
 
       - name: Create or validate the GitHub Release

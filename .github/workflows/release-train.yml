@@ -57,15 +57,19 @@ jobs:
             --title "chore(release): prepare next release" \
             --body "This draft accumulates the changes accepted into \`develop\`. Run **Release train** on \`develop\` when the batch is ready, review the generated version and changelog, then mark this PR ready. Merging this PR is the only supported release path."
 
-  prepare:
+  prepare-batch:
     name: Prepare the selected release batch
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
-      actions: write
-      contents: write
-      pull-requests: write
+      contents: read
+    outputs:
+      archive: ${{ steps.release.outputs.archive }}
+      bump: ${{ steps.release.outputs.bump }}
+      noop: ${{ steps.state.outputs.noop }}
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - name: Check out the dispatched develop revision
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -162,11 +166,77 @@ jobs:
           cmp --silent "$RELEASE_ARCHIVE" download/bookmark-x.zip
           git diff --check
 
-      - name: Commit the prepared release to develop
+      - name: Bundle prepared release files
         if: steps.state.outputs.noop != 'true'
         env:
+          PREPARED_ROOT: ${{ runner.temp }}/prepared-release
+        run: |
+          mkdir -p "$PREPARED_ROOT/public" "$PREPARED_ROOT/download"
+          cp package.json "$PREPARED_ROOT/package.json"
+          cp pnpm-lock.yaml "$PREPARED_ROOT/pnpm-lock.yaml"
+          cp CHANGELOG.md "$PREPARED_ROOT/CHANGELOG.md"
+          cp public/manifest.json "$PREPARED_ROOT/public/manifest.json"
+          cp download/bookmark-x.zip "$PREPARED_ROOT/download/bookmark-x.zip"
+          (
+            cd "$PREPARED_ROOT"
+            sha256sum \
+              package.json \
+              pnpm-lock.yaml \
+              CHANGELOG.md \
+              public/manifest.json \
+              download/bookmark-x.zip > SHA256SUMS
+          )
+
+      - name: Upload prepared release files
+        if: steps.state.outputs.noop != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: prepared-release-${{ steps.release.outputs.tag }}
+          path: ${{ runner.temp }}/prepared-release
+          if-no-files-found: error
+          retention-days: 1
+
+  apply-prepared-release:
+    name: Commit the verified release batch
+    needs: prepare-batch
+    if: needs.prepare-batch.outputs.noop != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the dispatched develop revision
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Download prepared release files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: prepared-release-${{ needs.prepare-batch.outputs.tag }}
+          path: ${{ runner.temp }}/prepared-release
+
+      - name: Apply the verified release files
+        env:
+          PREPARED_ROOT: ${{ runner.temp }}/prepared-release
+        run: |
+          (
+            cd "$PREPARED_ROOT"
+            sha256sum --check SHA256SUMS
+          )
+          cp "$PREPARED_ROOT/package.json" package.json
+          cp "$PREPARED_ROOT/pnpm-lock.yaml" pnpm-lock.yaml
+          cp "$PREPARED_ROOT/CHANGELOG.md" CHANGELOG.md
+          mkdir -p public download
+          cp "$PREPARED_ROOT/public/manifest.json" public/manifest.json
+          cp "$PREPARED_ROOT/download/bookmark-x.zip" download/bookmark-x.zip
+
+      - name: Commit the prepared release to develop
+        env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_TAG: ${{ needs.prepare-batch.outputs.tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -181,14 +251,31 @@ jobs:
             exit 1
           }
           git commit -m "chore(release): prepare $RELEASE_TAG"
-          gh auth setup-git
-          git push origin HEAD:develop
+          git -c http.extraheader="AUTHORIZATION: bearer $GH_TOKEN" \
+            push origin HEAD:develop
 
+  sync-prepared-pr:
+    name: Update and validate the prepared release PR
+    needs:
+      - prepare-batch
+      - apply-prepared-release
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/develop' &&
+      needs.prepare-batch.result == 'success' &&
+      (needs.apply-prepared-release.result == 'success' || needs.apply-prepared-release.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: write
+    steps:
       - name: Update the release PR
-        if: steps.state.outputs.noop != 'true'
+        id: pr
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_TAG: ${{ needs.prepare-batch.outputs.tag }}
         run: |
           pr="$(gh pr list \
             --repo "$GITHUB_REPOSITORY" \
@@ -204,7 +291,7 @@ jobs:
               --head develop \
               --draft \
               --title "chore(release): prepare $RELEASE_TAG" \
-              --body "Prepared release $RELEASE_TAG. Review the generated changelog, archive, and checks before marking this PR ready."
+              --body "Prepared release $RELEASE_TAG. Review the generated changelog, the committed ZIP, and the CI checks before marking this PR ready. Merging this \`develop\` PR publishes the release."
             number="$(gh pr list \
               --repo "$GITHUB_REPOSITORY" \
               --base main \
@@ -220,15 +307,22 @@ jobs:
             gh pr edit "$number" \
               --repo "$GITHUB_REPOSITORY" \
               --title "chore(release): prepare $RELEASE_TAG" \
-              --body "Prepared release $RELEASE_TAG. Review the generated changelog, archive, and checks before marking this PR ready. Merging this \`develop\` PR publishes the release."
+              --body "Prepared release $RELEASE_TAG. Review the generated changelog, the committed ZIP, and the CI checks before marking this PR ready. Merging this \`develop\` PR publishes the release."
           fi
-          echo "Release PR #$number is draft and tracks $RELEASE_TAG."
+          echo "number=$number" >> "$GITHUB_OUTPUT"
 
-      - name: Dispatch CI for the generated commit
-        if: steps.state.outputs.noop != 'true'
+      - name: Dispatch branch and release validation
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref develop
+          PULL_REQUEST_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          gh workflow run ci.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref develop
+          gh workflow run promote-release.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref develop \
+            -f pull_request_number="$PULL_REQUEST_NUMBER"
 
   wrong-branch:
     name: Require develop for release preparation
