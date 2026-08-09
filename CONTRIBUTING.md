@@ -31,37 +31,32 @@ environment file is required.
 ## Quality checks
 
 ```bash
-pnpm format:check
-pnpm lint
-pnpm typecheck
-node --check scripts/version.mjs
-node --check scripts/package.mjs
-node --check scripts/chrome-smoke.mjs
-pnpm test:coverage
-pnpm build
-pnpm smoke:chrome
-pnpm package
+pnpm verify:local
 ```
 
 Changed business logic should retain at least 80% line, function, and statement
-coverage. The configured branch threshold is 75%.
+coverage. The complete coverage, audit, package, semantic-model, and Chrome
+smoke gate runs once when a maintainer promotes a batch to `staging`.
+
+Record the exact commit and result in the pull request. If the local profile was
+not run, ask a maintainer to launch the manual **On-demand validation** workflow
+for that commit instead. Pull requests to `develop` intentionally start no
+automatic GitHub Actions.
 
 ## Commits and pull requests
 
 Use Conventional Commit subjects such as `feat: capture bookmark DOM`.
 
 Create feature and fix branches from `develop`, and target every contribution
-pull request to `develop`. Compatible changes accumulate there without
-publishing a version. The maintainers prepare a batch with the **Release
-train** workflow. The generated preparation PR is squash-merged into
-`develop` after CI; the single draft pull request from `develop` to `main`
-remains the only publishing path. Feature and preparation pull requests are
-squash-merged, while the final release pull request uses a merge commit so the
-published batch retains its ancestry.
+pull request to `develop`. Compatible changes accumulate there without running
+remote CI or publishing a version. A maintainer manually runs **Stage
+candidate** once for the selected batch; the verified source and ZIP then move
+to `staging`. Only a later, explicitly reviewed `staging` to `main` pull request
+may publish a release.
 
-A pull request should explain the user-visible outcome, list checks run,
-include screenshots for UI changes, call out permission/privacy/storage
-changes, and contain no generated ZIP outside the release workflow, browser
+A pull request should explain the user-visible outcome, list the exact local
+commit and checks run, include screenshots for UI changes, call out
+permission/privacy/storage changes, and contain no generated ZIP, browser
 profile, real bookmark data, or unrelated edits.
 
 Contributions are licensed under the repository's MIT License.

@@ -266,13 +266,12 @@ pnpm dev
 Run the quality checks:
 
 ```bash
-pnpm format:check
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm build
-pnpm smoke:chrome
+pnpm verify:local
 ```
+
+Pull requests to `develop` intentionally do not repeat this profile in GitHub
+Actions. If local verification is unavailable, a maintainer can run the manual
+**On-demand validation** workflow for the exact commit.
 
 `pnpm build` creates the unpacked extension in `dist`. Load that directory from
 `chrome://extensions`, then select **Reload** after each rebuild.
@@ -307,17 +306,20 @@ once. From `1.0.0` onward, normal
 features increment minor, and incompatible changes increment major. Commit
 counts never become version numbers.
 
-The **Release train** workflow builds the chosen batch with read-only
-permissions, then opens a small preparation pull request containing the
-version, changelog, lockfile, manifest, and ZIP. After that PR passes CI and is
-squash-merged into `develop`, the workflow refreshes the single draft
-`develop` to `main` pull request. Only merging that reviewed final pull request
-can create the `vX.Y.Z` tag and GitHub Release. Publication is retry-safe and
-validates the already reviewed archive before granting write access to the
-publishing job.
+The manually dispatched **Stage candidate** workflow is the only complete
+remote gate. It validates one exact `develop` snapshot, prepares the candidate
+version and changelog, builds and smoke-tests the extension once, then moves
+the sealed ZIP and source snapshot to `staging`. Repository dependencies never
+execute in the write-scoped publication job.
 
-The stable `download/bookmark-x.zip` file provides a simple link to the latest
-ready-to-install build.
+The team tests `staging` before any public release. Only a later, explicitly
+reviewed `staging` to `main` pull request can create the tag and GitHub Release;
+that promotion validates the reviewed archive without reinstalling,
+retesting, or rebuilding it.
+
+The `download/bookmark-x.zip` file on `staging` provides a simple link to the
+latest remotely tested build. The file on `main` remains the latest public
+release.
 
 Maintainers can find the event matrix, performance budgets, cache strategy, and
 recovery rules in the [CI and release architecture guide](docs/CI.md).

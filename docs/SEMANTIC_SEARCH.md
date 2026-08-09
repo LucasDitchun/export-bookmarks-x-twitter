@@ -27,9 +27,10 @@ weights are 118,308,185 bytes and the tokenizer is 17,082,730 bytes, for about
 
 ## Release-candidate model gate
 
-The manually dispatched **Release train** is the release-candidate boundary. It
-runs `pnpm semantic-model:gate`; normal pull-request CI runs only the gate's unit
-tests and `--dry-run`, so it never downloads model weights.
+The manually dispatched **Stage candidate** workflow is the release-candidate
+boundary. Its single `pnpm verify:staging` profile runs
+`pnpm semantic-model:gate`. Pull requests to `develop` run no automatic CI, and
+the optional **On-demand validation** profile never downloads model weights.
 
 The gate downloads the pinned revision into a temporary local filesystem cache.
 Every request is a bodyless `GET` for a model asset. Before Transformers.js is

@@ -1,94 +1,45 @@
-name: Release train
+name: Stage candidate
 
 on:
-  push:
-    branches:
-      - develop
   workflow_dispatch:
 
 permissions: {}
 
 concurrency:
-  group: bookmark-x-release-train-${{ github.event_name }}
-  cancel-in-progress: ${{ github.event_name == 'push' }}
+  group: bookmark-x-stage-candidate
+  cancel-in-progress: true
 
 jobs:
-  sync-pr:
-    name: Keep the release PR open
-    if: github.event_name == 'push'
+  validate:
+    name: Validate the develop batch once
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Open the draft release PR when needed
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          develop_version="$(gh api \
-            -H 'Accept: application/vnd.github.raw+json' \
-            "repos/$GITHUB_REPOSITORY/contents/package.json?ref=develop" | jq -r '.version')"
-          main_version="$(gh api \
-            -H 'Accept: application/vnd.github.raw+json' \
-            "repos/$GITHUB_REPOSITORY/contents/package.json?ref=main" | jq -r '.version')"
-          title="chore(release): prepare next release"
-          body="This draft accumulates the changes accepted into \`develop\`. Run **Release train** on \`develop\` when the batch is ready, review the generated version and changelog, then mark this PR ready. Merging this PR is the only supported release path."
-          if [[ "$develop_version" != "$main_version" ]]; then
-            title="chore(release): prepare v$develop_version"
-            body="Prepared release v$develop_version. Review the generated changelog, the committed ZIP, and the CI checks before marking this PR ready. Merging this \`develop\` PR publishes the release."
-          fi
-
-          existing="$(gh pr list \
-            --repo "$GITHUB_REPOSITORY" \
-            --base main \
-            --head develop \
-            --state open \
-            --json number,isDraft \
-            --jq '.[0] // empty')"
-          if [[ -n "$existing" ]]; then
-            number="$(jq -r '.number' <<< "$existing")"
-            if [[ "$(jq -r '.isDraft' <<< "$existing")" == "false" ]]; then
-              gh pr ready "$number" --repo "$GITHUB_REPOSITORY" --undo
-            fi
-            gh pr edit "$number" \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "$title" \
-              --body "$body"
-            echo "Release PR #$number now tracks develop at v$develop_version."
-            exit 0
-          fi
-
-          gh pr create \
-            --repo "$GITHUB_REPOSITORY" \
-            --base main \
-            --head develop \
-            --draft \
-            --title "$title" \
-            --body "$body"
-
-  prepare-batch:
-    name: Prepare the selected release batch
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
     outputs:
-      archive: ${{ steps.release.outputs.archive }}
-      noop: ${{ steps.state.outputs.noop }}
       tag: ${{ steps.release.outputs.tag }}
+      source-sha: ${{ steps.source.outputs.sha }}
       version: ${{ steps.release.outputs.version }}
     steps:
-      - name: Check out the dispatched develop revision
+      - name: Check out the selected develop snapshot
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           persist-credentials: false
           ref: ${{ github.sha }}
 
-      - name: Fetch release references
-        run: git fetch --force origin main develop --tags
+      - name: Bind the gate to the selected snapshot
+        id: source
+        env:
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$EVENT_SHA"
+          echo "sha=$actual_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the public release baseline
+        run: git fetch --force origin main --tags
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -100,159 +51,122 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install dependencies once
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Audit all dependencies at HIGH severity
-        run: pnpm audit:high
-
-      - name: Test the release policy
-        run: node --test .github/scripts/release-train.test.mjs
-
-      - name: Validate the pinned semantic model release candidate
-        run: pnpm semantic-model:gate
-
-      - name: Calculate and write the release version
+      - name: Prepare the candidate version and changelog
         id: release
         run: |
           node .github/scripts/release-train.mjs prepare \
             --base-ref origin/main \
             --head-ref HEAD \
             --github-output "$GITHUB_OUTPUT"
+          pnpm install --lockfile-only --offline
+          pnpm exec prettier --write \
+            package.json \
+            pnpm-lock.yaml \
+            public/manifest.json \
+            CHANGELOG.md
 
-      - name: Format generated metadata
-        run: pnpm exec prettier --write package.json public/manifest.json CHANGELOG.md
+      - name: Run the complete staging verification profile once
+        run: pnpm verify:staging
 
-      - name: Detect an already prepared batch
-        id: state
+      - name: Seal the tested ZIP and source identity
         env:
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          STAGED_ROOT: ${{ runner.temp }}/staged-candidate
         run: |
-          if [[ "$(git log -1 --pretty=%s)" == "chore(release): prepare $RELEASE_TAG" ]] && \
-            git diff --quiet -- package.json pnpm-lock.yaml public/manifest.json CHANGELOG.md download/bookmark-x.zip; then
-            echo "noop=true" >> "$GITHUB_OUTPUT"
-            echo "The current develop revision is already prepared as $RELEASE_TAG."
-          else
-            echo "noop=false" >> "$GITHUB_OUTPUT"
-          fi
+          mkdir -p "$STAGED_ROOT/download" "$STAGED_ROOT/public"
+          cp package.json "$STAGED_ROOT/package.json"
+          cp pnpm-lock.yaml "$STAGED_ROOT/pnpm-lock.yaml"
+          cp CHANGELOG.md "$STAGED_ROOT/CHANGELOG.md"
+          cp public/manifest.json "$STAGED_ROOT/public/manifest.json"
+          cp download/bookmark-x.zip "$STAGED_ROOT/download/bookmark-x.zip"
+          printf '%s\n' "$SOURCE_SHA" > "$STAGED_ROOT/SOURCE_SHA"
+          (
+            cd "$STAGED_ROOT"
+            sha256sum \
+              SOURCE_SHA \
+              CHANGELOG.md \
+              package.json \
+              pnpm-lock.yaml \
+              public/manifest.json \
+              download/bookmark-x.zip > SHA256SUMS
+          )
 
-      - name: Refresh the lockfile
-        if: steps.state.outputs.noop != 'true'
-        run: pnpm install --lockfile-only --offline
-
-      - name: Format the refreshed lockfile
-        if: steps.state.outputs.noop != 'true'
-        run: pnpm exec prettier --write pnpm-lock.yaml
-
-      - name: Check generated release formatting
-        if: steps.state.outputs.noop != 'true'
-        run: pnpm exec prettier --check package.json pnpm-lock.yaml public/manifest.json CHANGELOG.md
-
-      - name: Build extension
-        if: steps.state.outputs.noop != 'true'
-        run: pnpm build
-
-      - name: Package extension
-        if: steps.state.outputs.noop != 'true'
-        run: pnpm package
-
-      - name: Smoke-test the packaged extension in Chrome
-        if: steps.state.outputs.noop != 'true'
-        run: pnpm smoke:chrome
-
-      - name: Verify prepared release
-        if: steps.state.outputs.noop != 'true'
-        env:
-          RELEASE_ARCHIVE: ${{ steps.release.outputs.archive }}
+      - name: Verify the final staged release
         run: |
           node .github/scripts/release-train.mjs verify \
             --base-ref origin/main \
             --head-ref HEAD \
             --require-archive
-          cmp --silent "$RELEASE_ARCHIVE" download/bookmark-x.zip
           git diff --check
 
-      - name: Bundle prepared release files
-        if: steps.state.outputs.noop != 'true'
-        env:
-          PREPARED_ROOT: ${{ runner.temp }}/prepared-release
-        run: |
-          mkdir -p "$PREPARED_ROOT/public" "$PREPARED_ROOT/download"
-          cp package.json "$PREPARED_ROOT/package.json"
-          cp pnpm-lock.yaml "$PREPARED_ROOT/pnpm-lock.yaml"
-          cp CHANGELOG.md "$PREPARED_ROOT/CHANGELOG.md"
-          cp public/manifest.json "$PREPARED_ROOT/public/manifest.json"
-          cp download/bookmark-x.zip "$PREPARED_ROOT/download/bookmark-x.zip"
-          (
-            cd "$PREPARED_ROOT"
-            sha256sum \
-              package.json \
-              pnpm-lock.yaml \
-              CHANGELOG.md \
-              public/manifest.json \
-              download/bookmark-x.zip > SHA256SUMS
-          )
-
-      - name: Upload prepared release files
-        if: steps.state.outputs.noop != 'true'
+      - name: Upload the sealed staging candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: prepared-release-${{ steps.release.outputs.tag }}
-          path: ${{ runner.temp }}/prepared-release
+          name: staged-candidate-${{ steps.source.outputs.sha }}
+          path: ${{ runner.temp }}/staged-candidate
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
 
-  open-prepared-release-pr:
-    name: Open the verified release preparation PR
-    needs: prepare-batch
-    if: needs.prepare-batch.outputs.noop != 'true'
+  publish-staging:
+    name: Publish only the verified snapshot
+    needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     permissions:
       actions: read
       contents: write
-      pull-requests: write
-    outputs:
-      branch: ${{ steps.publish.outputs.branch }}
-      commit: ${{ steps.publish.outputs.commit }}
-      pull-request: ${{ steps.publish.outputs.pull-request }}
     steps:
-      - name: Check out the dispatched develop revision
+      - name: Check out the verified source without write credentials
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.sha }}
+          ref: ${{ needs.validate.outputs.source-sha }}
 
-      - name: Download prepared release files
+      - name: Download the sealed staging candidate
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: prepared-release-${{ needs.prepare-batch.outputs.tag }}
-          path: ${{ runner.temp }}/prepared-release
+          name: staged-candidate-${{ needs.validate.outputs.source-sha }}
+          path: ${{ runner.temp }}/staged-candidate
 
-      - name: Apply the verified release files
-        env:
-          PREPARED_ROOT: ${{ runner.temp }}/prepared-release
-        run: |
-          (
-            cd "$PREPARED_ROOT"
-            sha256sum --check SHA256SUMS
-          )
-          cp "$PREPARED_ROOT/package.json" package.json
-          cp "$PREPARED_ROOT/pnpm-lock.yaml" pnpm-lock.yaml
-          cp "$PREPARED_ROOT/CHANGELOG.md" CHANGELOG.md
-          mkdir -p public download
-          cp "$PREPARED_ROOT/public/manifest.json" public/manifest.json
-          cp "$PREPARED_ROOT/download/bookmark-x.zip" download/bookmark-x.zip
-
-      - name: Commit the prepared release to a dedicated branch
-        id: publish
+      - name: Verify and publish the staged snapshot
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.prepare-batch.outputs.tag }}
+          SOURCE_SHA: ${{ needs.validate.outputs.source-sha }}
+          STAGED_ROOT: ${{ runner.temp }}/staged-candidate
         run: |
-          preparation_branch="automation/prepare-$RELEASE_TAG"
+          test "$SOURCE_SHA" = "$(cat "$STAGED_ROOT/SOURCE_SHA")"
+          (
+            cd "$STAGED_ROOT"
+            sha256sum --check SHA256SUMS
+          )
+
+          git fetch --force origin develop staging || git fetch --force origin develop
+          if git show-ref --verify --quiet refs/remotes/origin/staging; then
+            git switch --create staging --track origin/staging
+            git merge --no-ff --no-commit "$SOURCE_SHA"
+          else
+            git switch --create staging "$SOURCE_SHA"
+          fi
+
+          mkdir -p download
+          mkdir -p public
+          cp "$STAGED_ROOT/package.json" package.json
+          cp "$STAGED_ROOT/pnpm-lock.yaml" pnpm-lock.yaml
+          cp "$STAGED_ROOT/CHANGELOG.md" CHANGELOG.md
+          cp "$STAGED_ROOT/public/manifest.json" public/manifest.json
+          cp "$STAGED_ROOT/download/bookmark-x.zip" download/bookmark-x.zip
+          git diff --exit-code "$SOURCE_SHA" -- . \
+            ':(exclude)CHANGELOG.md' \
+            ':(exclude)package.json' \
+            ':(exclude)pnpm-lock.yaml' \
+            ':(exclude)public/manifest.json' \
+            ':(exclude)download/bookmark-x.zip'
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
@@ -261,82 +175,28 @@ jobs:
             pnpm-lock.yaml \
             public/manifest.json \
             download/bookmark-x.zip
-          git diff --cached --exit-code --quiet && {
-            echo "::error::Release preparation did not update the tracked artifacts."
-            exit 1
-          }
-          git commit -m "chore(release): prepare $RELEASE_TAG"
+          git commit --allow-empty -m "chore(staging): prepare ${{ needs.validate.outputs.tag }}"
           gh auth setup-git
-          git push --force origin HEAD:"refs/heads/$preparation_branch"
+          git push origin HEAD:"refs/heads/staging"
 
-          number="$(gh pr list \
-            --repo "$GITHUB_REPOSITORY" \
-            --base develop \
-            --head "$preparation_branch" \
-            --state open \
-            --json number \
-            --jq '.[0].number // empty')"
-          if [[ -z "$number" ]]; then
-            gh pr create \
-              --repo "$GITHUB_REPOSITORY" \
-              --base develop \
-              --head "$preparation_branch" \
-              --title "chore(release): prepare $RELEASE_TAG" \
-              --body "This automated PR contains only the verified version, changelog, lockfile, manifest, and ZIP for $RELEASE_TAG. Merge it with squash after CI passes; the draft \`develop\` to \`main\` PR remains the only publishing path."
-            number="$(gh pr list \
-              --repo "$GITHUB_REPOSITORY" \
-              --base develop \
-              --head "$preparation_branch" \
-              --state open \
-              --json number \
-              --jq '.[0].number')"
-          else
-            gh pr edit "$number" \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "chore(release): prepare $RELEASE_TAG" \
-              --body "This automated PR contains only the verified version, changelog, lockfile, manifest, and ZIP for $RELEASE_TAG. Merge it with squash after CI passes; the draft \`develop\` to \`main\` PR remains the only publishing path."
-          fi
-          echo "branch=$preparation_branch" >> "$GITHUB_OUTPUT"
-          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "pull-request=$number" >> "$GITHUB_OUTPUT"
-
-  dispatch-prepared-release-ci:
-    name: Dispatch CI for the prepared commit
-    needs:
-      - prepare-batch
-      - open-prepared-release-pr
-    if: needs.prepare-batch.outputs.noop != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    permissions:
-      actions: write
-    steps:
-      - name: Dispatch only the exact prepared release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PREPARATION_BRANCH: ${{ needs.open-prepared-release-pr.outputs.branch }}
-          PREPARED_SHA: ${{ needs.open-prepared-release-pr.outputs.commit }}
-          RELEASE_TAG: ${{ needs.prepare-batch.outputs.tag }}
-        run: |
-          if [[ "$PREPARATION_BRANCH" != "automation/prepare-$RELEASE_TAG" ]]; then
-            echo "::error::Refusing to dispatch CI for unexpected branch $PREPARATION_BRANCH."
-            exit 1
-          fi
-          if [[ ! "$PREPARED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "::error::Prepared release did not expose a full commit SHA."
-            exit 1
-          fi
-          gh workflow run ci.yml \
-            --repo "$GITHUB_REPOSITORY" \
-            --ref "$PREPARATION_BRANCH" \
-            --field expected_sha="$PREPARED_SHA"
+          download_url="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/staging/download/bookmark-x.zip"
+          {
+            echo "## Staging is ready"
+            echo
+            echo "Validated source: \`$SOURCE_SHA\`"
+            echo "Version: \`${{ needs.validate.outputs.version }}\`"
+            echo
+            echo "[Download the tested ZIP]($download_url)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   wrong-branch:
-    name: Require develop for release preparation
-    if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/develop'
+    name: Require develop for staging
+    if: github.ref != 'refs/heads/develop'
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    permissions:
+      contents: read
     steps:
       - run: |
-          echo "::error::Select the develop branch when preparing a release."
+          echo "::error::Select the develop branch when staging a candidate."
           exit 1

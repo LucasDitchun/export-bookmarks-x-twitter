@@ -1,19 +1,10 @@
-name: CI
+name: On-demand validation
 
 on:
-  pull_request:
-    branches:
-      - develop
-  push:
-    branches:
-      - develop
-    paths:
-      - pnpm-lock.yaml
-      - .github/workflows/ci.yml
   workflow_dispatch:
     inputs:
       expected_sha:
-        description: Full SHA of the prepared release commit
+        description: Full commit SHA to validate when local checks were not run
         required: true
         type: string
 
@@ -21,60 +12,34 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: bookmark-x-on-demand-${{ inputs.expected_sha }}
   cancel-in-progress: true
 
 jobs:
-  warm-cache:
-    name: Warm dependency cache
-    if: github.event_name == 'push'
+  validate:
+    name: Validate an unverified commit
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     steps:
-      - name: Check out repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          persist-credentials: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Populate the develop dependency cache
-        run: pnpm fetch --frozen-lockfile
-
-  quality:
-    name: Quality, build, and package
-    if: github.event_name != 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      CI_MODE: ${{ (github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'automation/prepare-v')) && 'release' || 'full' }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          persist-credentials: false
-          ref: ${{ inputs.expected_sha || (startsWith(github.head_ref, 'automation/prepare-v') && github.event.pull_request.head.sha) || github.sha }}
-
-      - name: Bind release automation to the prepared commit
-        if: env.CI_MODE == 'release'
+      - name: Require an exact commit SHA
         env:
-          EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha || github.event.pull_request.head.sha }}
-          RELEASE_REF_NAME: ${{ github.head_ref || github.ref_name }}
-          TRIGGER_RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.head.sha }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
-          node scripts/release-dispatch-policy.mjs validate \
-            --ref-name "$RELEASE_REF_NAME" \
-            --expected-sha "$EXPECTED_RELEASE_SHA" \
-            --event-sha "$TRIGGER_RELEASE_SHA" \
-            --actual-sha "$(git rev-parse HEAD)"
+          if [[ ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::expected_sha must be a full lowercase commit SHA."
+            exit 1
+          fi
+
+      - name: Check out the requested commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.expected_sha }}
+
+      - name: Bind validation to the requested commit
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -89,104 +54,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Validate generated release PR scope
-        if: env.CI_MODE == 'release'
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha }}
-          RELEASE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          RELEASE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            RELEASE_HEAD_SHA="$EXPECTED_RELEASE_SHA"
-            git fetch --no-tags --deepen=1 origin "$GITHUB_REF"
-            if [[ "$(git show -s --format=%P "$RELEASE_HEAD_SHA" | wc -w)" -ne 1 ]]; then
-              echo "::error::Prepared release must contain exactly one non-merge commit."
-              exit 1
-            fi
-            RELEASE_BASE_SHA="$(git rev-parse "$RELEASE_HEAD_SHA^")"
-          else
-            git fetch --no-tags --depth=1 origin "$RELEASE_BASE_SHA" "$RELEASE_HEAD_SHA"
-          fi
-          pnpm verify:release-preparation -- \
-            --base-ref "$RELEASE_BASE_SHA" \
-            --head-ref "$RELEASE_HEAD_SHA"
-
-      - name: Preserve the reviewed release ZIP
-        if: env.CI_MODE == 'release'
-        run: cp download/bookmark-x.zip "$RUNNER_TEMP/reviewed-bookmark-x.zip"
-
-      - name: Audit all dependencies at HIGH severity
-        run: pnpm audit:high
-
-      - name: Check repository formatting
-        if: env.CI_MODE == 'full'
-        run: pnpm format:check
-
-      - name: Check generated release formatting
-        if: env.CI_MODE == 'release'
-        run: pnpm exec prettier --check package.json pnpm-lock.yaml public/manifest.json CHANGELOG.md
-
-      - name: Lint
-        if: env.CI_MODE == 'full'
-        run: pnpm lint
-
-      - name: Typecheck
-        if: env.CI_MODE == 'full'
-        run: pnpm typecheck
-
-      - name: Check release script syntax
-        if: env.CI_MODE == 'full'
-        run: |
-          node --check .github/scripts/release-train.mjs
-          node --check scripts/version.mjs
-          node --check scripts/package.mjs
-          node --check scripts/chrome-smoke.mjs
-          node --check scripts/archive-integrity.mjs
-          node --check scripts/release-dispatch-policy.mjs
-          node --check scripts/release-preparation-policy.mjs
-
-      - name: Test release policy
-        if: env.CI_MODE == 'full'
-        run: node --test .github/scripts/release-train.test.mjs
-
-      - name: Test the semantic model gate without downloading weights
-        if: env.CI_MODE == 'full'
-        run: |
-          pnpm semantic-model:gate:test
-          pnpm semantic-model:gate:dry-run
-
-      - name: Test with coverage
-        if: env.CI_MODE == 'full'
-        run: pnpm test:coverage
-
-      - name: Build extension
-        run: pnpm build
-
-      - name: Validate and package extension
-        run: pnpm package
-
-      - name: Detect browser harness changes
-        id: browser-harness
-        if: env.CI_MODE == 'full' && github.event_name == 'pull_request'
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          changed_paths="$(git diff --name-only "$BASE_SHA" HEAD)"
-          printf '%s\n' "$changed_paths"
-          if grep -Eq '^(\.github/workflows/(ci|release-train)\.yml|scripts/chrome-smoke(-readiness)?(\.test)?\.mjs)$' \
-            <<<"$changed_paths"; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Run Chrome smoke for browser harness changes
-        if: steps.browser-harness.outputs.run == 'true'
-        run: pnpm smoke:chrome
-
-      - name: Compare the reviewed and rebuilt ZIP contents
-        if: env.CI_MODE == 'release'
-        run: >-
-          pnpm verify:archive --
-          "$RUNNER_TEMP/reviewed-bookmark-x.zip"
-          download/bookmark-x.zip
+      - name: Run the same local verification profile
+        run: pnpm verify:local

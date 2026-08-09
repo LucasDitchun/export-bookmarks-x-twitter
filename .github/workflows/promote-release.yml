@@ -26,18 +26,18 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Require the same-repository develop release train
+      - name: Require the same-repository staging release train
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
-          if [[ "$BASE_REF" != "main" || "$HEAD_REF" != "develop" || "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
-            echo "::error::Only the same-repository develop release train may target main."
+          if [[ "$BASE_REF" != "main" || "$HEAD_REF" != "staging" || "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
+            echo "::error::Only the same-repository staging release train may target main."
             exit 1
           fi
 
-      - name: Check out the validated develop revision
+      - name: Check out the validated staging revision
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
@@ -66,7 +66,7 @@ jobs:
       github.event.action == 'closed' &&
       github.event.pull_request.merged == true &&
       github.event.pull_request.base.ref == 'main' &&
-      github.event.pull_request.head.ref == 'develop' &&
+      github.event.pull_request.head.ref == 'staging' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -86,7 +86,7 @@ jobs:
       - name: Resolve the reviewed release
         id: release
         env:
-          EXPECTED_DEVELOP_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_STAGING_SHA: ${{ github.event.pull_request.head.sha }}
           EXPECTED_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           actual_sha="$(git rev-parse HEAD)"
@@ -94,8 +94,8 @@ jobs:
             echo "::error::Checked out $actual_sha instead of merged revision $EXPECTED_MERGE_SHA."
             exit 1
           fi
-          if ! git merge-base --is-ancestor "$EXPECTED_DEVELOP_SHA" HEAD; then
-            echo "::error::The validated develop revision is not part of the release merge."
+          if ! git merge-base --is-ancestor "$EXPECTED_STAGING_SHA" HEAD; then
+            echo "::error::The validated staging revision is not part of the release merge."
             exit 1
           fi
 
