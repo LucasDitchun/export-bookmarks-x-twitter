@@ -37,8 +37,78 @@ describe("extractBookmarks", () => {
           name: "Ada Lovelace",
         },
         postCreatedAt: "2026-07-28T11:20:00.000Z",
+        media: { images: [], videos: [] },
       },
     ]);
+  });
+
+  it("captures selected stable image variants in DOM order and removes duplicates", () => {
+    const page = render(`
+      <article data-testid="tweet">
+        <a href="/ada/status/123"><time datetime="2026-07-28T11:20:00.000Z"></time></a>
+        <div data-testid="tweetPhoto"><img id="responsive" src="https://pbs.twimg.com/media/one?format=jpg&amp;name=small"></div>
+        <div data-testid="tweetPhoto"><img src="https://pbs.twimg.com/media/two?format=png&amp;name=large"></div>
+        <div data-testid="tweetPhoto"><img src="https://pbs.twimg.com/media/one?format=jpg&amp;name=large#ignored"></div>
+        <div data-testid="tweetPhoto"><img src="data:image/png;base64,unsafe"></div>
+      </article>
+    `);
+    Object.defineProperty(page.querySelector("#responsive"), "currentSrc", {
+      value: "https://pbs.twimg.com/media/one?format=jpg&name=large",
+    });
+
+    expect(extractBookmarks(page)[0]?.media?.images).toEqual([
+      "https://pbs.twimg.com/media/one?format=jpg&name=large",
+      "https://pbs.twimg.com/media/two?format=png&name=large",
+    ]);
+  });
+
+  it("stores only a stable video thumbnail and the canonical post URL", () => {
+    const result = extractBookmarks(
+      render(`
+        <article data-testid="tweet">
+          <a href="/ada/status/123"><time datetime="2026-07-28T11:20:00.000Z"></time></a>
+          <div data-testid="videoPlayer">
+            <video
+              poster="https://pbs.twimg.com/ext_tw_video_thumb/123/pu/img/thumb.jpg"
+              src="https://video.twimg.com/ext_tw_video/123/pu/vid/avc1/file.mp4"
+            ></video>
+          </div>
+          <div data-testid="videoPlayer">
+            <video poster="https://pbs.twimg.com/ext_tw_video_thumb/123/pu/img/thumb.jpg" src="blob:https://x.com/temporary"></video>
+          </div>
+        </article>
+      `),
+    );
+
+    expect(result[0]?.media?.videos).toEqual([
+      {
+        thumbnailUrl: "https://pbs.twimg.com/ext_tw_video_thumb/123/pu/img/thumb.jpg",
+        postUrl: "https://x.com/ada/status/123",
+      },
+    ]);
+    expect(JSON.stringify(result[0]?.media)).not.toContain("video.twimg.com");
+    expect(JSON.stringify(result[0]?.media)).not.toContain("blob:");
+    expect(JSON.stringify(result[0]?.media)).not.toContain(".mp4");
+  });
+
+  it("rejects malformed, credentialed, non-HTTPS, and non-X-CDN media URLs", () => {
+    const result = extractBookmarks(
+      render(`
+        <article data-testid="tweet">
+          <a href="/ada/status/123"><time datetime="2026-07-28T11:20:00.000Z"></time></a>
+          <div data-testid="tweetPhoto"><img src="http://pbs.twimg.com/media/plain"></div>
+          <div data-testid="tweetPhoto"><img src="https://user:secret@pbs.twimg.com/media/credentialed"></div>
+          <div data-testid="tweetPhoto"><img src="https://example.com/tracker.jpg"></div>
+          <div data-testid="tweetPhoto"><img src="blob:https://x.com/temporary"></div>
+          <div data-testid="videoPlayer"><video poster="data:image/jpeg;base64,unsafe"></video></div>
+        </article>
+      `),
+    );
+
+    expect(result[0]?.media).toEqual({
+      images: [],
+      videos: [{ thumbnailUrl: null, postUrl: "https://x.com/ada/status/123" }],
+    });
   });
 
   it("keeps media-only posts and falls back safely when optional DOM is absent", () => {

@@ -10,6 +10,7 @@ function bookmark(id: string, overrides: Partial<BookmarkRecord> = {}): Bookmark
     url: `https://x.com/person/status/${id}`,
     author: { id: "person", username: "person", name: "Person" },
     postCreatedAt: "2026-01-01T00:00:00.000Z",
+    media: { images: [], videos: [] },
     note: "",
     folderId: null,
     tagIds: [],

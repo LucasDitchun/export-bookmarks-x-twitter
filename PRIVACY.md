@@ -10,7 +10,10 @@ advertising, telemetry, or X API integration.
 
 When you explicitly start capture on `x.com/i/bookmarks`, the extension may
 read post IDs, text, author names and usernames, creation dates, and canonical
-post URLs rendered for your signed-in session. It also stores capture
+post URLs rendered for your signed-in session. When present, it may also store
+direct image URLs from X's image host and video poster thumbnails. Video records
+use the canonical post URL; temporary `blob:`, `data:`, or direct MP4/CDN video
+URLs are not retained. It also stores capture
 timestamps, counts, status metadata, and the selected interface language.
 When you click X's bookmark button on another X page, the extension reads only
 that post's rendered public fields and the button state needed to mirror the
@@ -45,7 +48,8 @@ number is hidden; the extension continues to work normally.
 
 X itself controls the page and network requests in the signed-in tab. Bookmark
 X reads the resulting page DOM but does not make X API calls or extract
-authentication credentials.
+authentication credentials. It does not fetch or download bookmark media; it
+only records validated URLs already rendered by X.
 
 ## Retention and deletion
 

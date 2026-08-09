@@ -24,9 +24,12 @@ function openVersionOne(databaseName: string): Promise<IDBDatabase> {
   });
 }
 
-function openVersionTwo(databaseName: string): Promise<IDBDatabase> {
+function openVersionTwo(
+  databaseName: string,
+  version: 2 | 3 = 2,
+): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(databaseName, 2);
+    const request = indexedDB.open(databaseName, version);
     request.addEventListener("upgradeneeded", () => {
       const bookmarks = request.result.createObjectStore("bookmarks", {
         keyPath: "id",
@@ -70,7 +73,7 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
 }
 
 describe("BookmarkDatabase", () => {
-  it("creates the complete version 3 schema for a new database", async () => {
+  it("creates the complete version 4 schema for a new database", async () => {
     const database = await new BookmarkDatabase(
       `fresh-v2-${crypto.randomUUID()}`,
     ).open();
@@ -202,6 +205,7 @@ describe("BookmarkDatabase", () => {
       url: "https://x.com/author/status/post-1",
       author: { id: "author-1", username: "author", name: "Author" },
       postCreatedAt: "2025-01-01T00:00:00.000Z",
+      media: { images: [], videos: [] },
       note: "",
       folderId: "folder-1",
       tagIds: [],
@@ -325,12 +329,14 @@ describe("BookmarkDatabase", () => {
       expect.objectContaining({
         id: "100",
         folderId: "folder-b",
+        media: { images: [], videos: [] },
         note: "Preserved note",
         tagIds: ["tag-1"],
       }),
       expect.objectContaining({
         id: "200",
         folderId: "folder-a",
+        media: { images: [], videos: [] },
         note: "Preserved note",
         tagIds: ["tag-1"],
       }),
@@ -339,6 +345,54 @@ describe("BookmarkDatabase", () => {
       { bookmarkId: "100", folderId: "folder-b" },
       { bookmarkId: "200", folderId: "folder-a" },
     ]);
+    database.close();
+  });
+
+  it("adds empty media to version 3 records without changing user metadata", async () => {
+    const databaseName = `migrate-v3-${crypto.randomUUID()}`;
+    const versionThree = await openVersionTwo(databaseName, 3);
+    const transaction = versionThree.transaction("bookmarks", "readwrite");
+    transaction.objectStore("bookmarks").put({
+      id: "300",
+      text: "Existing post",
+      url: "https://x.com/author/status/300",
+      author: { id: "author", username: "author", name: "Author" },
+      postCreatedAt: "2026-01-01T00:00:00.000Z",
+      note: "Preserve this",
+      folderId: null,
+      tagIds: ["tag-1"],
+      firstSavedAt: "2026-01-02T00:00:00.000Z",
+      lastSeenAt: "2026-01-03T00:00:00.000Z",
+      archivedAt: null,
+      metadataUpdatedAt: "2026-01-04T00:00:00.000Z",
+      status: "current",
+    });
+    await transactionDone(transaction);
+    versionThree.close();
+
+    const database = await new BookmarkDatabase(databaseName).open();
+    const read = database.transaction("bookmarks", "readonly");
+    const migrated = await new Promise<Record<string, unknown> | undefined>(
+      (resolve, reject) => {
+        const request = read.objectStore("bookmarks").get("300");
+        request.addEventListener(
+          "success",
+          () => resolve(request.result as Record<string, unknown> | undefined),
+          { once: true },
+        );
+        request.addEventListener("error", () => reject(indexedDbError(request.error)), {
+          once: true,
+        });
+      },
+    );
+    await transactionDone(read);
+
+    expect(migrated).toMatchObject({
+      id: "300",
+      note: "Preserve this",
+      tagIds: ["tag-1"],
+      media: { images: [], videos: [] },
+    });
     database.close();
   });
 
@@ -362,7 +416,7 @@ describe("BookmarkDatabase", () => {
     expect(onBlocked).toHaveBeenCalledOnce();
     versionOne.close();
 
-    await expect(opening).resolves.toMatchObject({ version: 3 });
+    await expect(opening).resolves.toMatchObject({ version: 4 });
     await connection.close();
   });
 
@@ -372,7 +426,7 @@ describe("BookmarkDatabase", () => {
     await connection.open();
 
     const upgraded = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(databaseName, 4);
+      const request = indexedDB.open(databaseName, 5);
       request.addEventListener("success", () => resolve(request.result), {
         once: true,
       });
@@ -384,14 +438,14 @@ describe("BookmarkDatabase", () => {
       });
     });
 
-    expect(upgraded.version).toBe(4);
+    expect(upgraded.version).toBe(5);
     upgraded.close();
   });
 
   it("allows retry after a rejected open request", async () => {
     const databaseName = `retry-${crypto.randomUUID()}`;
     const futureDatabase = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(databaseName, 4);
+      const request = indexedDB.open(databaseName, 5);
       request.addEventListener("success", () => resolve(request.result), {
         once: true,
       });
@@ -411,7 +465,7 @@ describe("BookmarkDatabase", () => {
       });
     });
 
-    await expect(connection.open()).resolves.toMatchObject({ version: 3 });
+    await expect(connection.open()).resolves.toMatchObject({ version: 4 });
     await connection.close();
   });
 });

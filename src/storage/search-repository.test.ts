@@ -17,6 +17,7 @@ function bookmark(id: string, firstSavedAt: string): BookmarkRecord {
     url: `https://x.com/person/status/${id}`,
     author: { id: "person", username: "person", name: "Person" },
     postCreatedAt: "2026-01-01T00:00:00.000Z",
+    media: { images: [], videos: [] },
     note: "",
     folderId: "project",
     tagIds: ["important"],

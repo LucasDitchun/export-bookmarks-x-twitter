@@ -257,6 +257,15 @@ const syntheticBookmarksPage = String.raw`
         <a href="/ada/status/111">
           <time datetime="2026-07-28T10:00:00.000Z">Jul 28</time>
         </a>
+        <div data-testid="tweetPhoto">
+          <img src="https://pbs.twimg.com/media/smoke?format=jpg&amp;name=large">
+        </div>
+        <div data-testid="videoPlayer">
+          <video
+            poster="https://pbs.twimg.com/ext_tw_video_thumb/111/pu/img/smoke.jpg"
+            src="https://video.twimg.com/ext_tw_video/111/pu/vid/avc1/temporary.mp4"
+          ></video>
+        </div>
         <button type="button" data-testid="removeBookmark" aria-pressed="true">
           Remove bookmark
         </button>
@@ -514,6 +523,13 @@ function assertScenario(page, ui, start, result, livePage, finalResult) {
     !bookmark.ok ||
     bookmark.data.bookmark?.status !== "current" ||
     bookmark.data.bookmark?.note !== "Preserved across live rebookmark" ||
+    bookmark.data.bookmark?.media?.images?.[0] !==
+      "https://pbs.twimg.com/media/smoke?format=jpg&name=large" ||
+    bookmark.data.bookmark?.media?.videos?.[0]?.thumbnailUrl !==
+      "https://pbs.twimg.com/ext_tw_video_thumb/111/pu/img/smoke.jpg" ||
+    bookmark.data.bookmark?.media?.videos?.[0]?.postUrl !==
+      "https://x.com/ada/status/111" ||
+    JSON.stringify(bookmark.data.bookmark?.media).includes("video.twimg.com") ||
     liveContext?.state !== "saved" ||
     liveContext?.bookmark?.id !== "111"
   ) {
@@ -527,8 +543,9 @@ function assertScenario(page, ui, start, result, livePage, finalResult) {
   const parsedBackup = backup.ok ? JSON.parse(backup.data.content) : null;
   if (
     !backup.ok ||
-    parsedBackup?.schemaVersion !== 1 ||
+    parsedBackup?.schemaVersion !== 2 ||
     parsedBackup?.data?.bookmarks?.length !== 2 ||
+    parsedBackup?.data?.bookmarks?.[0]?.media === undefined ||
     parsedBackup?.data?.settings?.extension?.schemaVersion !== 1 ||
     parsedBackup?.data?.settings?.extension?.settings?.behavior?.surface !== "modal" ||
     !restored.ok ||

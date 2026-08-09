@@ -7,6 +7,7 @@ import type {
   HydratedBookmarkRecord,
 } from "../domain/types";
 import type { LiveBookmarkAction } from "../shared/protocol";
+import { emptyBookmarkMedia, mergeBookmarkMedia } from "../domain/bookmark-media";
 import {
   BOOKMARK_FOLDERS_STORE,
   BOOKMARKS_STORE,
@@ -67,6 +68,10 @@ export class ArchiveRepository {
 
     const saved: BookmarkRecord = {
       ...bookmark,
+      media: mergeBookmarkMedia(
+        existing?.media ?? emptyBookmarkMedia(),
+        bookmark.media ?? emptyBookmarkMedia(),
+      ),
       note: existing?.note ?? "",
       folderId: existing?.folderId ?? null,
       tagIds: existing?.tagIds ?? [],
@@ -102,6 +107,10 @@ export class ArchiveRepository {
       );
       const record: BookmarkRecord = {
         ...bookmark,
+        media: mergeBookmarkMedia(
+          existing?.media ?? emptyBookmarkMedia(),
+          bookmark.media ?? emptyBookmarkMedia(),
+        ),
         note: existing?.note ?? "",
         folderId: existing?.folderId ?? null,
         tagIds: existing?.tagIds ?? [],
