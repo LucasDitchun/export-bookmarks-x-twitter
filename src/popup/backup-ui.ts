@@ -18,6 +18,7 @@ interface BackupUiOptions {
   createDownload: (result: JsonBackupExportResult) => void;
   readFile: (file: File) => Promise<string>;
   confirmReplace: (message: string) => boolean;
+  onDataRestored: () => void | Promise<void>;
   reload: () => void;
 }
 
@@ -55,6 +56,7 @@ export function createBackupUi(options: BackupUiOptions): {
     createDownload,
     readFile,
     confirmReplace,
+    onDataRestored,
     reload,
   } = options;
   const elements = getElements(document);
@@ -115,20 +117,22 @@ export function createBackupUi(options: BackupUiOptions): {
             : { type: "RESTORE_BACKUP", payload: { content, mode } };
         return perform(
           request,
-          (data) => {
+          async (data) => {
             const result = data as JsonBackupRestoreResult;
             elements.status.textContent = translate(
               "backupRestoreComplete",
               String(result.bookmarks),
             );
+            await onDataRestored();
             if (result.reloadRequired) reload();
           },
-          (error) => {
+          async (error) => {
             if (
               error.recovery?.dataRestored === true &&
               error.recovery.reloadRequired
             ) {
               elements.status.textContent = translate("backupRestorePartial");
+              await onDataRestored();
               reload();
             }
           },

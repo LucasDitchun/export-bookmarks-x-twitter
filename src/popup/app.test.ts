@@ -77,6 +77,222 @@ beforeEach(() => {
 });
 
 describe("popup app", () => {
+  it("filters the active view while typing and clears back to its paginated list", async () => {
+    const scheduled: Array<{ callback: () => void; delay: number }> = [];
+    const schedule = ((callback: () => void, delay: number) => {
+      scheduled.push({ callback, delay });
+      return scheduled.length;
+    }) as typeof window.setTimeout;
+    const searchBookmark = {
+      ...libraryBookmark,
+      id: "999",
+      text: '<img src=x onerror="alert(1)"> Café',
+    };
+    const requests: Array<{ type: string; payload?: unknown }> = [];
+    let listCalls = 0;
+    const sendMessage = ((request) => {
+      requests.push(request);
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        listCalls += 1;
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [libraryBookmark], nextCursor: "page-2" },
+        });
+      }
+      if (request.type === "SEARCH_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [searchBookmark], total: 1, nextCursor: null },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        const id = request.payload.id;
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: id === "999" ? searchBookmark : libraryBookmark },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      schedule,
+      cancelSchedule: vi.fn(),
+    });
+    await app.ready;
+
+    const input = document.getElementById("library-search") as HTMLInputElement;
+    input.value = "cafe";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    scheduled.find(({ delay }) => delay === 150)?.callback();
+    await vi.waitFor(() =>
+      expect(requests).toContainEqual({
+        type: "SEARCH_BOOKMARKS",
+        payload: { query: "cafe", view: "inbox" },
+      }),
+    );
+    expect(document.getElementById("bookmark-list")?.textContent).toContain(
+      '<img src=x onerror="alert(1)"> Café',
+    );
+    expect(document.querySelector("#bookmark-list img")).toBeNull();
+    expect(document.getElementById("library-search-status")?.textContent).toBe(
+      "searchResultsCount:1",
+    );
+
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await vi.waitFor(() => expect(listCalls).toBe(2));
+    expect(document.getElementById("bookmark-list")?.textContent).toContain(
+      "A useful bookmark",
+    );
+    expect(document.getElementById("load-more-bookmarks")?.hidden).toBe(false);
+    app.destroy();
+  });
+
+  it("keeps the newest typed query when an older search resolves later", async () => {
+    const firstSearch = deferred<{
+      ok: true;
+      data: { items: NotedBookmark[]; total: number; nextCursor: null };
+    }>();
+    const callbacks: Array<() => void> = [];
+    const schedule = ((callback: () => void, delay: number) => {
+      if (delay === 150) callbacks.push(callback);
+      return callbacks.length;
+    }) as typeof window.setTimeout;
+    const newerBookmark = { ...libraryBookmark, id: "456", text: "Newer result" };
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [libraryBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "SEARCH_BOOKMARKS") {
+        return request.payload.query === "old"
+          ? firstSearch.promise
+          : Promise.resolve({
+              ok: true as const,
+              data: { items: [newerBookmark], total: 1, nextCursor: null },
+            });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: libraryBookmark },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      schedule,
+      cancelSchedule: vi.fn(),
+    });
+    await app.ready;
+    const input = document.getElementById("library-search") as HTMLInputElement;
+
+    input.value = "old";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    callbacks.shift()?.();
+    input.value = "new";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    callbacks.shift()?.();
+    await vi.waitFor(() =>
+      expect(document.getElementById("bookmark-list")?.textContent).toContain(
+        "Newer result",
+      ),
+    );
+
+    firstSearch.resolve({
+      ok: true,
+      data: { items: [libraryBookmark], total: 1, nextCursor: null },
+    });
+    await firstSearch.promise;
+    await Promise.resolve();
+    expect(document.getElementById("bookmark-list")?.textContent).toContain(
+      "Newer result",
+    );
+    expect(document.getElementById("bookmark-list")?.textContent).not.toContain(
+      "A useful bookmark",
+    );
+    app.destroy();
+  });
+
+  it("waits for Enter or the Search button when filtering as you type is off", async () => {
+    const searchQueries: string[] = [];
+    const scheduledDelays: number[] = [];
+    const schedule = ((_callback: () => void, delay: number) => {
+      scheduledDelays.push(delay);
+      return scheduledDelays.length;
+    }) as typeof window.setTimeout;
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [libraryBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "SEARCH_BOOKMARKS") {
+        searchQueries.push(request.payload.query);
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [], total: 0, nextCursor: null },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: libraryBookmark },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      schedule,
+      cancelSchedule: vi.fn(),
+      filterAsYouType: false,
+    });
+    await app.ready;
+    const input = document.getElementById("library-search") as HTMLInputElement;
+
+    input.value = "notes";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await Promise.resolve();
+    expect(searchQueries).toEqual([]);
+    expect(scheduledDelays).not.toContain(150);
+    expect(document.getElementById("library-search-status")?.textContent).toBe(
+      "searchReady",
+    );
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await vi.waitFor(() => expect(searchQueries).toEqual(["notes"]));
+
+    input.value = "folders";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    document.getElementById("library-search-button")?.click();
+    await vi.waitFor(() => expect(searchQueries).toEqual(["notes", "folders"]));
+    app.destroy();
+  });
+
   it("opens the uncategorized view by default and selects its first bookmark", async () => {
     const requests: Array<{ type: string; payload?: unknown }> = [];
     const sendMessage = ((request) => {
@@ -1193,6 +1409,7 @@ describe("popup app", () => {
 
   it("requires explicit replace confirmation before reading or restoring a file", async () => {
     const requests: string[] = [];
+    let listCalls = 0;
     const readBackupFile = vi.fn(async () => '{"schemaVersion":1}');
     const confirmRestore = vi
       .fn<(message: string) => boolean>()
@@ -1205,6 +1422,7 @@ describe("popup app", () => {
         return Promise.resolve({ ok: true as const, data: emptyStatus });
       }
       if (request.type === "LIST_BOOKMARKS") {
+        listCalls += 1;
         return Promise.resolve({
           ok: true as const,
           data: { items: [], nextCursor: null },
@@ -1260,6 +1478,7 @@ describe("popup app", () => {
     restore.click();
     await vi.waitFor(() => expect(requests).toContain("RESTORE_BACKUP"));
     expect(readBackupFile).toHaveBeenCalledWith(file);
+    await vi.waitFor(() => expect(listCalls).toBe(2));
     expect(reload).toHaveBeenCalledOnce();
     expect(document.querySelector("#backup-status img")).toBeNull();
     app.destroy();

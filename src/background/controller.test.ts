@@ -47,6 +47,14 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       get: vi.fn(async (): Promise<unknown> => null),
       saveNote: vi.fn(async (): Promise<unknown> => null),
     },
+    search: {
+      search: vi.fn(async (): Promise<unknown> => ({
+        items: [],
+        total: 0,
+        nextCursor: null,
+      })),
+      invalidate: vi.fn(),
+    },
     tags: {
       list: vi.fn(async (): Promise<unknown> => []),
       add: vi.fn(async (): Promise<unknown> => null),
@@ -136,6 +144,35 @@ describe("isBookmarksUrl", () => {
 });
 
 describe("BackgroundController", () => {
+  it("searches only the requested library view with bounded pagination", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        {
+          type: "SEARCH_BOOKMARKS",
+          payload: {
+            query: "café",
+            view: "archived",
+            cursor: "opaque:cursor",
+            limit: 999,
+          },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      data: { items: [], total: 0, nextCursor: null },
+    });
+    expect(dependencies.search.search).toHaveBeenCalledWith({
+      query: "café",
+      view: "archived",
+      cursor: "opaque:cursor",
+      limit: 100,
+    });
+  });
+
   it("loads and saves settings, then applies the selected action surface", async () => {
     const dependencies = createDependencies();
     const controller = new BackgroundController(dependencies);
@@ -278,6 +315,7 @@ describe("BackgroundController", () => {
       "replace",
     );
     expect(dependencies.state.clearScrapeRun).toHaveBeenCalledTimes(2);
+    expect(dependencies.search.invalidate).toHaveBeenCalledTimes(2);
     await expect(
       controller.handle({ type: "GET_STATUS" }, POPUP_SENDER),
     ).resolves.toMatchObject({ ok: true, data: { scrape: null } });
@@ -383,6 +421,7 @@ describe("BackgroundController", () => {
       },
     });
     expect(dependencies.state.clearScrapeRun).toHaveBeenCalledOnce();
+    expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
     await expect(
       controller.handle({ type: "GET_STATUS" }, POPUP_SENDER),
     ).resolves.toMatchObject({ ok: true, data: { scrape: null } });
@@ -462,6 +501,7 @@ describe("BackgroundController", () => {
       "123",
       "<b>Keep as text</b>",
     );
+    expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
   });
 
   it("lists, assigns, and removes validated bookmark tags", async () => {
@@ -506,6 +546,7 @@ describe("BackgroundController", () => {
     });
     expect(dependencies.tags.add).toHaveBeenCalledWith("123", " Research ");
     expect(dependencies.tags.remove).toHaveBeenCalledWith("123", "tag-research");
+    expect(dependencies.search.invalidate).toHaveBeenCalledTimes(2);
   });
 
   it("rejects invalid tag requests at the extension boundary", async () => {
@@ -599,6 +640,7 @@ describe("BackgroundController", () => {
       "folder-1",
     );
     expect(dependencies.folders.assignBookmark).toHaveBeenNthCalledWith(2, "123", null);
+    expect(dependencies.search.invalidate).toHaveBeenCalledTimes(6);
   });
 
   it("rejects malformed folder operations before storage", async () => {
@@ -651,6 +693,37 @@ describe("BackgroundController", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
     expect(dependencies.bookmarks.get).not.toHaveBeenCalled();
     expect(dependencies.bookmarks.saveNote).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsafe or unbounded local search requests", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    const requests = [
+      {
+        type: "SEARCH_BOOKMARKS",
+        payload: { query: "x".repeat(501), view: "current" },
+      },
+      {
+        type: "SEARCH_BOOKMARKS",
+        payload: { query: "notes", view: "all" },
+      },
+      {
+        type: "SEARCH_BOOKMARKS",
+        payload: { query: "notes", view: "inbox", cursor: 42 },
+      },
+      {
+        type: "SEARCH_BOOKMARKS",
+        payload: { query: "notes", view: "inbox", limit: 0 },
+      },
+    ];
+
+    for (const request of requests) {
+      await expect(controller.handle(request, POPUP_SENDER)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "invalid_request" },
+      });
+    }
+    expect(dependencies.search.search).not.toHaveBeenCalled();
   });
 
   it("reports whether the active page is ready for capture", async () => {
@@ -728,6 +801,7 @@ describe("BackgroundController", () => {
       "run-1",
       "2026-07-29T13:14:15.123Z",
     );
+    expect(dependencies.search.invalidate).toHaveBeenCalledTimes(2);
   });
 
   it("rejects malformed or untrusted capture messages", async () => {
@@ -802,6 +876,7 @@ describe("BackgroundController", () => {
     expect(dependencies.browser.openBookmarks).toHaveBeenCalledOnce();
     expect(dependencies.archive.clear).toHaveBeenCalledOnce();
     expect(dependencies.state.clearScrapeRun).toHaveBeenCalledOnce();
+    expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
   });
 
   it("requires extension-owned popup messages and handles unavailable content scripts", async () => {

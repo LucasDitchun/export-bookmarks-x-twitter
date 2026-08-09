@@ -52,6 +52,20 @@
   "emptyArchive": { "message": "No bookmarks captured yet." },
   "libraryTitle": { "message": "Bookmark library" },
   "libraryHelp": { "message": "Select a bookmark to add a private note." },
+  "searchLabel": { "message": "Search saved posts" },
+  "searchPlaceholder": { "message": "Type what you remember" },
+  "searchHelp": {
+    "message": "Search text, people, notes, tags, and folders. Stored locally."
+  },
+  "searchButton": { "message": "Search" },
+  "searchReady": { "message": "Press Enter or Search." },
+  "searching": { "message": "Searching…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ matches",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "No matching bookmarks in this view." },
+  "searchLoadError": { "message": "Could not search bookmarks." },
   "libraryViewsLabel": { "message": "Bookmark library views" },
   "libraryViewInbox": { "message": "Inbox" },
   "libraryViewCurrent": { "message": "On X now" },

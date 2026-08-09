@@ -57,11 +57,17 @@ async function startPopup(): Promise<void> {
 
   const sendMessage: SendMessage = (request) => chrome.runtime.sendMessage(request);
   applyLibraryUiSettings(document, DEFAULT_SETTINGS);
+  let filterAsYouType = DEFAULT_SETTINGS.search.filterAsYouType;
+  let app: ReturnType<typeof createPopupApp> | null = null;
   const settingsUi = createSettingsUiController({
     document,
     async load() {
       const response = await sendMessage<SettingsResult>({ type: "GET_SETTINGS" });
       return response.ok ? response.data.settings : null;
+    },
+    onApply(settings) {
+      filterAsYouType = settings.search.filterAsYouType;
+      app?.setFilterAsYouType(filterAsYouType);
     },
   });
   await settingsUi.refresh();
@@ -77,18 +83,19 @@ async function startPopup(): Promise<void> {
   document.getElementById("open-settings-button")?.addEventListener("click", () => {
     void chrome.runtime.openOptionsPage();
   });
-  const app = createPopupApp({
+  app = createPopupApp({
     document,
     locale,
     sendMessage,
     translate,
+    filterAsYouType,
   });
   window.addEventListener(
     "unload",
     () => {
       chrome.storage.onChanged.removeListener(refreshSettings);
       settingsUi.destroy();
-      app.destroy();
+      app?.destroy();
     },
     { once: true },
   );

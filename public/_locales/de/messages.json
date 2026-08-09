@@ -34,6 +34,20 @@
   "libraryHelp": {
     "message": "Wähle ein Lesezeichen aus, um eine private Notiz hinzuzufügen."
   },
+  "searchLabel": { "message": "Gespeicherte Beiträge durchsuchen" },
+  "searchPlaceholder": { "message": "Gib ein, woran du dich erinnerst" },
+  "searchHelp": {
+    "message": "Durchsuche Text, Personen, Notizen, Tags und Ordner. Alles bleibt lokal."
+  },
+  "searchButton": { "message": "Suchen" },
+  "searchReady": { "message": "Drücke die Eingabetaste oder Suchen." },
+  "searching": { "message": "Suche läuft…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ Treffer",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "Keine passenden Lesezeichen in dieser Ansicht." },
+  "searchLoadError": { "message": "Lesezeichen konnten nicht durchsucht werden." },
   "libraryViewsLabel": { "message": "Ansichten der Lesezeichenbibliothek" },
   "libraryViewInbox": { "message": "Eingang" },
   "libraryViewCurrent": { "message": "Jetzt auf X" },

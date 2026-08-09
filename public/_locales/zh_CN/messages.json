@@ -28,6 +28,18 @@
   },
   "libraryTitle": { "message": "书签库" },
   "libraryHelp": { "message": "选择一个书签以添加私人备注。" },
+  "searchLabel": { "message": "搜索已保存的帖子" },
+  "searchPlaceholder": { "message": "输入您记得的内容" },
+  "searchHelp": { "message": "搜索正文、用户、备注、标签和文件夹。数据仅保存在本地。" },
+  "searchButton": { "message": "搜索" },
+  "searchReady": { "message": "按 Enter 或点击搜索。" },
+  "searching": { "message": "正在搜索…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ 个结果",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "此视图中没有匹配的书签。" },
+  "searchLoadError": { "message": "无法搜索书签。" },
   "libraryViewsLabel": { "message": "书签库视图" },
   "libraryViewInbox": { "message": "收件箱" },
   "libraryViewCurrent": { "message": "X 中现有" },

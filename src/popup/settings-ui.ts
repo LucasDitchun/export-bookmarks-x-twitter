@@ -3,6 +3,7 @@ import type { ExtensionSettings } from "../settings/settings-repository";
 interface SettingsUiControllerOptions {
   document: Document;
   load(): Promise<ExtensionSettings | null>;
+  onApply?: (settings: ExtensionSettings) => void;
 }
 
 export function applyLibraryUiSettings(
@@ -36,6 +37,7 @@ export function createSettingsUiController(options: SettingsUiControllerOptions)
         const settings = await options.load();
         if (destroyed || requestRevision !== revision || settings === null) return;
         applyLibraryUiSettings(options.document, settings);
+        options.onApply?.(settings);
       } catch {
         // Retain the last successfully applied settings if the worker restarts.
       }

@@ -34,6 +34,20 @@
   "libraryHelp": {
     "message": "Seleziona un segnalibro per aggiungere una nota privata."
   },
+  "searchLabel": { "message": "Cerca i post salvati" },
+  "searchPlaceholder": { "message": "Scrivi ciò che ricordi" },
+  "searchHelp": {
+    "message": "Cerca testo, persone, note, tag e cartelle. Tutto resta in locale."
+  },
+  "searchButton": { "message": "Cerca" },
+  "searchReady": { "message": "Premi Invio o Cerca." },
+  "searching": { "message": "Ricerca…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ risultati",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "Nessun segnalibro corrispondente in questa vista." },
+  "searchLoadError": { "message": "Impossibile cercare nei segnalibri." },
   "libraryViewsLabel": { "message": "Viste della libreria dei segnalibri" },
   "libraryViewInbox": { "message": "In arrivo" },
   "libraryViewCurrent": { "message": "Ora su X" },

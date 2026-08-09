@@ -29,6 +29,10 @@ export interface BookmarkListPage {
   nextCursor: string | null;
 }
 
+export interface BookmarkSearchPage extends BookmarkListPage {
+  total: number;
+}
+
 export interface BookmarkDetailResult {
   bookmark: NotedBookmark | null;
 }
@@ -104,6 +108,15 @@ export type UiRequest =
   | {
       type: "LIST_BOOKMARKS";
       payload?: { view?: BookmarkView; cursor?: string; limit?: number };
+    }
+  | {
+      type: "SEARCH_BOOKMARKS";
+      payload: {
+        query: string;
+        view: BookmarkView;
+        cursor?: string;
+        limit?: number;
+      };
     }
   | { type: "GET_BOOKMARK"; payload: { id: string } }
   | { type: "SAVE_BOOKMARK_NOTE"; payload: { id: string; note: string } }

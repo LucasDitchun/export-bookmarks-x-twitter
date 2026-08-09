@@ -34,6 +34,20 @@
   },
   "libraryTitle": { "message": "ブックマークライブラリ" },
   "libraryHelp": { "message": "ブックマークを選択して非公開メモを追加します。" },
+  "searchLabel": { "message": "保存したポストを検索" },
+  "searchPlaceholder": { "message": "覚えている内容を入力" },
+  "searchHelp": {
+    "message": "本文、ユーザー、メモ、タグ、フォルダーを検索します。データは端末内に保存されます。"
+  },
+  "searchButton": { "message": "検索" },
+  "searchReady": { "message": "Enter または検索ボタンを押してください。" },
+  "searching": { "message": "検索中…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ 件一致",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "この表示に一致するブックマークはありません。" },
+  "searchLoadError": { "message": "ブックマークを検索できませんでした。" },
   "libraryViewsLabel": { "message": "ブックマークライブラリの表示" },
   "libraryViewInbox": { "message": "受信箱" },
   "libraryViewCurrent": { "message": "Xで保存中" },
