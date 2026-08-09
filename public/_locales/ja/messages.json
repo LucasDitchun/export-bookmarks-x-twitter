@@ -1,4 +1,37 @@
 {
+  "backupRestorePartial": {
+    "message": "ライブラリを復元しました。一部の設定は適用されませんでした。"
+  },
+  "backupTitle": { "message": "バックアップと復元" },
+  "backupDescription": {
+    "message": "ローカルのライブラリ、フォルダー、タグ、メモ、設定をJSONで保存または復元します。"
+  },
+  "exportBackupButton": { "message": "JSONバックアップを保存" },
+  "backupFileLabel": { "message": "JSONバックアップファイル" },
+  "restoreModeLabel": { "message": "復元モード" },
+  "restoreModeMerge": { "message": "このライブラリと統合" },
+  "restoreModeReplace": { "message": "このライブラリを置換" },
+  "restoreBackupButton": { "message": "バックアップを復元" },
+  "backupTooLarge": { "message": "このバックアップは大きすぎます。" },
+  "backupFileReady": { "message": "バックアップを復元できます。" },
+  "backupReading": { "message": "バックアップを確認中…" },
+  "confirmReplaceBackup": {
+    "message": "ローカルのブックマーク、フォルダー、タグ、メモ、設定をすべてこのバックアップで置き換えますか？この操作は元に戻せません。"
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$件のブックマークを復元しました。",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark Xでこのファイルを読み込めませんでした。" },
+  "errorInvalidBackup": {
+    "message": "有効なBookmark XのJSONバックアップを選択してください。"
+  },
+  "errorRestoreCaptureRunning": {
+    "message": "実行中の取得が完了してから復元してください。"
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "ライブラリは復元されましたが、設定を適用できませんでした。復元したデータを表示するためBookmark Xを再読み込みします。"
+  },
   "libraryTitle": { "message": "ブックマークライブラリ" },
   "libraryHelp": { "message": "ブックマークを選択して非公開メモを追加します。" },
   "libraryViewsLabel": { "message": "ブックマークライブラリの表示" },

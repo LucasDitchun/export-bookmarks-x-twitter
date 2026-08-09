@@ -1,4 +1,31 @@
 {
+  "backupRestorePartial": { "message": "收藏库已恢复。部分设置未能应用。" },
+  "backupTitle": { "message": "备份与恢复" },
+  "backupDescription": {
+    "message": "以 JSON 格式下载或恢复本地收藏库、文件夹、标签、笔记和设置。"
+  },
+  "exportBackupButton": { "message": "下载 JSON 备份" },
+  "backupFileLabel": { "message": "JSON 备份文件" },
+  "restoreModeLabel": { "message": "恢复模式" },
+  "restoreModeMerge": { "message": "与此收藏库合并" },
+  "restoreModeReplace": { "message": "替换此收藏库" },
+  "restoreBackupButton": { "message": "恢复备份" },
+  "backupTooLarge": { "message": "此备份文件过大。" },
+  "backupFileReady": { "message": "备份已准备好恢复。" },
+  "backupReading": { "message": "正在检查备份…" },
+  "confirmReplaceBackup": {
+    "message": "要用此备份替换所有本地书签、文件夹、标签、笔记和设置吗？此操作无法撤销。"
+  },
+  "backupRestoreComplete": {
+    "message": "已恢复 $COUNT$ 个书签。",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X 无法读取该文件。" },
+  "errorInvalidBackup": { "message": "请选择有效的 Bookmark X JSON 备份。" },
+  "errorRestoreCaptureRunning": { "message": "请等待当前抓取完成后再恢复。" },
+  "errorRestoreSettingsFailed": {
+    "message": "收藏库已恢复，但无法应用其中的设置。Bookmark X 将重新加载以显示已恢复的数据。"
+  },
   "libraryTitle": { "message": "书签库" },
   "libraryHelp": { "message": "选择一个书签以添加私人备注。" },
   "libraryViewsLabel": { "message": "书签库视图" },

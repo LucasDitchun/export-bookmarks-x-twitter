@@ -1,4 +1,35 @@
 {
+  "backupRestorePartial": {
+    "message": "Bibliothek wiederhergestellt. Einige Einstellungen wurden nicht übernommen."
+  },
+  "backupTitle": { "message": "Sicherung und Wiederherstellung" },
+  "backupDescription": {
+    "message": "Lokale Bibliothek, Ordner, Tags, Notizen und Einstellungen als JSON sichern oder wiederherstellen."
+  },
+  "exportBackupButton": { "message": "JSON-Sicherung herunterladen" },
+  "backupFileLabel": { "message": "JSON-Sicherungsdatei" },
+  "restoreModeLabel": { "message": "Wiederherstellungsmodus" },
+  "restoreModeMerge": { "message": "Mit dieser Bibliothek zusammenführen" },
+  "restoreModeReplace": { "message": "Diese Bibliothek ersetzen" },
+  "restoreBackupButton": { "message": "Sicherung wiederherstellen" },
+  "backupTooLarge": { "message": "Diese Sicherung ist zu groß." },
+  "backupFileReady": { "message": "Sicherung kann wiederhergestellt werden." },
+  "backupReading": { "message": "Sicherung wird geprüft…" },
+  "confirmReplaceBackup": {
+    "message": "Alle lokalen Lesezeichen, Ordner, Tags, Notizen und Einstellungen durch diese Sicherung ersetzen? Dies kann nicht rückgängig gemacht werden."
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$ Lesezeichen wiederhergestellt.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X konnte diese Datei nicht lesen." },
+  "errorInvalidBackup": { "message": "Wähle eine gültige Bookmark-X-JSON-Sicherung." },
+  "errorRestoreCaptureRunning": {
+    "message": "Warte vor der Wiederherstellung, bis die aktive Erfassung beendet ist."
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "Die Bibliothek wurde wiederhergestellt, einige Einstellungen konnten jedoch nicht übernommen werden. Bookmark X wird neu geladen, um die Daten anzuzeigen."
+  },
   "libraryTitle": { "message": "Lesezeichenbibliothek" },
   "libraryHelp": {
     "message": "Wähle ein Lesezeichen aus, um eine private Notiz hinzuzufügen."

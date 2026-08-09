@@ -88,6 +88,77 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function hasExactly(record: Record<string, unknown>, keys: readonly string[]): boolean {
+  const actual = Object.keys(record).sort();
+  const expected = [...keys].sort();
+  return (
+    actual.length === expected.length &&
+    actual.every((key, index) => key === expected[index])
+  );
+}
+
+function isExactBooleanRecord(
+  value: unknown,
+  keys: readonly string[],
+): value is Record<string, boolean> {
+  return (
+    isRecord(value) &&
+    hasExactly(value, keys) &&
+    Object.values(value).every((entry) => typeof entry === "boolean")
+  );
+}
+
+/** Strict import-boundary guard for a complete canonical settings envelope. */
+export function isStoredSettingsEnvelope(
+  value: unknown,
+): value is StoredSettingsEnvelope {
+  if (
+    !isRecord(value) ||
+    !hasExactly(value, ["schemaVersion", "settings"]) ||
+    value.schemaVersion !== SETTINGS_SCHEMA_VERSION ||
+    !isRecord(value.settings) ||
+    !hasExactly(value.settings, ["appearance", "behavior", "export", "search", "data"])
+  ) {
+    return false;
+  }
+  const settings = value.settings;
+  if (
+    !isExactBooleanRecord(settings.appearance, [
+      "largeText",
+      "highContrast",
+      "reduceMotion",
+    ]) ||
+    !isRecord(settings.behavior) ||
+    !hasExactly(settings.behavior, ["surface", "promptAfterBookmark", "metadata"]) ||
+    (settings.behavior.surface !== "modal" &&
+      settings.behavior.surface !== "sidePanel") ||
+    typeof settings.behavior.promptAfterBookmark !== "boolean" ||
+    !isExactBooleanRecord(settings.behavior.metadata, [
+      "summary",
+      "breadcrumb",
+      "tags",
+      "note",
+      "categoryIndicator",
+    ]) ||
+    !isExactBooleanRecord(settings.export, [
+      "includeLink",
+      "includeText",
+      "includeAuthor",
+      "includeDate",
+      "includeImages",
+      "includeVideos",
+      "includeNote",
+      "includeTags",
+      "includeFolder",
+    ]) ||
+    !isExactBooleanRecord(settings.search, ["filterAsYouType"]) ||
+    !isExactBooleanRecord(settings.data, ["keepArchived"])
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function booleanOr(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
 }

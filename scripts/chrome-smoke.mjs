@@ -309,10 +309,29 @@ const runtimeScenario = String.raw`
     type: "EXPORT_BOOKMARKS",
     payload: { format: "urls", locale: "en" },
   });
+  const backup = await chrome.runtime.sendMessage({ type: "EXPORT_BACKUP" });
   const cleared = await chrome.runtime.sendMessage({ type: "CLEAR_ARCHIVE" });
+  const restored = await chrome.runtime.sendMessage({
+    type: "RESTORE_BACKUP",
+    payload: { content: backup.data.content, mode: "replace", confirmed: true },
+  });
+  const restoredSettings = await chrome.runtime.sendMessage({ type: "GET_SETTINGS" });
+  const restoredStatus = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
+  const clearedAgain = await chrome.runtime.sendMessage({ type: "CLEAR_ARCHIVE" });
   const after = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
 
-  return { before, completed, exported, cleared, after };
+  return {
+    before,
+    completed,
+    exported,
+    backup,
+    cleared,
+    restored,
+    restoredSettings,
+    restoredStatus,
+    clearedAgain,
+    after,
+  };
 })()
 `;
 
@@ -360,7 +379,18 @@ const startContentCaptureScenario = String.raw`
 `;
 
 function assertScenario(page, ui, start, result) {
-  const { before, completed, exported, cleared, after } = result;
+  const {
+    before,
+    completed,
+    exported,
+    backup,
+    cleared,
+    restored,
+    restoredSettings,
+    restoredStatus,
+    clearedAgain,
+    after,
+  } = result;
   if (page.url !== "https://x.com/i/bookmarks" || page.articles !== 2) {
     throw new Error(`The synthetic X page was not ready: ${JSON.stringify(page)}`);
   }
@@ -415,6 +445,25 @@ function assertScenario(page, ui, start, result) {
   }
   if (!cleared.ok || !after.ok || after.data.stats.total !== 0) {
     throw new Error("The runtime archive clear flow did not finish.");
+  }
+  const parsedBackup = backup.ok ? JSON.parse(backup.data.content) : null;
+  if (
+    !backup.ok ||
+    parsedBackup?.schemaVersion !== 1 ||
+    parsedBackup?.data?.bookmarks?.length !== 2 ||
+    parsedBackup?.data?.settings?.extension?.schemaVersion !== 1 ||
+    parsedBackup?.data?.settings?.extension?.settings?.behavior?.surface !== "modal" ||
+    !restored.ok ||
+    restored.data.bookmarks !== 2 ||
+    restored.data.reloadRequired !== true ||
+    !restoredSettings.ok ||
+    restoredSettings.data.settings.behavior.surface !== "modal" ||
+    !restoredStatus.ok ||
+    restoredStatus.data.stats.total !== 2 ||
+    restoredStatus.data.scrape !== null ||
+    !clearedAgain.ok
+  ) {
+    throw new Error("The runtime JSON backup round-trip did not finish.");
   }
 }
 
@@ -627,7 +676,7 @@ async function main() {
       evaluation.result.value,
     );
     console.log(
-      "Chrome smoke passed: settings defaults, X-page DOM scraping, UI, MV3 worker, IndexedDB, TXT export, and clear.",
+      "Chrome smoke passed: settings defaults, X-page DOM scraping, UI, MV3 worker, IndexedDB, TXT export, JSON backup round-trip, and clear.",
     );
     if (VISUAL_CHECKPOINT_DIRECTORY) {
       console.log(`Visual checkpoints: ${VISUAL_CHECKPOINT_DIRECTORY}`);

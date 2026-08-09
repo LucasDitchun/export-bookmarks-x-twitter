@@ -68,6 +68,19 @@ export interface OpenSurfaceResult {
   opened: boolean;
 }
 
+export interface JsonBackupExportResult {
+  content: string;
+  filename: string;
+}
+
+export interface JsonBackupRestoreResult {
+  bookmarks: number;
+  folders: number;
+  tags: number;
+  mode: "merge" | "replace";
+  reloadRequired: true;
+}
+
 export type UiRequest =
   | { type: "GET_STATUS" }
   | { type: "GET_SETTINGS" }
@@ -77,6 +90,13 @@ export type UiRequest =
   | { type: "START_SCRAPE" }
   | { type: "CANCEL_SCRAPE" }
   | { type: "CLEAR_ARCHIVE" }
+  | { type: "EXPORT_BACKUP" }
+  | {
+      type: "RESTORE_BACKUP";
+      payload:
+        | { content: string; mode: "merge"; confirmed?: false }
+        | { content: string; mode: "replace"; confirmed: true };
+    }
   | {
       type: "EXPORT_BOOKMARKS";
       payload: { format: ExportFormat; locale: SupportedLocale };
@@ -134,6 +154,10 @@ export interface ExportResult {
 export interface RuntimeError {
   code: string;
   message: string;
+  recovery?: {
+    dataRestored: true;
+    reloadRequired: true;
+  };
 }
 
 export type RuntimeResponse<T> =

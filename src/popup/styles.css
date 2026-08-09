@@ -892,6 +892,44 @@ h3 {
   font-weight: 700;
 }
 
+.backup-tools {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 16px;
+  border: 2px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.backup-tools h3,
+.backup-tools p {
+  margin: 0;
+}
+
+.backup-tools label {
+  color: var(--muted);
+  font-size: 0.9375rem;
+  font-weight: 800;
+}
+
+.backup-tools input,
+.backup-tools select {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+}
+
+.backup-tools input[type="file"] {
+  min-height: 52px;
+  padding: 7px;
+}
+
 .text-button {
   min-height: 44px;
   padding: 8px 0;

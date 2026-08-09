@@ -1,4 +1,35 @@
 {
+  "backupRestorePartial": {
+    "message": "Biblioteca restaurada. Algunos ajustes no se aplicaron."
+  },
+  "backupTitle": { "message": "Copia de seguridad y restauración" },
+  "backupDescription": {
+    "message": "Descarga o restaura tu biblioteca local, carpetas, etiquetas, notas y ajustes en formato JSON."
+  },
+  "exportBackupButton": { "message": "Descargar copia JSON" },
+  "backupFileLabel": { "message": "Archivo de copia JSON" },
+  "restoreModeLabel": { "message": "Modo de restauración" },
+  "restoreModeMerge": { "message": "Combinar con esta biblioteca" },
+  "restoreModeReplace": { "message": "Reemplazar esta biblioteca" },
+  "restoreBackupButton": { "message": "Restaurar copia" },
+  "backupTooLarge": { "message": "Esta copia es demasiado grande." },
+  "backupFileReady": { "message": "Copia lista para restaurar." },
+  "backupReading": { "message": "Comprobando la copia…" },
+  "confirmReplaceBackup": {
+    "message": "¿Reemplazar todos los marcadores, carpetas, etiquetas, notas y ajustes locales con esta copia? No se puede deshacer."
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$ marcadores restaurados.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X no pudo leer ese archivo." },
+  "errorInvalidBackup": { "message": "Elige una copia JSON válida de Bookmark X." },
+  "errorRestoreCaptureRunning": {
+    "message": "Espera a que termine la captura activa antes de restaurar."
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "La biblioteca se restauró, pero no se pudieron aplicar sus ajustes. Bookmark X se recargará para mostrar los datos restaurados."
+  },
   "libraryTitle": { "message": "Biblioteca de marcadores" },
   "libraryHelp": { "message": "Selecciona un marcador para añadir una nota privada." },
   "libraryViewsLabel": { "message": "Vistas de la biblioteca de marcadores" },

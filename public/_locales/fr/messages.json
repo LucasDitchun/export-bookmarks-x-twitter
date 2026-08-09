@@ -1,4 +1,37 @@
 {
+  "backupRestorePartial": {
+    "message": "Bibliothèque restaurée. Certains réglages n’ont pas été appliqués."
+  },
+  "backupTitle": { "message": "Sauvegarde et restauration" },
+  "backupDescription": {
+    "message": "Téléchargez ou restaurez votre bibliothèque locale, vos dossiers, tags, notes et réglages au format JSON."
+  },
+  "exportBackupButton": { "message": "Télécharger la sauvegarde JSON" },
+  "backupFileLabel": { "message": "Fichier de sauvegarde JSON" },
+  "restoreModeLabel": { "message": "Mode de restauration" },
+  "restoreModeMerge": { "message": "Fusionner avec cette bibliothèque" },
+  "restoreModeReplace": { "message": "Remplacer cette bibliothèque" },
+  "restoreBackupButton": { "message": "Restaurer la sauvegarde" },
+  "backupTooLarge": { "message": "Cette sauvegarde est trop volumineuse." },
+  "backupFileReady": { "message": "Sauvegarde prête à être restaurée." },
+  "backupReading": { "message": "Vérification de la sauvegarde…" },
+  "confirmReplaceBackup": {
+    "message": "Remplacer tous les signets, dossiers, tags, notes et réglages locaux par cette sauvegarde ? Cette action est irréversible."
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$ signets restaurés.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X n’a pas pu lire ce fichier." },
+  "errorInvalidBackup": {
+    "message": "Choisissez une sauvegarde JSON Bookmark X valide."
+  },
+  "errorRestoreCaptureRunning": {
+    "message": "Attendez la fin de la capture en cours avant de restaurer."
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "La bibliothèque a été restaurée, mais certains réglages n’ont pas pu être appliqués. Bookmark X va se recharger pour afficher les données restaurées."
+  },
   "libraryTitle": { "message": "Bibliothèque de favoris" },
   "libraryHelp": { "message": "Sélectionnez un favori pour ajouter une note privée." },
   "libraryViewsLabel": { "message": "Vues de la bibliothèque de favoris" },

@@ -105,11 +105,28 @@ To change the language manually, open the popup, expand **More options**, and
 choose a language from the **Language** selector. The preference is stored
 locally and used the next time you open Bookmark X.
 
+## Back up and restore your local library
+
+Open **More options** and use **Download JSON backup** to save a complete local
+copy of your bookmarks, notes, folders, tags, archive date, and Bookmark X
+settings. The file is created in your browser and is never uploaded.
+
+To restore it, choose the JSON file and one of these modes:
+
+| Restore mode | Result                                                                     |
+| ------------ | -------------------------------------------------------------------------- |
+| **Merge**    | Imported records win when an ID already exists; local-only records remain. |
+| **Replace**  | Replaces the local library after an explicit confirmation.                 |
+
+Bookmark X validates the entire file before changing local data. A restore is
+blocked while bookmark capture is running. Keep a separate copy of important
+backup files, especially before using **Replace**.
+
 ## Privacy and permissions
 
 All extension-managed bookmark data stays in IndexedDB inside the current
-Chrome profile. TXT files are generated locally and downloaded through Chrome.
-Bookmark X does not send your archive to a server.
+Chrome profile. TXT exports and JSON backups are generated locally and
+downloaded through Chrome. Bookmark X does not send your archive to a server.
 
 The extension requests only the capabilities needed for capture:
 
@@ -165,7 +182,7 @@ The package command validates the build, creates
 `release/bookmark-x-<version>.zip`, and refreshes the stable
 `download/bookmark-x.zip` file. The Chrome smoke test uses an isolated temporary
 profile to exercise the popup, Manifest V3 service worker, IndexedDB, runtime
-messaging, TXT export, and archive clearing.
+messaging, TXT export, JSON backup round-trip, and archive clearing.
 
 ## Versioning and releases
 

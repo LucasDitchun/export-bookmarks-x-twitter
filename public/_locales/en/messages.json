@@ -1,4 +1,35 @@
 {
+  "backupRestorePartial": {
+    "message": "Library restored. Some settings were not applied."
+  },
+  "backupTitle": { "message": "Backup & restore" },
+  "backupDescription": {
+    "message": "Download or restore your local library, folders, tags, notes, and settings as JSON."
+  },
+  "exportBackupButton": { "message": "Download JSON backup" },
+  "backupFileLabel": { "message": "JSON backup file" },
+  "restoreModeLabel": { "message": "Restore mode" },
+  "restoreModeMerge": { "message": "Merge with this library" },
+  "restoreModeReplace": { "message": "Replace this library" },
+  "restoreBackupButton": { "message": "Restore backup" },
+  "backupTooLarge": { "message": "This backup is too large." },
+  "backupFileReady": { "message": "Backup ready to restore." },
+  "backupReading": { "message": "Checking backup…" },
+  "confirmReplaceBackup": {
+    "message": "Replace all local bookmarks, folders, tags, notes, and settings with this backup? This cannot be undone."
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$ bookmarks restored.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X could not read that file." },
+  "errorInvalidBackup": { "message": "Choose a valid Bookmark X JSON backup." },
+  "errorRestoreCaptureRunning": {
+    "message": "Wait for the active capture to finish before restoring."
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "Your library was restored, but its settings could not be applied. Bookmark X will reload to show the restored data."
+  },
   "extensionName": { "message": "Bookmark X" },
   "extensionDescription": {
     "message": "Capture your X bookmarks from the open page and export a private local TXT archive."

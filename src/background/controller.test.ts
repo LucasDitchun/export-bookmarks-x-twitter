@@ -6,6 +6,7 @@ import {
   type ExtensionSettings,
   type SettingsPatch,
 } from "../settings/settings-repository";
+import { BackupSettingsWriteError } from "../storage/backup-repository";
 import { BackgroundController, isBookmarksUrl } from "./controller";
 
 const EXTENSION_ID = "bookmark-x-extension";
@@ -71,6 +72,19 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
         ...bookmark,
         note: "",
         folderId: "folder-1",
+      })),
+    },
+    backup: {
+      export: vi.fn(async () => ({
+        content: '{"schemaVersion":1}',
+        filename: "bookmark-x-backup.json",
+      })),
+      restore: vi.fn(async (_content: string, mode: "merge" | "replace") => ({
+        bookmarks: 2,
+        folders: 1,
+        tags: 1,
+        mode,
+        reloadRequired: true as const,
       })),
     },
     state: {
@@ -201,6 +215,177 @@ describe("BackgroundController", () => {
       data: { surface: "modal", opened: false },
     });
     expect(dependencies.browser.openSidePanel).not.toHaveBeenCalled();
+  });
+
+  it("exports a local JSON backup through the background boundary", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "EXPORT_BACKUP" }, POPUP_SENDER),
+    ).resolves.toEqual({
+      ok: true,
+      data: {
+        content: '{"schemaVersion":1}',
+        filename: "bookmark-x-backup.json",
+      },
+    });
+    expect(dependencies.backup.export).toHaveBeenCalledOnce();
+  });
+
+  it("restores merge and explicitly confirmed replace backups", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    await dependencies.state.setScrapeRun({
+      id: "completed-run",
+      tabId: 7,
+      status: "completed",
+      fetched: 2,
+      added: 2,
+      updated: 0,
+      startedAt: "2026-07-29T13:00:00.000Z",
+      updatedAt: "2026-07-29T13:01:00.000Z",
+      errorCode: null,
+    });
+
+    await controller.handle(
+      {
+        type: "RESTORE_BACKUP",
+        payload: { content: '{"schemaVersion":1}', mode: "merge" },
+      },
+      POPUP_SENDER,
+    );
+    await controller.handle(
+      {
+        type: "RESTORE_BACKUP",
+        payload: {
+          content: '{"schemaVersion":1}',
+          mode: "replace",
+          confirmed: true,
+        },
+      },
+      POPUP_SENDER,
+    );
+
+    expect(dependencies.backup.restore).toHaveBeenNthCalledWith(
+      1,
+      '{"schemaVersion":1}',
+      "merge",
+    );
+    expect(dependencies.backup.restore).toHaveBeenNthCalledWith(
+      2,
+      '{"schemaVersion":1}',
+      "replace",
+    );
+    expect(dependencies.state.clearScrapeRun).toHaveBeenCalledTimes(2);
+    await expect(
+      controller.handle({ type: "GET_STATUS" }, POPUP_SENDER),
+    ).resolves.toMatchObject({ ok: true, data: { scrape: null } });
+  });
+
+  it("applies the restored action surface after settings commit", async () => {
+    const dependencies = createDependencies();
+    dependencies.settings.get.mockResolvedValueOnce({
+      ...structuredClone(DEFAULT_SETTINGS),
+      behavior: {
+        ...structuredClone(DEFAULT_SETTINGS.behavior),
+        surface: "sidePanel",
+      },
+    });
+    const controller = new BackgroundController(dependencies);
+
+    await controller.handle(
+      {
+        type: "RESTORE_BACKUP",
+        payload: { content: '{"schemaVersion":1}', mode: "merge" },
+      },
+      POPUP_SENDER,
+    );
+
+    expect(dependencies.browser.configureSurface).toHaveBeenCalledWith("sidePanel");
+  });
+
+  it("rejects unconfirmed replace and blocks all restores during capture", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        {
+          type: "RESTORE_BACKUP",
+          payload: { content: "{}", mode: "replace" },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_request" },
+    });
+    expect(dependencies.backup.restore).not.toHaveBeenCalled();
+
+    await dependencies.state.setScrapeRun({
+      id: "active-run",
+      tabId: 7,
+      status: "running",
+      fetched: 1,
+      added: 1,
+      updated: 0,
+      startedAt: "2026-07-29T13:00:00.000Z",
+      updatedAt: "2026-07-29T13:00:00.000Z",
+      errorCode: null,
+    });
+    await expect(
+      controller.handle(
+        {
+          type: "RESTORE_BACKUP",
+          payload: { content: "{}", mode: "merge" },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "restore_capture_running" },
+    });
+    expect(dependencies.backup.restore).not.toHaveBeenCalled();
+  });
+
+  it("reports an explicit safe error when only backup settings fail", async () => {
+    const dependencies = createDependencies();
+    await dependencies.state.setScrapeRun({
+      id: "completed-run",
+      tabId: 7,
+      status: "completed",
+      fetched: 2,
+      added: 2,
+      updated: 0,
+      startedAt: "2026-07-29T13:00:00.000Z",
+      updatedAt: "2026-07-29T13:01:00.000Z",
+      errorCode: null,
+    });
+    dependencies.backup.restore.mockRejectedValueOnce(new BackupSettingsWriteError());
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        {
+          type: "RESTORE_BACKUP",
+          payload: { content: "{}", mode: "merge" },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      error: {
+        code: "restore_settings_failed",
+        message:
+          "The library was restored, but Bookmark X could not apply the backed-up settings.",
+        recovery: { dataRestored: true, reloadRequired: true },
+      },
+    });
+    expect(dependencies.state.clearScrapeRun).toHaveBeenCalledOnce();
+    await expect(
+      controller.handle({ type: "GET_STATUS" }, POPUP_SENDER),
+    ).resolves.toMatchObject({ ok: true, data: { scrape: null } });
   });
   it("lists current bookmarks with a safe default page size", async () => {
     const dependencies = createDependencies();

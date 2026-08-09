@@ -1,4 +1,35 @@
 {
+  "backupRestorePartial": {
+    "message": "Biblioteca restaurada. Algumas configurações não foram aplicadas."
+  },
+  "backupTitle": { "message": "Backup e restauração" },
+  "backupDescription": {
+    "message": "Baixe ou restaure sua biblioteca local, pastas, tags, notas e configurações em JSON."
+  },
+  "exportBackupButton": { "message": "Baixar backup JSON" },
+  "backupFileLabel": { "message": "Arquivo de backup JSON" },
+  "restoreModeLabel": { "message": "Modo de restauração" },
+  "restoreModeMerge": { "message": "Mesclar com esta biblioteca" },
+  "restoreModeReplace": { "message": "Substituir esta biblioteca" },
+  "restoreBackupButton": { "message": "Restaurar backup" },
+  "backupTooLarge": { "message": "Este backup é grande demais." },
+  "backupFileReady": { "message": "Backup pronto para restaurar." },
+  "backupReading": { "message": "Verificando o backup…" },
+  "confirmReplaceBackup": {
+    "message": "Substituir todos os bookmarks, pastas, tags, notas e configurações locais por este backup? Isso não pode ser desfeito."
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$ bookmarks restaurados.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "O Bookmark X não conseguiu ler esse arquivo." },
+  "errorInvalidBackup": { "message": "Escolha um backup JSON válido do Bookmark X." },
+  "errorRestoreCaptureRunning": {
+    "message": "Aguarde o fim da captura em andamento antes de restaurar."
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "Sua biblioteca foi restaurada, mas as configurações não puderam ser aplicadas. O Bookmark X será recarregado para mostrar os dados restaurados."
+  },
   "libraryTitle": { "message": "Biblioteca de favoritos" },
   "libraryHelp": {
     "message": "Selecione um favorito para adicionar uma nota privada."
