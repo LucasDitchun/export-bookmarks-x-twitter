@@ -6,6 +6,7 @@ import { FolderRepository } from "../storage/folder-repository";
 import { SettingsRepository } from "../settings/settings-repository";
 import { BackupRepository } from "../storage/backup-repository";
 import { SearchRepository } from "../storage/search-repository";
+import { LiveBookmarkStateRepository } from "../storage/live-bookmark-state";
 import { BackgroundController } from "./controller";
 
 const state = new ExtensionStateRepository({
@@ -19,6 +20,10 @@ const tags = new TagRepository();
 const folders = new FolderRepository();
 const search = new SearchRepository();
 const settings = new SettingsRepository({
+  get: (keys) => chrome.storage.local.get(keys),
+  set: (items) => chrome.storage.local.set(items),
+});
+const liveState = new LiveBookmarkStateRepository({
   get: (keys) => chrome.storage.local.get(keys),
   set: (items) => chrome.storage.local.set(items),
 });
@@ -45,6 +50,7 @@ const controller = new BackgroundController({
   search,
   settings,
   backup,
+  liveState,
   state,
   extensionId: chrome.runtime.id,
   browser: {

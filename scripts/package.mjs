@@ -15,6 +15,7 @@ import process from "node:process";
 import { ZipArchive } from "archiver";
 
 import {
+  EXPECTED_CONTENT_SCRIPT_MATCHES,
   EXPECTED_MANIFEST_HOST_PERMISSIONS,
   EXPECTED_MANIFEST_PERMISSIONS,
   validateExactStringArray,
@@ -134,7 +135,7 @@ async function validateBuild(packageVersion) {
   const [contentScript] = manifest.content_scripts;
   validateExactStringArray(
     contentScript?.matches,
-    ["https://www.x.com/i/bookmarks*", "https://x.com/i/bookmarks*"],
+    EXPECTED_CONTENT_SCRIPT_MATCHES,
     "content_scripts[0].matches",
   );
   validateExactStringArray(

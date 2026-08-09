@@ -324,5 +324,15 @@
   "bookmarkPromptFolder": { "message": "フォルダー" },
   "bookmarkPromptNote": { "message": "非公開メモ" },
   "bookmarkCategorized": { "message": "分類済み" },
-  "bookmarkNeedsCategory": { "message": "要分類" }
+  "bookmarkNeedsCategory": { "message": "要分類" },
+  "liveBookmarkPending": { "message": "X の確認を待っています…" },
+  "liveBookmarkSaved": {
+    "message": "ローカルに保存しました。メモ、フォルダー、タグを追加できます。"
+  },
+  "liveBookmarkArchived": {
+    "message": "現在のブックマークから削除し、アーカイブに保持しました。"
+  },
+  "liveBookmarkFailed": {
+    "message": "X が変更を確認しなかったため、ローカルアーカイブは変更されませんでした。"
+  }
 }

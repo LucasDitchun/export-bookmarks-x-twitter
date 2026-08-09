@@ -4,6 +4,7 @@ import { hasReachedPageEnd, isPageLoading } from "./page-state";
 import { runScrape } from "./scrape-runner";
 import { advanceTimeline } from "./timeline-navigation";
 import { waitForTimelineUpdate } from "./timeline-waiter";
+import { startLiveBookmarkObserver } from "./live-bookmark-observer";
 
 let activeCapture: { runId: string; controller: AbortController } | undefined;
 
@@ -101,4 +102,14 @@ chrome.runtime.onMessage.addListener((request: unknown, sender, sendResponse) =>
   sendResponse({ accepted: true });
   void capture(request.runId, controller);
   return false;
+});
+
+const liveBookmarkObserver = startLiveBookmarkObserver({
+  document,
+  send: (event) => chrome.runtime.sendMessage(event),
+  translate: (key) => chrome.i18n.getMessage(key) || key,
+});
+
+window.addEventListener("pagehide", () => liveBookmarkObserver.stop(), {
+  once: true,
 });

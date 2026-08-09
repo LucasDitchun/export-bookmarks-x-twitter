@@ -1,6 +1,6 @@
 # Bookmark X Privacy Policy
 
-Last updated: July 29, 2026
+Last updated: August 9, 2026
 
 Bookmark X is a local-first Chrome extension that captures bookmarks rendered
 on the X bookmarks page and exports them as text. It has no backend, analytics,
@@ -12,6 +12,9 @@ When you explicitly start capture on `x.com/i/bookmarks`, the extension may
 read post IDs, text, author names and usernames, creation dates, and canonical
 post URLs rendered for your signed-in session. It also stores capture
 timestamps, counts, status metadata, and the selected interface language.
+When you click X's bookmark button on another X page, the extension reads only
+that post's rendered public fields and the button state needed to mirror the
+confirmed action in the local archive.
 
 Bookmarks can contain private or sensitive information. Treat exported files
 as private files.
@@ -58,8 +61,9 @@ files must be deleted separately.
 - `unlimitedStorage`: supports a durable local archive.
 - `https://api.github.com/*`: reads the project's public star count for the
   open-source card in Settings.
-- The content script match is restricted to `https://x.com/i/bookmarks*` and
-  `https://www.x.com/i/bookmarks*`.
+- The content script match is restricted to `https://x.com/*` and
+  `https://www.x.com/*`. Outside `/i/bookmarks`, it processes post content only
+  after an explicit bookmark-button click.
 
 Bookmark X does not request cookies, browsing history, downloads, or access to
 arbitrary websites.

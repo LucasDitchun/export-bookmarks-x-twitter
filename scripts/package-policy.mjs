@@ -9,6 +9,11 @@ export const EXPECTED_MANIFEST_HOST_PERMISSIONS = Object.freeze([
   "https://api.github.com/*",
 ]);
 
+export const EXPECTED_CONTENT_SCRIPT_MATCHES = Object.freeze([
+  "https://x.com/*",
+  "https://www.x.com/*",
+]);
+
 export function validateExactStringArray(actual, expected, fieldName) {
   if (!Array.isArray(actual) || actual.some((value) => typeof value !== "string")) {
     throw new Error(`Manifest ${fieldName} must be an array of strings.`);

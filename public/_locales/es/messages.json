@@ -324,5 +324,15 @@
   "bookmarkPromptFolder": { "message": "Carpeta" },
   "bookmarkPromptNote": { "message": "Nota privada" },
   "bookmarkCategorized": { "message": "Categorizado" },
-  "bookmarkNeedsCategory": { "message": "Falta categorizar" }
+  "bookmarkNeedsCategory": { "message": "Falta categorizar" },
+  "liveBookmarkPending": { "message": "Esperando la confirmación de X…" },
+  "liveBookmarkSaved": {
+    "message": "Guardado localmente. Añade una nota, carpeta o etiquetas."
+  },
+  "liveBookmarkArchived": {
+    "message": "Eliminado de los marcadores actuales y conservado en Archivados."
+  },
+  "liveBookmarkFailed": {
+    "message": "X no confirmó este cambio. Tu archivo local no se modificó."
+  }
 }

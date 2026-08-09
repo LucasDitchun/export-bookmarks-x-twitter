@@ -6,6 +6,7 @@ import type {
   BookmarkSnapshot,
   HydratedBookmarkRecord,
 } from "../domain/types";
+import type { LiveBookmarkAction } from "../shared/protocol";
 import {
   BOOKMARK_FOLDERS_STORE,
   BOOKMARKS_STORE,
@@ -34,6 +35,50 @@ export class ArchiveRepository {
 
   constructor(databaseName = "bookmark-x") {
     this.connection = new BookmarkDatabase(databaseName);
+  }
+
+  async applyLiveBookmark(
+    bookmark: BookmarkSnapshot,
+    action: LiveBookmarkAction,
+    changedAt: string,
+  ): Promise<BookmarkRecord | null> {
+    const database = await this.connection.open();
+    const transaction = database.transaction(BOOKMARKS_STORE, "readwrite");
+    const store = transaction.objectStore(BOOKMARKS_STORE);
+    const existing = await requestAsPromise(
+      store.get(bookmark.id) as IDBRequest<BookmarkRecord | undefined>,
+    );
+
+    if (action === "remove") {
+      if (existing === undefined) {
+        await transactionDone(transaction);
+        return null;
+      }
+      const archived: BookmarkRecord = {
+        ...existing,
+        lastSeenAt: changedAt,
+        archivedAt: existing.archivedAt ?? changedAt,
+        status: "archived",
+      };
+      store.put(archived);
+      await transactionDone(transaction);
+      return archived;
+    }
+
+    const saved: BookmarkRecord = {
+      ...bookmark,
+      note: existing?.note ?? "",
+      folderId: existing?.folderId ?? null,
+      tagIds: existing?.tagIds ?? [],
+      firstSavedAt: existing?.firstSavedAt ?? changedAt,
+      lastSeenAt: changedAt,
+      archivedAt: null,
+      metadataUpdatedAt: existing?.metadataUpdatedAt ?? changedAt,
+      status: "current",
+    };
+    store.put(saved);
+    await transactionDone(transaction);
+    return saved;
   }
 
   async mergeBookmarks(

@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ArchiveStats, BookmarkSnapshot, ScrapeRun } from "../domain/types";
+import type {
+  ArchiveStats,
+  BookmarkRecord,
+  BookmarkSnapshot,
+  ScrapeRun,
+} from "../domain/types";
+import type { LiveBookmarkContext } from "../shared/protocol";
 import {
   DEFAULT_SETTINGS,
   type ExtensionSettings,
@@ -33,6 +39,7 @@ const bookmark: BookmarkSnapshot = {
 
 function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
   let currentRun: ScrapeRun | null = null;
+  const liveBookmarkContexts = new Map<string, LiveBookmarkContext>();
   let currentSettings = structuredClone(DEFAULT_SETTINGS) as ExtensionSettings;
   return {
     archive: {
@@ -41,6 +48,7 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       getStats: vi.fn(async () => stats),
       getAll: vi.fn(async () => []),
       clear: vi.fn(async () => undefined),
+      applyLiveBookmark: vi.fn(async (): Promise<BookmarkRecord | null> => null),
     },
     bookmarks: {
       list: vi.fn(async (): Promise<unknown> => ({ items: [], nextCursor: null })),
@@ -121,6 +129,15 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
         return currentSettings;
       }),
     },
+    liveState: {
+      get: vi.fn(
+        async (tabId: number, intentId: string) =>
+          liveBookmarkContexts.get(`${tabId}:${intentId}`) ?? null,
+      ),
+      set: vi.fn(async (tabId: number, context: LiveBookmarkContext) => {
+        liveBookmarkContexts.set(`${tabId}:${context.intentId}`, context);
+      }),
+    },
     browser: {
       getActiveTab: vi.fn(async () => ({ id: 7, url: activeUrl })),
       openBookmarks: vi.fn(async () => undefined),
@@ -144,6 +161,241 @@ describe("isBookmarksUrl", () => {
 });
 
 describe("BackgroundController", () => {
+  it("opens the configured surface pending, then saves only after confirmation", async () => {
+    const dependencies = createDependencies("https://x.com/home");
+    dependencies.settings.get.mockResolvedValue({
+      ...structuredClone(DEFAULT_SETTINGS),
+      behavior: {
+        ...structuredClone(DEFAULT_SETTINGS).behavior,
+        surface: "sidePanel",
+      },
+    });
+    dependencies.archive.applyLiveBookmark.mockResolvedValue({
+      ...bookmark,
+      note: "",
+      folderId: null,
+      tagIds: [],
+      firstSavedAt: "2026-07-29T13:14:15.123Z",
+      lastSeenAt: "2026-07-29T13:14:15.123Z",
+      archivedAt: null,
+      metadataUpdatedAt: "2026-07-29T13:14:15.123Z",
+      status: "current",
+    });
+    const controller = new BackgroundController(dependencies);
+    const sender = {
+      id: EXTENSION_ID,
+      tab: { id: 7, url: "https://x.com/home" },
+    };
+
+    await expect(
+      controller.handle(
+        {
+          type: "LIVE_BOOKMARK_PENDING",
+          intentId: "intent-1",
+          action: "save",
+          bookmark,
+        },
+        sender,
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      data: { prompt: true, surface: "sidePanel", opened: true },
+    });
+    expect(dependencies.browser.openSidePanel).toHaveBeenCalledWith(7);
+    expect(dependencies.archive.applyLiveBookmark).not.toHaveBeenCalled();
+
+    await expect(
+      controller.handle(
+        {
+          type: "LIVE_BOOKMARK_CONFIRMED",
+          intentId: "intent-1",
+          action: "save",
+          bookmark,
+        },
+        sender,
+      ),
+    ).resolves.toMatchObject({ ok: true, data: { bookmark: { status: "current" } } });
+    expect(dependencies.archive.applyLiveBookmark).toHaveBeenCalledWith(
+      bookmark,
+      "save",
+      "2026-07-29T13:14:15.123Z",
+    );
+    expect(dependencies.liveState.set).toHaveBeenLastCalledWith(
+      7,
+      expect.objectContaining({ intentId: "intent-1", state: "saved" }),
+    );
+  });
+
+  it("persists two interleaved accepted posts in one tab and rejects replay", async () => {
+    const dependencies = createDependencies("https://x.com/home");
+    const second = {
+      ...bookmark,
+      id: "456",
+      url: "https://x.com/person/status/456",
+      text: "Second post",
+    };
+    const controller = new BackgroundController(dependencies);
+    const sender = { id: EXTENSION_ID, tab: { id: 7, url: "https://x.com/home" } };
+
+    await controller.handle(
+      {
+        type: "LIVE_BOOKMARK_PENDING",
+        intentId: "intent-a",
+        action: "save",
+        bookmark,
+      },
+      sender,
+    );
+    await controller.handle(
+      {
+        type: "LIVE_BOOKMARK_PENDING",
+        intentId: "intent-b",
+        action: "save",
+        bookmark: second,
+      },
+      sender,
+    );
+    const confirmedA = {
+      type: "LIVE_BOOKMARK_CONFIRMED",
+      intentId: "intent-a",
+      action: "save",
+      bookmark,
+    } as const;
+    const confirmedB = {
+      type: "LIVE_BOOKMARK_CONFIRMED",
+      intentId: "intent-b",
+      action: "save",
+      bookmark: second,
+    } as const;
+
+    await expect(controller.handle(confirmedA, sender)).resolves.toMatchObject({
+      ok: true,
+    });
+    await expect(controller.handle(confirmedB, sender)).resolves.toMatchObject({
+      ok: true,
+    });
+    expect(dependencies.archive.applyLiveBookmark).toHaveBeenCalledTimes(2);
+    expect(dependencies.archive.applyLiveBookmark).toHaveBeenNthCalledWith(
+      1,
+      bookmark,
+      "save",
+      expect.any(String),
+    );
+    expect(dependencies.archive.applyLiveBookmark).toHaveBeenNthCalledWith(
+      2,
+      second,
+      "save",
+      expect.any(String),
+    );
+    await expect(controller.handle(confirmedA, sender)).resolves.toMatchObject({
+      ok: false,
+      error: { code: "stale_live_bookmark" },
+    });
+    expect(dependencies.archive.applyLiveBookmark).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not open an interface when the prompt preference is disabled", async () => {
+    const dependencies = createDependencies("https://x.com/alice/status/123");
+    dependencies.settings.get.mockResolvedValue({
+      ...structuredClone(DEFAULT_SETTINGS),
+      behavior: {
+        ...structuredClone(DEFAULT_SETTINGS).behavior,
+        promptAfterBookmark: false,
+        surface: "sidePanel",
+      },
+    });
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        {
+          type: "LIVE_BOOKMARK_PENDING",
+          intentId: "intent-off",
+          action: "remove",
+          bookmark,
+        },
+        { id: EXTENSION_ID, tab: { id: 7, url: "https://x.com/home" } },
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      data: { prompt: false, surface: "sidePanel", opened: false },
+    });
+    expect(dependencies.browser.openSidePanel).not.toHaveBeenCalled();
+  });
+
+  it("keeps local data unchanged for cancellation, stale confirmation, and non-X senders", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    const pending = {
+      type: "LIVE_BOOKMARK_PENDING",
+      intentId: "intent-cancel",
+      action: "save",
+      bookmark,
+    } as const;
+    await controller.handle(pending, CONTENT_SENDER);
+    await expect(
+      controller.handle(
+        { type: "LIVE_BOOKMARK_CANCELLED", intentId: "intent-cancel" },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toEqual({ ok: true, data: null });
+    await expect(
+      controller.handle(
+        { ...pending, type: "LIVE_BOOKMARK_CONFIRMED" },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "stale_live_bookmark" },
+    });
+    await expect(
+      controller.handle(pending, {
+        id: EXTENSION_ID,
+        tab: { id: 7, url: "https://example.com" },
+      }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_sender" } });
+    expect(dependencies.archive.applyLiveBookmark).not.toHaveBeenCalled();
+  });
+
+  it("rejects a confirmation whose action or post differs from the pending intent", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    await controller.handle(
+      {
+        type: "LIVE_BOOKMARK_PENDING",
+        intentId: "intent-bound",
+        action: "save",
+        bookmark,
+      },
+      CONTENT_SENDER,
+    );
+
+    for (const request of [
+      {
+        type: "LIVE_BOOKMARK_CONFIRMED",
+        intentId: "intent-bound",
+        action: "remove",
+        bookmark,
+      },
+      {
+        type: "LIVE_BOOKMARK_CONFIRMED",
+        intentId: "intent-bound",
+        action: "save",
+        bookmark: {
+          ...bookmark,
+          id: "999",
+          url: "https://x.com/person/status/999",
+        },
+      },
+    ]) {
+      await expect(controller.handle(request, CONTENT_SENDER)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "stale_live_bookmark" },
+      });
+    }
+    expect(dependencies.archive.applyLiveBookmark).not.toHaveBeenCalled();
+  });
+
   it("searches only the requested library view with bounded pagination", async () => {
     const dependencies = createDependencies();
     const controller = new BackgroundController(dependencies);

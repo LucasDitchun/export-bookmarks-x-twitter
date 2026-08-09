@@ -21,6 +21,79 @@ async function putRecord(databaseName: string, record: BookmarkRecord): Promise<
 }
 
 describe("ArchiveRepository", () => {
+  it("adds, archives, and rebookmarks live posts without losing local metadata", async () => {
+    const databaseName = `live-${crypto.randomUUID()}`;
+    const repository = new ArchiveRepository(databaseName);
+
+    await expect(
+      repository.applyLiveBookmark(syncedBookmark, "save", "2026-08-09T09:00:00.000Z"),
+    ).resolves.toMatchObject({ status: "current", note: "", tagIds: [] });
+
+    const database = await new BookmarkDatabase(databaseName).open();
+    const transaction = database.transaction("bookmarks", "readwrite");
+    const current = await new Promise<BookmarkRecord>((resolve, reject) => {
+      const request = transaction
+        .objectStore("bookmarks")
+        .get(syncedBookmark.id) as IDBRequest<BookmarkRecord | undefined>;
+      request.onsuccess = () => {
+        if (request.result) resolve(request.result);
+        else reject(new Error("Seeded live bookmark was not found."));
+      };
+      request.onerror = () =>
+        reject(request.error ?? new Error("Live bookmark lookup failed."));
+    });
+    transaction.objectStore("bookmarks").put({
+      ...current,
+      note: "Why this matters",
+      folderId: "folder-research",
+      tagIds: ["tag-ai"],
+      metadataUpdatedAt: "2026-08-09T09:02:00.000Z",
+    });
+    await transactionDone(transaction);
+    database.close();
+
+    await expect(
+      repository.applyLiveBookmark(
+        syncedBookmark,
+        "remove",
+        "2026-08-09T09:03:00.000Z",
+      ),
+    ).resolves.toMatchObject({
+      status: "archived",
+      archivedAt: "2026-08-09T09:03:00.000Z",
+      lastSeenAt: "2026-08-09T09:03:00.000Z",
+    });
+    await expect(
+      repository.applyLiveBookmark(
+        { ...syncedBookmark, text: "Edited on X" },
+        "save",
+        "2026-08-09T09:04:00.000Z",
+      ),
+    ).resolves.toMatchObject({
+      status: "current",
+      archivedAt: null,
+      text: "Edited on X",
+      note: "Why this matters",
+      folderId: "folder-research",
+      tagIds: ["tag-ai"],
+      firstSavedAt: "2026-08-09T09:00:00.000Z",
+      metadataUpdatedAt: "2026-08-09T09:02:00.000Z",
+    });
+  });
+
+  it("does not create a local record when an unknown post is unbookmarked", async () => {
+    const repository = new ArchiveRepository(`live-missing-${crypto.randomUUID()}`);
+
+    await expect(
+      repository.applyLiveBookmark(
+        syncedBookmark,
+        "remove",
+        "2026-08-09T09:03:00.000Z",
+      ),
+    ).resolves.toBeNull();
+    await expect(repository.getAll()).resolves.toEqual([]);
+  });
+
   it("adds scraped bookmarks as current records with empty local metadata", async () => {
     const repository = new ArchiveRepository(`test-${crypto.randomUUID()}`);
 

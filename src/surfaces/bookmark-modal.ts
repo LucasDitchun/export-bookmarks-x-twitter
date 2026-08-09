@@ -4,6 +4,7 @@ export interface BookmarkModalLabels {
   folder: string;
   save: string;
   tags: string;
+  pending?: string;
 }
 
 export interface BookmarkModalValues {
@@ -27,6 +28,8 @@ export interface BookmarkModalController {
   open(): void;
   close(): void;
   destroy(): void;
+  setValues(values: Partial<BookmarkModalValues>): void;
+  setState(state: "pending" | "ready" | "success" | "error", message: string): void;
 }
 
 const MODAL_STYLES = `
@@ -66,6 +69,9 @@ const MODAL_STYLES = `
   .heading { align-items: start; display: flex; gap: 20px; justify-content: space-between; }
   h2 { font-size: clamp(1.6rem, 6vw, 2.35rem); line-height: 1.05; margin: 0; }
   .bookmark { border-left: 5px solid #caff4a; font-family: ui-monospace, monospace; margin: 18px 0 24px; padding-left: 14px; }
+  .status { border: 2px solid #45483f; border-radius: 9px; margin: 0 0 18px; padding: 12px 14px; }
+  .status[data-state="success"] { border-color: #16733d; }
+  .status[data-state="error"] { border-color: #a52222; }
   label { display: block; font-weight: 700; margin-top: 18px; }
   input, textarea {
     background: white;
@@ -150,6 +156,15 @@ export function createBookmarkModal(
   bookmark.className = "bookmark";
   bookmark.textContent = options.bookmarkTitle;
 
+  const status = document.createElement("p");
+  status.className = "status";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  status.setAttribute("aria-atomic", "true");
+  status.dataset.state = options.labels.pending ? "pending" : "ready";
+  status.textContent = options.labels.pending ?? "";
+  status.hidden = status.textContent.length === 0;
+
   const form = document.createElement("form");
   const tags = appendLabelledInput(
     document,
@@ -177,7 +192,8 @@ export function createBookmarkModal(
   saveButton.type = "submit";
   saveButton.textContent = options.labels.save;
   form.append(descriptionLabel, description, saveButton);
-  dialog.append(heading, bookmark, form);
+  form.hidden = options.labels.pending !== undefined;
+  dialog.append(heading, bookmark, status, form);
   backdrop.append(dialog);
   shadow.append(style, backdrop);
   document.body.append(host);
@@ -232,6 +248,17 @@ export function createBookmarkModal(
       closeButton.focus();
     },
     close,
+    setValues(values) {
+      if (values.tags !== undefined) tags.value = values.tags;
+      if (values.folder !== undefined) folder.value = values.folder;
+      if (values.description !== undefined) description.value = values.description;
+    },
+    setState(state, message) {
+      status.dataset.state = state;
+      status.textContent = message;
+      status.hidden = message.length === 0;
+      form.hidden = state !== "ready";
+    },
     destroy() {
       host.remove();
     },

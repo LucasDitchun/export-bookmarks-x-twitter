@@ -246,5 +246,15 @@
   "bookmarkPromptFolder": { "message": "Pasta" },
   "bookmarkPromptNote": { "message": "Nota privada" },
   "bookmarkCategorized": { "message": "Categorizado" },
-  "bookmarkNeedsCategory": { "message": "Precisa de categoria" }
+  "bookmarkNeedsCategory": { "message": "Precisa de categoria" },
+  "liveBookmarkPending": { "message": "Aguardando a confirmação do X…" },
+  "liveBookmarkSaved": {
+    "message": "Salvo localmente. Adicione uma nota, pasta ou tags."
+  },
+  "liveBookmarkArchived": {
+    "message": "Removido dos bookmarks atuais e mantido em Arquivados."
+  },
+  "liveBookmarkFailed": {
+    "message": "O X não confirmou esta alteração. Seu arquivo local não foi alterado."
+  }
 }
