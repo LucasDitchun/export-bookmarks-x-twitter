@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   build: {
@@ -27,6 +27,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    exclude: [...configDefaults.exclude, ".github/scripts/release-train.test.mjs"],
     setupFiles: ["./src/test/setup.ts"],
     coverage: {
       provider: "v8",

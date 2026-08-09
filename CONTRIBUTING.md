@@ -50,6 +50,13 @@ coverage. The configured branch threshold is 75%.
 
 Use Conventional Commit subjects such as `feat: capture bookmark DOM`.
 
+Create feature and fix branches from `develop`, and target every contribution
+pull request to `develop`. Compatible changes accumulate there without
+publishing a version. The maintainers prepare a batch with the **Release
+train** workflow; its single draft pull request from `develop` to `main` is the
+only release path. Feature pull requests are squash-merged, while the release
+pull request uses a merge commit so the published batch retains its ancestry.
+
 A pull request should explain the user-visible outcome, list checks run,
 include screenshots for UI changes, call out permission/privacy/storage
 changes, and contain no generated ZIP outside the release workflow, browser
