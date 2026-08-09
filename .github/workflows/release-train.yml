@@ -37,15 +37,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          develop_version="$(gh api \
+            -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$GITHUB_REPOSITORY/contents/package.json?ref=develop" | jq -r '.version')"
+          main_version="$(gh api \
+            -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$GITHUB_REPOSITORY/contents/package.json?ref=main" | jq -r '.version')"
+          title="chore(release): prepare next release"
+          body="This draft accumulates the changes accepted into \`develop\`. Run **Release train** on \`develop\` when the batch is ready, review the generated version and changelog, then mark this PR ready. Merging this PR is the only supported release path."
+          if [[ "$develop_version" != "$main_version" ]]; then
+            title="chore(release): prepare v$develop_version"
+            body="Prepared release v$develop_version. Review the generated changelog, the committed ZIP, and the CI checks before marking this PR ready. Merging this \`develop\` PR publishes the release."
+          fi
+
           existing="$(gh pr list \
             --repo "$GITHUB_REPOSITORY" \
             --base main \
             --head develop \
             --state open \
-            --json number \
-            --jq '.[0].number // empty')"
+            --json number,isDraft \
+            --jq '.[0] // empty')"
           if [[ -n "$existing" ]]; then
-            echo "Release PR #$existing already tracks develop."
+            number="$(jq -r '.number' <<< "$existing")"
+            if [[ "$(jq -r '.isDraft' <<< "$existing")" == "false" ]]; then
+              gh pr ready "$number" --repo "$GITHUB_REPOSITORY" --undo
+            fi
+            gh pr edit "$number" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body "$body"
+            echo "Release PR #$number now tracks develop at v$develop_version."
             exit 0
           fi
 
@@ -54,8 +75,8 @@ jobs:
             --base main \
             --head develop \
             --draft \
-            --title "chore(release): prepare next release" \
-            --body "This draft accumulates the changes accepted into \`develop\`. Run **Release train** on \`develop\` when the batch is ready, review the generated version and changelog, then mark this PR ready. Merging this PR is the only supported release path."
+            --title "$title" \
+            --body "$body"
 
   prepare-batch:
     name: Prepare the selected release batch
@@ -196,14 +217,19 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  apply-prepared-release:
-    name: Commit the verified release batch
+  open-prepared-release-pr:
+    name: Open the verified release preparation PR
     needs: prepare-batch
     if: needs.prepare-batch.outputs.noop != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      actions: write
       contents: write
+      pull-requests: write
+    outputs:
+      branch: ${{ steps.publish.outputs.branch }}
+      pull-request: ${{ steps.publish.outputs.pull-request }}
     steps:
       - name: Check out the dispatched develop revision
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -233,11 +259,13 @@ jobs:
           cp "$PREPARED_ROOT/public/manifest.json" public/manifest.json
           cp "$PREPARED_ROOT/download/bookmark-x.zip" download/bookmark-x.zip
 
-      - name: Commit the prepared release to develop
+      - name: Commit the prepared release to a dedicated branch
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.prepare-batch.outputs.tag }}
         run: |
+          preparation_branch="automation/prepare-$RELEASE_TAG"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
@@ -252,78 +280,46 @@ jobs:
           }
           git commit -m "chore(release): prepare $RELEASE_TAG"
           gh auth setup-git
-          git push origin HEAD:develop
+          git push --force origin HEAD:"refs/heads/$preparation_branch"
 
-  sync-prepared-pr:
-    name: Update and validate the prepared release PR
-    needs:
-      - prepare-batch
-      - apply-prepared-release
-    if: >-
-      always() &&
-      github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/develop' &&
-      needs.prepare-batch.result == 'success' &&
-      (needs.apply-prepared-release.result == 'success' || needs.apply-prepared-release.result == 'skipped')
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Update the release PR
-        id: pr
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.prepare-batch.outputs.tag }}
-        run: |
-          pr="$(gh pr list \
+          number="$(gh pr list \
             --repo "$GITHUB_REPOSITORY" \
-            --base main \
-            --head develop \
+            --base develop \
+            --head "$preparation_branch" \
             --state open \
-            --json number,isDraft \
-            --jq '.[0] // empty')"
-          if [[ -z "$pr" ]]; then
+            --json number \
+            --jq '.[0].number // empty')"
+          if [[ -z "$number" ]]; then
             gh pr create \
               --repo "$GITHUB_REPOSITORY" \
-              --base main \
-              --head develop \
-              --draft \
+              --base develop \
+              --head "$preparation_branch" \
               --title "chore(release): prepare $RELEASE_TAG" \
-              --body "Prepared release $RELEASE_TAG. Review the generated changelog, the committed ZIP, and the CI checks before marking this PR ready. Merging this \`develop\` PR publishes the release."
+              --body "This automated PR contains only the verified version, changelog, lockfile, manifest, and ZIP for $RELEASE_TAG. Merge it with squash after CI passes; the draft \`develop\` to \`main\` PR remains the only publishing path."
             number="$(gh pr list \
               --repo "$GITHUB_REPOSITORY" \
-              --base main \
-              --head develop \
+              --base develop \
+              --head "$preparation_branch" \
               --state open \
               --json number \
               --jq '.[0].number')"
           else
-            number="$(jq -r '.number' <<< "$pr")"
-            if [[ "$(jq -r '.isDraft' <<< "$pr")" == "false" ]]; then
-              gh pr ready "$number" --repo "$GITHUB_REPOSITORY" --undo
-            fi
             gh pr edit "$number" \
               --repo "$GITHUB_REPOSITORY" \
               --title "chore(release): prepare $RELEASE_TAG" \
-              --body "Prepared release $RELEASE_TAG. Review the generated changelog, the committed ZIP, and the CI checks before marking this PR ready. Merging this \`develop\` PR publishes the release."
+              --body "This automated PR contains only the verified version, changelog, lockfile, manifest, and ZIP for $RELEASE_TAG. Merge it with squash after CI passes; the draft \`develop\` to \`main\` PR remains the only publishing path."
           fi
-          echo "number=$number" >> "$GITHUB_OUTPUT"
+          echo "branch=$preparation_branch" >> "$GITHUB_OUTPUT"
+          echo "pull-request=$number" >> "$GITHUB_OUTPUT"
 
-      - name: Dispatch branch and release validation
+      - name: Dispatch CI for the generated commit
         env:
           GH_TOKEN: ${{ github.token }}
-          PULL_REQUEST_NUMBER: ${{ steps.pr.outputs.number }}
+          PREPARATION_BRANCH: ${{ steps.publish.outputs.branch }}
         run: |
           gh workflow run ci.yml \
             --repo "$GITHUB_REPOSITORY" \
-            --ref develop
-          gh workflow run promote-release.yml \
-            --repo "$GITHUB_REPOSITORY" \
-            --ref develop \
-            -f pull_request_number="$PULL_REQUEST_NUMBER"
+            --ref "$PREPARATION_BRANCH"
 
   wrong-branch:
     name: Require develop for release preparation

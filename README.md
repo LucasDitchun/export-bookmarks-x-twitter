@@ -181,11 +181,14 @@ once. From `1.0.0` onward, normal
 features increment minor, and incompatible changes increment major. Commit
 counts never become version numbers.
 
-The **Release train** workflow prepares the chosen batch on `develop`, updates
-the changelog and ZIP, and keeps one draft `develop` to `main` pull request.
-Only merging that reviewed pull request can create the `vX.Y.Z` tag and GitHub
-Release. Publication is retry-safe and validates the already reviewed archive
-before granting write access to the publishing job.
+The **Release train** workflow builds the chosen batch with read-only
+permissions, then opens a small preparation pull request containing the
+version, changelog, lockfile, manifest, and ZIP. After that PR passes CI and is
+squash-merged into `develop`, the workflow refreshes the single draft
+`develop` to `main` pull request. Only merging that reviewed final pull request
+can create the `vX.Y.Z` tag and GitHub Release. Publication is retry-safe and
+validates the already reviewed archive before granting write access to the
+publishing job.
 
 The stable `download/bookmark-x.zip` file provides a simple link to the latest
 ready-to-install build.
