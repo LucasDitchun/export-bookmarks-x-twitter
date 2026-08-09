@@ -304,6 +304,30 @@ const pageReadyScenario = String.raw`
 })()
 `;
 
+const delayedLoaderScenario = String.raw`
+(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 1300));
+  const main = document.querySelector("main");
+  if (!main) return { error: "timeline_missing" };
+  const loader = document.createElement("div");
+  loader.setAttribute("role", "progressbar");
+  loader.setAttribute("aria-label", "Loading more bookmarks");
+  main.append(loader);
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  loader.remove();
+
+  await new Promise((resolve) => setTimeout(resolve, 1270));
+  main.insertAdjacentHTML(
+    "beforeend",
+    '<article data-testid="tweet"><div data-testid="User-Name"><a href="/katherine"><span>Katherine Johnson</span></a><span>@katherine</span></div><div data-testid="tweetText">Late bookmark after a transient loader</div><a href="/katherine/status/333"><time datetime="2026-07-30T10:00:00.000Z">Jul 30</time></a></article>',
+  );
+  return {
+    loaderRemoved: !document.querySelector('[role="progressbar"]'),
+    articles: document.querySelectorAll('article[data-testid="tweet"]').length,
+  };
+})()
+`;
+
 const runtimeScenario = String.raw`
 (async () => {
   const before = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
@@ -440,7 +464,7 @@ const startContentCaptureScenario = String.raw`
 })()
 `;
 
-function assertScenario(page, ui, start, result, livePage, finalResult) {
+function assertScenario(page, ui, start, delayedLoader, result, livePage, finalResult) {
   const { before, completed, exported, note } = result;
   const {
     bookmark,
@@ -455,6 +479,11 @@ function assertScenario(page, ui, start, result, livePage, finalResult) {
   } = finalResult;
   if (page.url !== "https://x.com/i/bookmarks" || page.articles !== 2) {
     throw new Error(`The synthetic X page was not ready: ${JSON.stringify(page)}`);
+  }
+  if (!delayedLoader.loaderRemoved || delayedLoader.articles !== 3) {
+    throw new Error(
+      `The delayed loader fixture did not finish: ${JSON.stringify(delayedLoader)}`,
+    );
   }
   if (
     !ui.title.includes("Bookmark X") ||
@@ -490,8 +519,8 @@ function assertScenario(page, ui, start, result, livePage, finalResult) {
     start.accepted !== true ||
     !completed.ok ||
     completed.data.scrape?.status !== "completed" ||
-    completed.data.scrape?.fetched !== 2 ||
-    completed.data.stats.total !== 2
+    completed.data.scrape?.fetched !== 3 ||
+    completed.data.stats.total !== 3
   ) {
     throw new Error(
       `The DOM capture did not complete: ${JSON.stringify({ start, completed })}`,
@@ -500,7 +529,7 @@ function assertScenario(page, ui, start, result, livePage, finalResult) {
   if (
     !exported.ok ||
     exported.data.content !==
-      "\uFEFFhttps://x.com/grace/status/222\nhttps://x.com/ada/status/111\n" ||
+      "\uFEFFhttps://x.com/katherine/status/333\nhttps://x.com/grace/status/222\nhttps://x.com/ada/status/111\n" ||
     !exported.data.filename.endsWith("-urls.txt")
   ) {
     throw new Error("The runtime TXT export did not match the scraped bookmarks.");
@@ -544,17 +573,17 @@ function assertScenario(page, ui, start, result, livePage, finalResult) {
   if (
     !backup.ok ||
     parsedBackup?.schemaVersion !== 2 ||
-    parsedBackup?.data?.bookmarks?.length !== 2 ||
+    parsedBackup?.data?.bookmarks?.length !== 3 ||
     parsedBackup?.data?.bookmarks?.[0]?.media === undefined ||
     parsedBackup?.data?.settings?.extension?.schemaVersion !== 1 ||
     parsedBackup?.data?.settings?.extension?.settings?.behavior?.surface !== "modal" ||
     !restored.ok ||
-    restored.data.bookmarks !== 2 ||
+    restored.data.bookmarks !== 3 ||
     restored.data.reloadRequired !== true ||
     !restoredSettings.ok ||
     restoredSettings.data.settings.behavior.surface !== "modal" ||
     !restoredStatus.ok ||
-    restoredStatus.data.stats.total !== 2 ||
+    restoredStatus.data.stats.total !== 3 ||
     restoredStatus.data.scrape !== null ||
     !clearedAgain.ok
   ) {
@@ -752,6 +781,17 @@ async function main() {
           startEvaluation.exceptionDetails.text,
       );
     }
+    const delayedLoaderEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: delayedLoaderScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (delayedLoaderEvaluation.exceptionDetails) {
+      throw new Error(
+        delayedLoaderEvaluation.exceptionDetails.exception?.description ??
+          delayedLoaderEvaluation.exceptionDetails.text,
+      );
+    }
 
     const evaluation = await popupDevTools.send("Runtime.evaluate", {
       expression: runtimeScenario,
@@ -790,12 +830,13 @@ async function main() {
       pageEvaluation.result.value,
       uiEvaluation.result.value,
       startEvaluation.result.value,
+      delayedLoaderEvaluation.result.value,
       evaluation.result.value,
       livePageEvaluation.result.value,
       finalEvaluation.result.value,
     );
     console.log(
-      "Chrome smoke passed: settings, X-page scraping, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, TXT export, JSON backup round-trip, and clear.",
+      "Chrome smoke passed: settings, delayed-loader X-page scraping, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, TXT export, JSON backup round-trip, and clear.",
     );
     if (VISUAL_CHECKPOINT_DIRECTORY) {
       console.log(`Visual checkpoints: ${VISUAL_CHECKPOINT_DIRECTORY}`);

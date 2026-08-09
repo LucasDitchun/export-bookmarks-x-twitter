@@ -262,4 +262,87 @@ describe("ArchiveRepository", () => {
       lastSuccessfulSyncAt: null,
     });
   });
+
+  it("removes absent bookmarks and their memberships when keep archived is off", async () => {
+    const databaseName = `remove-missing-${crypto.randomUUID()}`;
+    const repository = new ArchiveRepository(databaseName);
+    const stillSaved = {
+      ...syncedBookmark,
+      id: "post-2",
+      url: "https://x.com/author/status/post-2",
+    };
+    await repository.mergeBookmarks(
+      [syncedBookmark, stillSaved],
+      "capture-1",
+      "2026-01-01T00:00:00.000Z",
+    );
+    await repository.finalizeCapture("capture-1", "2026-01-01T00:01:00.000Z", true);
+
+    const database = await new BookmarkDatabase(databaseName).open();
+    const seed = database.transaction(["bookmarkFolders", "folders"], "readwrite");
+    seed.objectStore("folders").put({
+      id: "folder-1",
+      name: "Research",
+      parentId: null,
+    });
+    seed.objectStore("bookmarkFolders").put({
+      bookmarkId: syncedBookmark.id,
+      folderId: "folder-1",
+    });
+    await transactionDone(seed);
+    database.close();
+
+    await repository.mergeBookmarks(
+      [stillSaved],
+      "capture-2",
+      "2026-02-01T00:00:00.000Z",
+    );
+    await expect(
+      repository.finalizeCapture("capture-2", "2026-02-01T00:01:00.000Z", false),
+    ).resolves.toEqual({ archived: 0, removed: 1 });
+
+    await expect(repository.getAll()).resolves.toEqual([
+      expect.objectContaining({ id: "post-2", status: "current" }),
+    ]);
+    const checkDatabase = await new BookmarkDatabase(databaseName).open();
+    const check = checkDatabase.transaction("bookmarkFolders", "readonly");
+    await expect(
+      new Promise<unknown[]>((resolve, reject) => {
+        const request = check.objectStore("bookmarkFolders").getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () =>
+          reject(request.error ?? new Error("Membership lookup failed."));
+      }),
+    ).resolves.toEqual([]);
+    await transactionDone(check);
+    checkDatabase.close();
+  });
+
+  it("discards only the transient seen markers for an incomplete run", async () => {
+    const databaseName = `discard-run-${crypto.randomUUID()}`;
+    const repository = new ArchiveRepository(databaseName);
+    await repository.mergeBookmarks(
+      [syncedBookmark],
+      "capture-cancelled",
+      "2026-01-01T00:00:00.000Z",
+    );
+
+    await expect(repository.discardCapture("capture-cancelled")).resolves.toBe(1);
+    await expect(repository.getAll()).resolves.toEqual([
+      expect.objectContaining({ id: syncedBookmark.id, status: "current" }),
+    ]);
+
+    const database = await new BookmarkDatabase(databaseName).open();
+    const transaction = database.transaction("seen", "readonly");
+    await expect(
+      new Promise<unknown[]>((resolve, reject) => {
+        const request = transaction.objectStore("seen").getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () =>
+          reject(request.error ?? new Error("Seen-marker lookup failed."));
+      }),
+    ).resolves.toEqual([]);
+    await transactionDone(transaction);
+    database.close();
+  });
 });

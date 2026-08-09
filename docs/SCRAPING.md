@@ -19,17 +19,41 @@ direct MP4/CDN URLs, `blob:` URLs, or `data:` URLs as permanent video links.
 Bookmark X does not fetch or download media; it records validated URLs already
 rendered by X.
 
-The content script scrolls the page and sends only newly discovered batches to
-the extension service worker. The worker treats content-script messages as
+The content script scrolls the page and sends only newly discovered batches of
+at most 100 posts to the extension service worker. A `Set` keyed by canonical
+status ID makes deduplication linear even for libraries with thousands of
+items; DOM reads are grouped before each scroll write. The worker treats
+content-script messages as
 untrusted input: it validates sender identity, source tab URL, run ID, batch
 size, post IDs, canonical URLs, and field types before writing to IndexedDB.
 IndexedDB is keyed by the canonical post ID, so a previously saved post is
 refreshed instead of inserted again. The completed capture reports that count
 discreetly as duplicates skipped, and TXT exports remain unique by post ID.
 
-A complete run marks posts seen in that run as current and older missing posts
-as archived. A cancelled or failed run never applies that missing-post step.
-This prevents a partial page load from incorrectly archiving data.
+## Full-review completion
+
+Reaching the current document bottom is only a candidate for completion. The
+runner observes the timeline through `MutationObserver` before it scrolls, then
+requires repeated quiet end checks. Any visible progress bar, `aria-busy`
+state, timeline mutation, or loader observed between checks resets the end
+confirmation. A loader may disappear and reappear; its activity remains part
+of that wait result even when it is already gone at the next DOM read. A loader
+that exceeds the bounded retry budget produces an incomplete error, never a
+successful end.
+
+The content script also verifies the X bookmarks route before and after every
+wait. Navigation, cancellation, page unload, a rejected stale run, delivery
+failure, and extraction errors all leave the run incomplete. Only a completion
+message carrying the validated `stable_end` reason can start reconciliation in
+the service worker.
+
+A successful full review marks posts seen in that run as current. With **Keep
+archived bookmarks** enabled, older missing posts become archived. With it
+disabled, missing posts and their folder-membership rows are deleted in the
+same IndexedDB transaction. Cancelled, incomplete, stale, or failed runs keep
+the batches already captured but discard their temporary seen markers and
+never reconcile missing posts. Live bookmark events use their own intent state
+and never participate in a full-review run ID or finalization.
 
 ## Live bookmark confirmation
 

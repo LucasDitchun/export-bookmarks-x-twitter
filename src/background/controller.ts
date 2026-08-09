@@ -57,6 +57,7 @@ interface BackgroundDependencies {
     ArchiveRepository,
     | "mergeBookmarks"
     | "finalizeCapture"
+    | "discardCapture"
     | "applyLiveBookmark"
     | "getAll"
     | "getStats"
@@ -338,7 +339,8 @@ function isContentEvent(value: unknown): value is ContentEvent {
     return (
       (value.status === "completed" || value.status === "cancelled") &&
       typeof value.fetched === "number" &&
-      Number.isSafeInteger(value.fetched)
+      Number.isSafeInteger(value.fetched) &&
+      (value.status === "cancelled" || value.completionReason === "stable_end")
     );
   }
   return value.type === "SCRAPE_FAILED" && typeof value.errorCode === "string";
@@ -668,6 +670,7 @@ export class BackgroundController {
       updatedAt: this.now().toISOString(),
     };
     await this.dependencies.state.setScrapeRun(cancelled);
+    await this.dependencies.archive.discardCapture(run.id);
     return cancelled;
   }
 
@@ -735,6 +738,7 @@ export class BackgroundController {
           updatedAt: timestamp,
         };
         await this.dependencies.state.setScrapeRun(failed);
+        await this.dependencies.archive.discardCapture(run.id);
         return success(failed);
       }
 
@@ -745,10 +749,18 @@ export class BackgroundController {
         updatedAt: timestamp,
       };
       if (event.status === "completed") {
-        await this.dependencies.archive.finalizeCapture(run.id, timestamp);
+        const settings = await this.dependencies.settings.get();
+        await this.dependencies.archive.finalizeCapture(
+          run.id,
+          timestamp,
+          settings.data.keepArchived,
+        );
         this.dependencies.search.invalidate();
       }
       await this.dependencies.state.setScrapeRun(completed);
+      if (event.status === "cancelled") {
+        await this.dependencies.archive.discardCapture(run.id);
+      }
       return success(completed);
     } catch (error) {
       return failure(error);

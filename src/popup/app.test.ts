@@ -1366,6 +1366,9 @@ describe("popup app", () => {
     expect(document.getElementById("capture-progress-copy")?.textContent).toBe(
       "captureProgress:18",
     );
+    expect(document.getElementById("capture-feedback")?.getAttribute("aria-busy")).toBe(
+      "true",
+    );
     const button = document.getElementById("capture-button") as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     button.click();

@@ -169,7 +169,14 @@ export type ContentEvent =
   | {
       type: "SCRAPE_COMPLETE";
       runId: string;
-      status: "completed" | "cancelled";
+      status: "completed";
+      fetched: number;
+      completionReason: "stable_end";
+    }
+  | {
+      type: "SCRAPE_COMPLETE";
+      runId: string;
+      status: "cancelled";
       fetched: number;
     }
   | { type: "SCRAPE_FAILED"; runId: string; errorCode: string }
