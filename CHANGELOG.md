@@ -27,6 +27,8 @@ All notable changes to Bookmark X are documented in this file.
 - format prepared release lockfile (`0beb547`)
 - stabilize Chrome extension navigation (#22) (`0d813ff`)
 - require Chromium for extension smoke (#23) (`c2e50de`)
+- ignore squashed release preparation commits (#25) (`09a9790`)
+- allow same-version release preparation (#27) (`18c8980`)
 
 ### Performance
 
