@@ -29,6 +29,7 @@ All notable changes to Bookmark X are documented in this file.
 - require Chromium for extension smoke (#23) (`c2e50de`)
 - ignore squashed release preparation commits (#25) (`09a9790`)
 - allow same-version release preparation (#27) (`18c8980`)
+- preserve live bookmark metadata state (#28) (`c5d803e`)
 
 ### Performance
 
