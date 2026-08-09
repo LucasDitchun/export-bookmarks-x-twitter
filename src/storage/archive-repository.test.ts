@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { ArchiveRepository } from "./archive-repository";
-import type { BookmarkSnapshot } from "../domain/types";
+import { BookmarkDatabase, transactionDone } from "./bookmark-database";
+import type { BookmarkRecord, BookmarkSnapshot } from "../domain/types";
 
 const syncedBookmark: BookmarkSnapshot = {
   id: "post-1",
@@ -11,8 +12,16 @@ const syncedBookmark: BookmarkSnapshot = {
   postCreatedAt: "2025-01-01T00:00:00.000Z",
 };
 
+async function putRecord(databaseName: string, record: BookmarkRecord): Promise<void> {
+  const database = await new BookmarkDatabase(databaseName).open();
+  const transaction = database.transaction("bookmarks", "readwrite");
+  transaction.objectStore("bookmarks").put(record);
+  await transactionDone(transaction);
+  database.close();
+}
+
 describe("ArchiveRepository", () => {
-  it("merges by post ID while preserving the first archive time", async () => {
+  it("adds scraped bookmarks as current records with empty local metadata", async () => {
     const repository = new ArchiveRepository(`test-${crypto.randomUUID()}`);
 
     await expect(
@@ -22,6 +31,39 @@ describe("ArchiveRepository", () => {
         "2026-01-01T00:00:00.000Z",
       ),
     ).resolves.toEqual({ added: 1, updated: 0 });
+
+    await expect(repository.getAll()).resolves.toEqual([
+      {
+        ...syncedBookmark,
+        note: "",
+        folderId: null,
+        folders: [],
+        tagIds: [],
+        firstSavedAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+        archivedAt: null,
+        metadataUpdatedAt: "2026-01-01T00:00:00.000Z",
+        status: "current",
+      },
+    ]);
+  });
+
+  it("refreshes scrape fields while preserving local metadata and firstSavedAt", async () => {
+    const databaseName = `test-${crypto.randomUUID()}`;
+    const repository = new ArchiveRepository(databaseName);
+    const existing: BookmarkRecord = {
+      ...syncedBookmark,
+      note: "Read this later",
+      folderId: "folder-1",
+      tagIds: ["tag-1"],
+      firstSavedAt: "2026-01-01T00:00:00.000Z",
+      lastSeenAt: "2026-01-01T00:00:00.000Z",
+      archivedAt: "2026-01-15T00:00:00.000Z",
+      metadataUpdatedAt: "2026-01-10T00:00:00.000Z",
+      status: "archived",
+    };
+    await putRecord(databaseName, existing);
+
     await expect(
       repository.mergeBookmarks(
         [{ ...syncedBookmark, text: "Edited text" }],
@@ -31,16 +73,59 @@ describe("ArchiveRepository", () => {
     ).resolves.toEqual({ added: 0, updated: 1 });
 
     await expect(repository.getAll()).resolves.toEqual([
-      expect.objectContaining({
-        id: "post-1",
+      {
+        ...existing,
         text: "Edited text",
-        firstArchivedAt: "2026-01-01T00:00:00.000Z",
+        folders: [],
         lastSeenAt: "2026-02-01T00:00:00.000Z",
-      }),
+        archivedAt: null,
+        status: "current",
+      },
     ]);
   });
 
-  it("archives missing records only after a complete capture is finalized", async () => {
+  it("hydrates every normalized folder membership for export", async () => {
+    const databaseName = `folders-${crypto.randomUUID()}`;
+    const existing: BookmarkRecord = {
+      ...syncedBookmark,
+      note: "",
+      folderId: "folder-1",
+      tagIds: [],
+      firstSavedAt: "2026-01-01T00:00:00.000Z",
+      lastSeenAt: "2026-01-01T00:00:00.000Z",
+      archivedAt: null,
+      metadataUpdatedAt: "2026-01-01T00:00:00.000Z",
+      status: "current",
+    };
+    const database = await new BookmarkDatabase(databaseName).open();
+    const transaction = database.transaction(
+      ["bookmarkFolders", "bookmarks", "folders"],
+      "readwrite",
+    );
+    transaction.objectStore("bookmarks").put(existing);
+    transaction.objectStore("folders").put({ id: "folder-1", name: "Research" });
+    transaction.objectStore("folders").put({ id: "folder-2", name: "Reading list" });
+    transaction
+      .objectStore("bookmarkFolders")
+      .put({ bookmarkId: "post-1", folderId: "folder-1" });
+    transaction
+      .objectStore("bookmarkFolders")
+      .put({ bookmarkId: "post-1", folderId: "folder-2" });
+    await transactionDone(transaction);
+    database.close();
+
+    await expect(new ArchiveRepository(databaseName).getAll()).resolves.toEqual([
+      {
+        ...existing,
+        folders: [
+          { id: "folder-1", name: "Research" },
+          { id: "folder-2", name: "Reading list" },
+        ],
+      },
+    ]);
+  });
+
+  it("archives missing current records once without rewriting archivedAt", async () => {
     const repository = new ArchiveRepository(`test-${crypto.randomUUID()}`);
     await repository.mergeBookmarks(
       [syncedBookmark],
@@ -49,25 +134,25 @@ describe("ArchiveRepository", () => {
     );
     await repository.finalizeCapture("capture-1", "2026-01-01T00:05:00.000Z");
 
-    await repository.mergeBookmarks(
-      [{ ...syncedBookmark, id: "post-2" }],
-      "capture-2",
-      "2026-02-01T00:00:00.000Z",
-    );
     await repository.finalizeCapture("capture-2", "2026-02-01T00:05:00.000Z");
+    await repository.finalizeCapture("capture-3", "2026-03-01T00:05:00.000Z");
 
-    const records = await repository.getAll();
-    expect(records.find((record) => record.id === "post-1")?.isCurrent).toBe(false);
-    expect(records.find((record) => record.id === "post-2")?.isCurrent).toBe(true);
+    await expect(repository.getAll()).resolves.toEqual([
+      expect.objectContaining({
+        id: "post-1",
+        status: "archived",
+        archivedAt: "2026-02-01T00:05:00.000Z",
+      }),
+    ]);
     await expect(repository.getStats()).resolves.toEqual({
-      total: 2,
-      current: 1,
+      total: 1,
+      current: 0,
       archived: 1,
-      lastSuccessfulSyncAt: "2026-02-01T00:05:00.000Z",
+      lastSuccessfulSyncAt: "2026-03-01T00:05:00.000Z",
     });
   });
 
-  it("does not archive missing records after a partial capture and clears on request", async () => {
+  it("does not archive unseen records until a capture is finalized", async () => {
     const repository = new ArchiveRepository(`test-${crypto.randomUUID()}`);
     await repository.mergeBookmarks(
       [syncedBookmark],
@@ -82,9 +167,9 @@ describe("ArchiveRepository", () => {
       "2026-02-01T00:00:00.000Z",
     );
 
-    expect(
-      (await repository.getAll()).find(({ id }) => id === "post-1")?.isCurrent,
-    ).toBe(true);
+    expect((await repository.getAll()).find(({ id }) => id === "post-1")?.status).toBe(
+      "current",
+    );
     await repository.clear();
     await expect(repository.getAll()).resolves.toEqual([]);
     await expect(repository.getStats()).resolves.toEqual({

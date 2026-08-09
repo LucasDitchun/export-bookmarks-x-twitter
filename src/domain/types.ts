@@ -9,16 +9,36 @@ export interface BookmarkFolder {
   name: string;
 }
 
+export interface BookmarkFolderMembership {
+  bookmarkId: string;
+  folderId: string;
+}
+
+export interface BookmarkTag {
+  id: string;
+  name: string;
+}
+
+export type BookmarkStatus = "current" | "archived";
+
 export interface BookmarkRecord {
   id: string;
   text: string;
   url: string;
   author: BookmarkAuthor;
   postCreatedAt: string;
-  folders: BookmarkFolder[];
-  firstArchivedAt: string;
+  note: string;
+  folderId: string | null;
+  tagIds: string[];
+  firstSavedAt: string;
   lastSeenAt: string;
-  isCurrent: boolean;
+  archivedAt: string | null;
+  metadataUpdatedAt: string;
+  status: BookmarkStatus;
+}
+
+export interface HydratedBookmarkRecord extends BookmarkRecord {
+  folders: BookmarkFolder[];
 }
 
 export type BookmarkSnapshot = Pick<

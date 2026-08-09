@@ -1,4 +1,5 @@
 import { ArchiveRepository } from "../storage/archive-repository";
+import { BookmarkRepository } from "../storage/bookmark-repository";
 import { ExtensionStateRepository } from "../storage/extension-state";
 import { BackgroundController } from "./controller";
 
@@ -8,8 +9,10 @@ const state = new ExtensionStateRepository({
   remove: (keys) => chrome.storage.local.remove(keys),
 });
 const archive = new ArchiveRepository();
+const bookmarks = new BookmarkRepository();
 const controller = new BackgroundController({
   archive,
+  bookmarks,
   state,
   extensionId: chrome.runtime.id,
   browser: {

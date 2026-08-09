@@ -1,4 +1,19 @@
 {
+  "libraryTitle": { "message": "Libreria dei segnalibri" },
+  "libraryHelp": {
+    "message": "Seleziona un segnalibro per aggiungere una nota privata."
+  },
+  "libraryEmpty": { "message": "Acquisisci segnalibri per iniziare la tua libreria." },
+  "libraryLoading": { "message": "Caricamento…" },
+  "libraryLoadError": { "message": "Impossibile caricare i segnalibri." },
+  "loadMoreBookmarks": { "message": "Carica altro" },
+  "noteLabel": { "message": "Nota privata" },
+  "noteHelp": { "message": "Testo semplice, salvato localmente mentre scrivi." },
+  "noteLoading": { "message": "Caricamento…" },
+  "noteLoadError": { "message": "Impossibile aprire la nota." },
+  "noteSaving": { "message": "Salvataggio…" },
+  "noteSaved": { "message": "Salvata" },
+  "noteSaveError": { "message": "Non salvata" },
   "extensionName": {
     "message": "Bookmark X"
   },
