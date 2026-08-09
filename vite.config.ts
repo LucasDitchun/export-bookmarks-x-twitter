@@ -34,7 +34,7 @@ export default defineConfig({
       ...configDefaults.exclude,
       ".github/scripts/release-train.test.mjs",
       "scripts/semantic-model-gate.test.mjs",
-      "scripts/semantic-browser-gate.test.mjs",
+      "scripts/semantic-browser-gate.node-test.mjs",
     ],
     setupFiles: ["./src/test/setup.ts"],
     coverage: {

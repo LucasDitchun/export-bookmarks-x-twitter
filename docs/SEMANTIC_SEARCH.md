@@ -8,8 +8,9 @@ bookmark content never crosses a network boundary.
 
 The **Download and enable** button is the only operation that allows a model
 download. It records a device-local consent timestamp and starts a dedicated
-module Web Worker. Normal searches use cached files only and set Transformers.js
-to local-only mode.
+module Web Worker. Normal searches read the pinned files from Browser Cache and
+replace the Transformers.js remote fetch hook with a cache-miss response, so a
+missing asset cannot start a network request.
 
 The extension package contains all executable code:
 
@@ -53,6 +54,17 @@ English, Spanish, French, Italian, Japanese, Brazilian Portuguese, and Simplifie
 Chinese. In every case, the matching passage must rank first by cosine similarity
 with a score margin of at least 0.01 over the runner-up.
 
+The opt-in `pnpm semantic-browser:gate` additionally builds and loads the real
+extension in a temporary headless Chrome profile. It verifies that pre-consent
+startup creates no semantic cache or index and sends no model request, then
+automates explicit consent, downloads the pinned q8 model, indexes a synthetic
+three-bookmark corpus, and runs a query whose lexical result is empty. A fresh
+popup is put offline to prove cache-only model reuse and retrieval before the
+gate removes the model, index, state, and consent. This download is intentionally
+excluded from the default test and `smoke:chrome` commands; use
+`pnpm semantic-browser:gate:dry-run` to check the opt-in guard without Chrome or
+network access.
+
 ## Local indexing and ranking
 
 Each document passage includes post text, author, private note, tag names, and
@@ -70,11 +82,13 @@ no ranking and the lexical result is displayed unchanged.
 
 ## Execution and storage
 
-WebGPU is attempted first. Session creation failures fall back to the packaged
-WASM runtime with one thread, keeping inference off the popup's main thread. The
-packaged runtime adds about 24 MB unpacked (roughly 6 MB compressed) to the
-extension. Vectors use 1,536 bytes per post, plus bookmark snapshots, keys, and
-IndexedDB overhead.
+WebGPU is attempted only after `requestAdapter()` returns an adapter. A missing
+or rejected adapter goes directly to the packaged WASM runtime. If WebGPU
+pipeline creation fails after that preflight, the client retries WASM in a fresh
+Worker so the ONNX Runtime singleton is clean. Inference stays off the popup's
+main thread and WASM uses one thread. The packaged runtime adds about 24 MB
+unpacked (roughly 6 MB compressed) to the extension. Vectors use 1,536 bytes per
+post, plus bookmark snapshots, keys, and IndexedDB overhead.
 
 The `unlimitedStorage` permission covers IndexedDB and Cache Storage quota, but
 the user's free disk space remains the real limit. The options page displays

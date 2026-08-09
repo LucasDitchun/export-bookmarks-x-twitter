@@ -36,6 +36,15 @@ export type PipelineLoader = (
   options: PipelineLoadOptions,
 ) => Promise<FeatureExtractionPipeline>;
 
+export type WebGpuProbe = () => Promise<boolean>;
+
+export class WebGpuPipelineLoadError extends Error {
+  constructor(cause: unknown) {
+    super("The WebGPU semantic pipeline failed to load.", { cause });
+    this.name = "WebGpuPipelineLoadError";
+  }
+}
+
 interface TransformersProgress {
   status?: string;
   file?: string;
@@ -44,13 +53,95 @@ interface TransformersProgress {
   progress?: number;
 }
 
+interface PretrainedComponentLoader {
+  from_pretrained(model: string, options: Record<string, unknown>): Promise<unknown>;
+}
+
+interface JsonCache {
+  match(request: string): Promise<Response | undefined>;
+}
+
+function pinnedAssetUrl(file: string): string {
+  return `https://huggingface.co/${MODEL_ID}/resolve/${MODEL_REVISION}/${file}`;
+}
+
+export async function loadPinnedTokenizerFromCache(
+  cache: JsonCache,
+  create: (tokenizer: unknown, config: unknown) => unknown,
+): Promise<unknown> {
+  const [tokenizerResponse, configResponse] = await Promise.all([
+    cache.match(pinnedAssetUrl("tokenizer.json")),
+    cache.match(pinnedAssetUrl("tokenizer_config.json")),
+  ]);
+  if (tokenizerResponse === undefined || configResponse === undefined) {
+    throw new Error("The pinned semantic tokenizer is missing from Browser Cache.");
+  }
+  return create(await tokenizerResponse.json(), await configResponse.json());
+}
+
+export async function loadPinnedComponents(
+  loaders: {
+    AutoTokenizer: PretrainedComponentLoader;
+    AutoModel: PretrainedComponentLoader;
+    XLMRobertaTokenizer: new (tokenizer: unknown, config: unknown) => unknown;
+  },
+  options: PipelineLoadOptions,
+  progressCallback: (event: TransformersProgress) => void,
+): Promise<{ tokenizer: unknown; model: unknown }> {
+  const pretrainedOptions = {
+    revision: options.revision,
+    dtype: options.dtype,
+    device: options.device,
+    local_files_only: false,
+    progress_callback: progressCallback,
+  };
+  const tokenizerLoad = options.allowDownload
+    ? loaders.AutoTokenizer.from_pretrained(options.model, pretrainedOptions)
+    : caches
+        .open("bookmark-x-transformers-v1")
+        .then((cache) =>
+          loadPinnedTokenizerFromCache(
+            cache,
+            (tokenizer, config) => new loaders.XLMRobertaTokenizer(tokenizer, config),
+          ),
+        );
+  const [tokenizer, model] = await Promise.all([
+    tokenizerLoad,
+    loaders.AutoModel.from_pretrained(options.model, pretrainedOptions),
+  ]);
+  return { tokenizer, model };
+}
+
+export function modelAccessPolicy(allowDownload: boolean): {
+  allowRemoteModels: true;
+  localFilesOnly: false;
+  networkAllowed: boolean;
+} {
+  // Transformers.js v4 checks Browser Cache on the remote-model path.
+  // `local_files_only` refers to filesystem-local models and cannot be combined
+  // with the browser default of `allowLocalModels = false`.
+  return {
+    allowRemoteModels: true,
+    localFilesOnly: false,
+    networkAllowed: allowDownload,
+  };
+}
+
 const loadTransformersPipeline: PipelineLoader = async (options) => {
   const transformers = await import("@huggingface/transformers");
   const onnx = transformers.env.backends.onnx;
   const wasm = onnx.wasm;
   if (wasm === undefined) throw new Error("The packaged WASM backend is unavailable.");
-  transformers.env.allowRemoteModels = options.allowDownload;
+  const access = modelAccessPolicy(options.allowDownload);
+  // Browser Cache Storage is populated and read through the remote-model path.
+  // For cache-only loads, a synthetic miss prevents an actual network request
+  // while preserving Transformers.js's cache lookup before fetch.
+  transformers.env.allowRemoteModels = access.allowRemoteModels;
   transformers.env.allowLocalModels = false;
+  transformers.env.fetch = access.networkAllowed
+    ? globalThis.fetch.bind(globalThis)
+    : () =>
+        Promise.resolve(new Response(null, { status: 404, statusText: "Cache miss" }));
   transformers.env.useBrowserCache = true;
   // MV3 does not allow the blob: module import used by the optional WASM cache
   // preloader. ORT can import our packaged extension URL directly instead.
@@ -77,13 +168,34 @@ const loadTransformersPipeline: PipelineLoader = async (options) => {
     });
   };
 
-  return (await transformers.pipeline("feature-extraction", options.model, {
-    revision: options.revision,
-    dtype: options.dtype,
-    device: options.device,
-    local_files_only: !options.allowDownload,
+  const components = await loadPinnedComponents(
+    transformers,
+    options,
     progress_callback,
-  })) as unknown as FeatureExtractionPipeline;
+  );
+  // Avoid pipeline()'s online metadata autodetection. In Transformers.js v4,
+  // that probe is not persisted in Browser Cache and can omit the tokenizer
+  // when a fresh worker loads an otherwise complete model cache offline.
+  return new transformers.FeatureExtractionPipeline({
+    task: "feature-extraction",
+    model: components.model,
+    tokenizer: components.tokenizer,
+  } as never) as unknown as FeatureExtractionPipeline;
+};
+
+const probeWebGpu: WebGpuProbe = async () => {
+  if (typeof navigator === "undefined") return false;
+  const gpu = (
+    navigator as Navigator & {
+      gpu?: { requestAdapter(): Promise<object | null> };
+    }
+  ).gpu;
+  if (gpu === undefined) return false;
+  try {
+    return (await gpu.requestAdapter()) !== null;
+  } catch {
+    return false;
+  }
 };
 
 export class TransformersEmbeddingModel implements EmbeddingModel {
@@ -91,13 +203,13 @@ export class TransformersEmbeddingModel implements EmbeddingModel {
 
   constructor(
     private readonly loader: PipelineLoader = loadTransformersPipeline,
-    private readonly webGpuAvailable = typeof navigator !== "undefined" &&
-      "gpu" in navigator,
+    private readonly webGpuAvailable: WebGpuProbe = probeWebGpu,
   ) {}
 
   async load(
     allowDownload: boolean,
     onProgress?: (progress: SemanticProgress) => void,
+    forceWasm = false,
   ): Promise<SemanticBackend> {
     if (this.active !== null) throw new Error("The semantic model is already loaded.");
     const common = {
@@ -107,13 +219,14 @@ export class TransformersEmbeddingModel implements EmbeddingModel {
       allowDownload,
       ...(onProgress === undefined ? {} : { onProgress }),
     } as const;
-    if (this.webGpuAvailable) {
+    if (!forceWasm && (await this.webGpuAvailable().catch(() => false))) {
       try {
         this.active = await this.loader({ ...common, device: "webgpu" });
         return "webgpu";
-      } catch {
-        // WebGPU availability does not guarantee that this model/device can create a
-        // session. The packaged WASM backend is the deterministic fallback.
+      } catch (error) {
+        // ONNX Runtime is a singleton within a worker. A failed WebGPU session can
+        // leave it unusable, so the client retries WASM in a fresh worker instead.
+        throw new WebGpuPipelineLoadError(error);
       }
     }
     this.active = await this.loader({ ...common, device: "wasm" });

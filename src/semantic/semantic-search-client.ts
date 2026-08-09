@@ -36,6 +36,13 @@ interface PendingRequest {
   reject(reason: Error): void;
 }
 
+class SemanticWorkerResponseError extends Error {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = "SemanticWorkerResponseError";
+  }
+}
+
 export class SemanticOperationCancelledError extends Error {
   constructor() {
     super("Semantic search operation cancelled.");
@@ -79,9 +86,7 @@ export class SemanticSearchClient {
     await this.state.beginConsentInstall();
     try {
       this.assertCurrent(generation);
-      const { backend } = await this.request<{ backend: SemanticBackend }>("LOAD", {
-        allowDownload: true,
-      });
+      const { backend } = await this.loadWithFallback(true);
       this.assertCurrent(generation);
       await this.state.markIndexing(backend);
       const documents = await this.loadCorpus();
@@ -103,9 +108,7 @@ export class SemanticSearchClient {
     }
     try {
       this.assertCurrent(generation);
-      const { backend } = await this.request<{ backend: SemanticBackend }>("LOAD", {
-        allowDownload: false,
-      });
+      const { backend } = await this.loadWithFallback(false);
       this.assertCurrent(generation);
       await this.state.markIndexing(backend);
       const documents = await this.loadCorpus();
@@ -133,7 +136,7 @@ export class SemanticSearchClient {
       return null;
     }
     try {
-      await this.request("LOAD", { allowDownload: false });
+      await this.loadWithFallback(false);
       const documents = await this.loadCorpus();
       await this.request("SYNC", { documents });
       return await this.request<BookmarkRecord[]>("SEARCH", { query, view, limit });
@@ -199,6 +202,28 @@ export class SemanticSearchClient {
     });
   }
 
+  private async loadWithFallback(
+    allowDownload: boolean,
+  ): Promise<{ backend: SemanticBackend }> {
+    try {
+      return await this.request<{ backend: SemanticBackend }>("LOAD", {
+        allowDownload,
+      });
+    } catch (error) {
+      if (
+        !(error instanceof SemanticWorkerResponseError) ||
+        error.code !== "semantic_webgpu_failed"
+      ) {
+        throw error;
+      }
+      this.destroyWorker();
+      return this.request<{ backend: SemanticBackend }>("LOAD", {
+        allowDownload,
+        forceWasm: true,
+      });
+    }
+  }
+
   private getWorker(): SemanticWorkerLike {
     if (this.worker === null) {
       this.worker = this.createWorker();
@@ -222,7 +247,7 @@ export class SemanticSearchClient {
     if (pending === undefined) return;
     this.pending.delete(response.requestId);
     if (response.ok) pending.resolve(response.data);
-    else pending.reject(new Error(response.error.code));
+    else pending.reject(new SemanticWorkerResponseError(response.error.code));
   };
 
   private readonly handleWorkerFailure = (): void => {
