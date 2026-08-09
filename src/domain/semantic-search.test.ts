@@ -51,6 +51,16 @@ describe("semantic search domain", () => {
     await expect(
       semanticDocumentFingerprint({ ...document, tagNames: ["Different"] }),
     ).resolves.not.toBe(first);
+    await expect(
+      semanticDocumentFingerprint({
+        ...document,
+        bookmark: {
+          ...document.bookmark,
+          status: "archived",
+          archivedAt: "2026-08-09T12:00:00.000Z",
+        },
+      }),
+    ).resolves.not.toBe(first);
   });
 
   it("combines lexical and semantic rankings with deterministic RRF ties", () => {

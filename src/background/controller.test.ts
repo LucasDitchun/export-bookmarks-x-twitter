@@ -247,6 +247,7 @@ describe("BackgroundController", () => {
     });
     expect(dependencies.browser.openSidePanel).toHaveBeenCalledWith(7);
     expect(dependencies.archive.applyLiveBookmark).not.toHaveBeenCalled();
+    expect(dependencies.search.invalidate).not.toHaveBeenCalled();
 
     await expect(
       controller.handle(
@@ -268,6 +269,34 @@ describe("BackgroundController", () => {
       7,
       expect.objectContaining({ intentId: "intent-1", state: "saved" }),
     );
+    expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
+  });
+
+  it("invalidates lexical search after a confirmed live removal", async () => {
+    const dependencies = createDependencies("https://x.com/home");
+    const controller = new BackgroundController(dependencies);
+    const sender = {
+      id: EXTENSION_ID,
+      tab: { id: 7, url: "https://x.com/home" },
+    };
+    const event = {
+      intentId: "intent-remove",
+      action: "remove",
+      bookmark,
+    } as const;
+
+    await controller.handle({ type: "LIVE_BOOKMARK_PENDING", ...event }, sender);
+    expect(dependencies.search.invalidate).not.toHaveBeenCalled();
+
+    await expect(
+      controller.handle({ type: "LIVE_BOOKMARK_CONFIRMED", ...event }, sender),
+    ).resolves.toMatchObject({ ok: true });
+    expect(dependencies.archive.applyLiveBookmark).toHaveBeenCalledWith(
+      bookmark,
+      "remove",
+      expect.any(String),
+    );
+    expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
   });
 
   it("persists two interleaved accepted posts in one tab and rejects replay", async () => {

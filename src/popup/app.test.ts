@@ -160,6 +160,95 @@ describe("popup app", () => {
     app.destroy();
   });
 
+  it("keeps lexical pagination available after fusing semantic results", async () => {
+    const callbacks: Array<() => void> = [];
+    const schedule = ((callback: () => void, delay: number) => {
+      if (delay === 150) callbacks.push(callback);
+      return callbacks.length;
+    }) as typeof window.setTimeout;
+    const firstLexical = {
+      ...libraryBookmark,
+      id: "701",
+      text: "First lexical page",
+    };
+    const secondLexical = {
+      ...libraryBookmark,
+      id: "703",
+      text: "Second lexical page",
+    };
+    const semantic = {
+      ...libraryBookmark,
+      id: "702",
+      text: "Semantic result",
+    };
+    const searchRequests: Array<{ cursor?: string }> = [];
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [libraryBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "SEARCH_BOOKMARKS") {
+        searchRequests.push({
+          ...(request.payload.cursor ? { cursor: request.payload.cursor } : {}),
+        });
+        return Promise.resolve({
+          ok: true as const,
+          data: request.payload.cursor
+            ? { items: [secondLexical], total: 2, nextCursor: null }
+            : { items: [firstLexical], total: 2, nextCursor: "lexical-page-2" },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: firstLexical },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const semanticSearch = vi.fn().mockResolvedValue([semantic]);
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      schedule,
+      cancelSchedule: vi.fn(),
+      semanticSearch,
+    });
+    await app.ready;
+
+    const input = document.getElementById("library-search") as HTMLInputElement;
+    input.value = "search all pages";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    callbacks.shift()?.();
+    await vi.waitFor(() =>
+      expect(document.getElementById("bookmark-list")?.textContent).toContain(
+        "Semantic result",
+      ),
+    );
+    const loadMore = document.getElementById(
+      "load-more-bookmarks",
+    ) as HTMLButtonElement;
+    expect(loadMore.hidden).toBe(false);
+
+    loadMore.click();
+    await vi.waitFor(() =>
+      expect(document.getElementById("bookmark-list")?.textContent).toContain(
+        "Second lexical page",
+      ),
+    );
+    expect(searchRequests).toEqual([{}, { cursor: "lexical-page-2" }]);
+    expect(semanticSearch).toHaveBeenCalledOnce();
+    expect(loadMore.hidden).toBe(true);
+    app.destroy();
+  });
+
   it("filters the active view while typing and clears back to its paginated list", async () => {
     const scheduled: Array<{ callback: () => void; delay: number }> = [];
     const schedule = ((callback: () => void, delay: number) => {
