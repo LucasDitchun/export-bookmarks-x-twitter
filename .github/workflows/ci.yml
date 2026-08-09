@@ -171,10 +171,9 @@ jobs:
         if: env.CI_MODE == 'full' && github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          changed_paths="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          changed_paths="$(git diff --name-only "$BASE_SHA" HEAD)"
           printf '%s\n' "$changed_paths"
           if grep -Eq '^(\.github/workflows/(ci|release-train)\.yml|scripts/chrome-smoke(-readiness)?(\.test)?\.mjs)$' \
             <<<"$changed_paths"; then
