@@ -10,6 +10,7 @@ import { createFolderUi } from "./folder-ui";
 import type {
   BookmarkDetailResult,
   BookmarkListPage,
+  BookmarkView,
   ExportResult,
   NotedBookmark,
   PopupStatus,
@@ -51,10 +52,14 @@ interface RequiredElements {
   exportUrlsButton: HTMLButtonElement;
   lastSync: HTMLElement;
   libraryEmpty: HTMLElement;
+  libraryPanel: HTMLElement;
   libraryStatus: HTMLElement;
   loadMoreBookmarks: HTMLButtonElement;
   loadingView: HTMLElement;
   bookmarkList: HTMLUListElement;
+  viewArchivedButton: HTMLButtonElement;
+  viewCurrentButton: HTMLButtonElement;
+  viewInboxButton: HTMLButtonElement;
   noteEditor: HTMLElement;
   noteSaveStatus: HTMLElement;
   noteTextarea: HTMLTextAreaElement;
@@ -111,10 +116,14 @@ function getElements(document: Document): RequiredElements {
     exportUrlsButton: requireElement(document, "export-urls-button"),
     lastSync: requireElement(document, "last-sync"),
     libraryEmpty: requireElement(document, "library-empty"),
+    libraryPanel: requireElement(document, "library-view-panel"),
     libraryStatus: requireElement(document, "library-status"),
     loadMoreBookmarks: requireElement(document, "load-more-bookmarks"),
     loadingView: requireElement(document, "loading-view"),
     bookmarkList: requireElement(document, "bookmark-list"),
+    viewArchivedButton: requireElement(document, "view-archived-button"),
+    viewCurrentButton: requireElement(document, "view-current-button"),
+    viewInboxButton: requireElement(document, "view-inbox-button"),
     noteEditor: requireElement(document, "note-editor"),
     noteSaveStatus: requireElement(document, "note-save-status"),
     noteTextarea: requireElement(document, "note-textarea"),
@@ -163,6 +172,7 @@ export function createPopupApp(options: PopupAppOptions): {
   let refreshHandle: number | null = null;
   let destroyed = false;
   let bookmarks: NotedBookmark[] = [];
+  let libraryView: BookmarkView = "inbox";
   let nextBookmarkCursor: string | null = null;
   let selectedBookmarkId: string | null = null;
   let selectedBookmark: NotedBookmark | null = null;
@@ -330,6 +340,12 @@ export function createPopupApp(options: PopupAppOptions): {
       item.append(button);
       elements.bookmarkList.append(item);
     }
+    const emptyMessageKeys: Record<BookmarkView, string> = {
+      inbox: "libraryEmptyInbox",
+      current: "libraryEmptyCurrent",
+      archived: "libraryEmptyArchived",
+    };
+    elements.libraryEmpty.textContent = translate(emptyMessageKeys[libraryView]);
     elements.libraryEmpty.hidden = bookmarks.length > 0;
     elements.loadMoreBookmarks.hidden = nextBookmarkCursor === null;
     elements.loadMoreBookmarks.disabled = libraryBusy;
@@ -432,7 +448,8 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.noteSaveStatus.dataset.state = messageKey ?? "idle";
   };
 
-  const resetBookmarkSelection = (): void => {
+  const resetBookmarkSelection = (discardDraft = false): void => {
+    if (!discardDraft) queueDebouncedNote();
     selectionVersion += 1;
     selectedBookmarkId = null;
     selectedBookmark = null;
@@ -440,7 +457,7 @@ export function createPopupApp(options: PopupAppOptions): {
     if (noteSaveHandle !== null) cancelSchedule(noteSaveHandle);
     noteSaveHandle = null;
     debouncedNoteSave = null;
-    pendingNoteSave = null;
+    if (discardDraft) pendingNoteSave = null;
     elements.noteEditor.hidden = true;
     elements.selectedBookmarkTitle.textContent = "";
     elements.selectedBookmarkAuthor.textContent = "";
@@ -452,14 +469,45 @@ export function createPopupApp(options: PopupAppOptions): {
     renderSelectedTags();
   };
 
-  const resetLibrary = (): void => {
+  const resetLibrary = (discardDraft = false): void => {
     libraryGeneration += 1;
     libraryBusy = false;
     libraryRefreshPending = false;
     bookmarks = [];
     nextBookmarkCursor = null;
-    resetBookmarkSelection();
+    resetBookmarkSelection(discardDraft);
     renderBookmarkList();
+  };
+
+  const viewButtons: Record<BookmarkView, HTMLButtonElement> = {
+    inbox: elements.viewInboxButton,
+    current: elements.viewCurrentButton,
+    archived: elements.viewArchivedButton,
+  };
+  const viewOrder: BookmarkView[] = ["inbox", "current", "archived"];
+
+  const renderLibraryView = (): void => {
+    for (const view of viewOrder) {
+      const selected = view === libraryView;
+      const button = viewButtons[view];
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    }
+    elements.libraryPanel.setAttribute("aria-labelledby", viewButtons[libraryView].id);
+    renderBookmarkList();
+  };
+
+  const selectLibraryView = (view: BookmarkView, focus = false): void => {
+    if (view === libraryView) {
+      if (focus) viewButtons[view].focus();
+      return;
+    }
+    resetLibrary();
+    libraryView = view;
+    elements.libraryStatus.textContent = translate("libraryLoading");
+    renderLibraryView();
+    if (focus) viewButtons[view].focus();
+    void loadLibrary(undefined, false);
   };
 
   const queueDebouncedNote = (): void => {
@@ -578,16 +626,17 @@ export function createPopupApp(options: PopupAppOptions): {
     renderBookmarkList();
   }
 
-  async function loadLibrary(cursor?: string): Promise<void> {
+  async function loadLibrary(cursor?: string, selectFirst = true): Promise<void> {
     if (destroyed || libraryBusy) return;
     const generation = libraryGeneration;
+    const requestedView = libraryView;
     libraryBusy = true;
     elements.libraryStatus.textContent = translate("libraryLoading");
     renderBookmarkList();
     try {
       const response = await sendMessage<BookmarkListPage>({
         type: "LIST_BOOKMARKS",
-        payload: { view: "current", ...(cursor ? { cursor } : {}) },
+        payload: { view: requestedView, ...(cursor ? { cursor } : {}) },
       });
       if (
         generation !== libraryGeneration ||
@@ -609,7 +658,7 @@ export function createPopupApp(options: PopupAppOptions): {
       }
       elements.libraryStatus.textContent = "";
       renderBookmarkList();
-      if (!selectedBookmarkId && bookmarks[0]) {
+      if (selectFirst && !selectedBookmarkId && bookmarks[0]) {
         await selectBookmark(bookmarks[0].id);
       }
     } catch {
@@ -622,7 +671,7 @@ export function createPopupApp(options: PopupAppOptions): {
         renderBookmarkList();
         if (libraryRefreshPending) {
           libraryRefreshPending = false;
-          void loadLibrary();
+          void loadLibrary(undefined, false);
         }
       }
     }
@@ -633,7 +682,7 @@ export function createPopupApp(options: PopupAppOptions): {
       libraryRefreshPending = true;
       return;
     }
-    await loadLibrary();
+    await loadLibrary(undefined, false);
   }
 
   const render = (): void => {
@@ -756,8 +805,8 @@ export function createPopupApp(options: PopupAppOptions): {
   });
   elements.confirmClearButton.addEventListener("click", () => {
     void perform({ type: "CLEAR_ARCHIVE" }, async () => {
-      resetLibrary();
-      await loadLibrary();
+      resetLibrary(true);
+      await loadLibrary(undefined, false);
     });
   });
   const exportArchive = (format: ExportFormat): void => {
@@ -770,6 +819,23 @@ export function createPopupApp(options: PopupAppOptions): {
   elements.loadMoreBookmarks.addEventListener("click", () => {
     if (nextBookmarkCursor) void loadLibrary(nextBookmarkCursor);
   });
+  for (const view of viewOrder) {
+    const button = viewButtons[view];
+    button.addEventListener("click", () => selectLibraryView(view));
+    button.addEventListener("keydown", (event) => {
+      let nextIndex: number | null = null;
+      const currentIndex = viewOrder.indexOf(view);
+      if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % viewOrder.length;
+      if (event.key === "ArrowLeft") {
+        nextIndex = (currentIndex - 1 + viewOrder.length) % viewOrder.length;
+      }
+      if (event.key === "Home") nextIndex = 0;
+      if (event.key === "End") nextIndex = viewOrder.length - 1;
+      if (nextIndex === null) return;
+      event.preventDefault();
+      selectLibraryView(viewOrder[nextIndex]!, true);
+    });
+  }
   elements.noteTextarea.addEventListener("input", stageNoteSave);
   elements.noteTextarea.addEventListener("blur", queueDebouncedNote);
   elements.tagInput.addEventListener("keydown", (event) => {
@@ -787,6 +853,7 @@ export function createPopupApp(options: PopupAppOptions): {
     },
   });
 
+  renderLibraryView();
   render();
   const ready = Promise.all([
     loadStatus(),

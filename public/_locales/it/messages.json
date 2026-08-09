@@ -3,6 +3,13 @@
   "libraryHelp": {
     "message": "Seleziona un segnalibro per aggiungere una nota privata."
   },
+  "libraryViewsLabel": { "message": "Viste della libreria dei segnalibri" },
+  "libraryViewInbox": { "message": "Senza categoria" },
+  "libraryViewCurrent": { "message": "Ora su X" },
+  "libraryViewArchived": { "message": "Archiviati" },
+  "libraryEmptyInbox": { "message": "Nessun segnalibro senza categoria." },
+  "libraryEmptyCurrent": { "message": "Nessun segnalibro è attualmente salvato su X." },
+  "libraryEmptyArchived": { "message": "Nessun segnalibro archiviato." },
   "libraryEmpty": { "message": "Acquisisci segnalibri per iniziare la tua libreria." },
   "libraryLoading": { "message": "Caricamento…" },
   "libraryLoadError": { "message": "Impossibile caricare i segnalibri." },

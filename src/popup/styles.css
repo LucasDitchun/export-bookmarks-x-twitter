@@ -380,6 +380,36 @@ h3 {
   font-size: 14px;
 }
 
+.library-view-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.library-view-button {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 2px solid #b8b7aa;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.library-view-button[aria-selected="true"] {
+  border-width: 3px;
+  border-color: var(--line);
+  background: #f1f7d5;
+  color: var(--ink);
+  box-shadow: 2px 2px 0 var(--line);
+}
+
 .quiet-status {
   flex: 0 0 auto;
   color: var(--muted);

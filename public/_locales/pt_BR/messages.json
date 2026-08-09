@@ -3,6 +3,13 @@
   "libraryHelp": {
     "message": "Selecione um favorito para adicionar uma nota privada."
   },
+  "libraryViewsLabel": { "message": "Visualizações da biblioteca de favoritos" },
+  "libraryViewInbox": { "message": "Sem categoria" },
+  "libraryViewCurrent": { "message": "No X agora" },
+  "libraryViewArchived": { "message": "Arquivados" },
+  "libraryEmptyInbox": { "message": "Nenhum favorito sem categoria." },
+  "libraryEmptyCurrent": { "message": "Nenhum favorito está salvo no X agora." },
+  "libraryEmptyArchived": { "message": "Nenhum favorito arquivado." },
   "libraryEmpty": { "message": "Capture favoritos para começar sua biblioteca." },
   "libraryLoading": { "message": "Carregando…" },
   "libraryLoadError": { "message": "Não foi possível carregar os favoritos." },

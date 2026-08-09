@@ -1,6 +1,15 @@
 {
   "libraryTitle": { "message": "ブックマークライブラリ" },
   "libraryHelp": { "message": "ブックマークを選択して非公開メモを追加します。" },
+  "libraryViewsLabel": { "message": "ブックマークライブラリの表示" },
+  "libraryViewInbox": { "message": "未分類" },
+  "libraryViewCurrent": { "message": "Xで保存中" },
+  "libraryViewArchived": { "message": "アーカイブ" },
+  "libraryEmptyInbox": { "message": "未分類のブックマークはありません。" },
+  "libraryEmptyCurrent": {
+    "message": "現在Xに保存されているブックマークはありません。"
+  },
+  "libraryEmptyArchived": { "message": "アーカイブされたブックマークはありません。" },
   "libraryEmpty": { "message": "ブックマークを取得するとライブラリを利用できます。" },
   "libraryLoading": { "message": "読み込み中…" },
   "libraryLoadError": { "message": "ブックマークを読み込めませんでした。" },

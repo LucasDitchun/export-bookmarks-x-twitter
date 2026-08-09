@@ -1,6 +1,15 @@
 {
   "libraryTitle": { "message": "Bibliothèque de favoris" },
   "libraryHelp": { "message": "Sélectionnez un favori pour ajouter une note privée." },
+  "libraryViewsLabel": { "message": "Vues de la bibliothèque de favoris" },
+  "libraryViewInbox": { "message": "Non classés" },
+  "libraryViewCurrent": { "message": "Sur X actuellement" },
+  "libraryViewArchived": { "message": "Archivés" },
+  "libraryEmptyInbox": { "message": "Aucun favori non classé." },
+  "libraryEmptyCurrent": {
+    "message": "Aucun favori n’est actuellement enregistré sur X."
+  },
+  "libraryEmptyArchived": { "message": "Aucun favori archivé." },
   "libraryEmpty": {
     "message": "Capturez des favoris pour commencer votre bibliothèque."
   },

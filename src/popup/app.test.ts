@@ -77,10 +77,10 @@ beforeEach(() => {
 });
 
 describe("popup app", () => {
-  it("lists current bookmarks and opens the selected note in a safe editor", async () => {
-    const requests: string[] = [];
+  it("opens the uncategorized view by default and selects its first bookmark", async () => {
+    const requests: Array<{ type: string; payload?: unknown }> = [];
     const sendMessage = ((request) => {
-      requests.push(request.type);
+      requests.push(request);
       if (request.type === "GET_STATUS") {
         return Promise.resolve({ ok: true as const, data: readyStatus });
       }
@@ -101,8 +101,23 @@ describe("popup app", () => {
     const app = createPopupApp({ document, locale: "en", sendMessage, translate });
     await app.ready;
 
-    expect(requests).toContain("LIST_BOOKMARKS");
-    expect(requests).toContain("GET_BOOKMARK");
+    expect(requests).toContainEqual({
+      type: "LIST_BOOKMARKS",
+      payload: { view: "inbox" },
+    });
+    expect(requests.some(({ type }) => type === "GET_BOOKMARK")).toBe(true);
+    expect(
+      document.getElementById("view-inbox-button")?.getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(document.getElementById("view-inbox-button")?.getAttribute("tabindex")).toBe(
+      "0",
+    );
+    expect(
+      document.getElementById("view-current-button")?.getAttribute("tabindex"),
+    ).toBe("-1");
+    expect(
+      document.getElementById("library-view-panel")?.getAttribute("aria-labelledby"),
+    ).toBe("view-inbox-button");
     expect(document.getElementById("bookmark-list")?.textContent).toContain(
       "A useful bookmark",
     );
@@ -112,6 +127,193 @@ describe("popup app", () => {
     expect(document.getElementById("selected-bookmark-title")?.textContent).toBe(
       "A useful bookmark",
     );
+    app.destroy();
+  });
+
+  it("switches views with roving keyboard focus and localizes each empty state", async () => {
+    const listViews: string[] = [];
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        listViews.push(request.payload?.view ?? "current");
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [], nextCursor: null },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await app.ready;
+
+    const inbox = document.getElementById("view-inbox-button") as HTMLButtonElement;
+    const current = document.getElementById("view-current-button") as HTMLButtonElement;
+    const archived = document.getElementById(
+      "view-archived-button",
+    ) as HTMLButtonElement;
+    expect(document.getElementById("library-empty")?.textContent).toBe(
+      "libraryEmptyInbox",
+    );
+
+    inbox.focus();
+    inbox.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+    await vi.waitFor(() => expect(listViews).toEqual(["inbox", "current"]));
+    expect(document.activeElement).toBe(current);
+    expect(current.getAttribute("aria-selected")).toBe("true");
+    expect(current.tabIndex).toBe(0);
+    expect(inbox.tabIndex).toBe(-1);
+    expect(document.getElementById("library-empty")?.textContent).toBe(
+      "libraryEmptyCurrent",
+    );
+
+    current.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+    await vi.waitFor(() => expect(listViews).toEqual(["inbox", "current", "archived"]));
+    expect(document.activeElement).toBe(archived);
+    expect(
+      document.getElementById("library-view-panel")?.getAttribute("aria-labelledby"),
+    ).toBe("view-archived-button");
+    expect(document.getElementById("library-empty")?.textContent).toBe(
+      "libraryEmptyArchived",
+    );
+    app.destroy();
+  });
+
+  it("invalidates a stale list response when the selected view changes", async () => {
+    const staleInbox = deferred<{
+      ok: true;
+      data: { items: NotedBookmark[]; nextCursor: null };
+    }>();
+    const listViews: string[] = [];
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        const view = request.payload?.view ?? "current";
+        listViews.push(view);
+        if (view === "inbox") return staleInbox.promise;
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [], nextCursor: null },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: libraryBookmark },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await vi.waitFor(() => expect(listViews).toEqual(["inbox"]));
+
+    document.getElementById("view-current-button")?.click();
+    await vi.waitFor(() => expect(listViews).toEqual(["inbox", "current"]));
+    staleInbox.resolve({
+      ok: true,
+      data: { items: [libraryBookmark], nextCursor: null },
+    });
+    await app.ready;
+
+    expect(document.getElementById("bookmark-list")?.children).toHaveLength(0);
+    expect(document.getElementById("note-editor")?.hidden).toBe(true);
+    expect(
+      document.getElementById("view-current-button")?.getAttribute("aria-selected"),
+    ).toBe("true");
+    app.destroy();
+  });
+
+  it("flushes a pending note and disconnects its editor before switching views", async () => {
+    const savedNotes: Array<{ id: string; note: string }> = [];
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            items: request.payload?.view === "inbox" ? [libraryBookmark] : [],
+            nextCursor: null,
+          },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: libraryBookmark },
+        });
+      }
+      if (request.type === "SAVE_BOOKMARK_NOTE") {
+        savedNotes.push(request.payload);
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            bookmark: { ...libraryBookmark, note: request.payload.note },
+          },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await app.ready;
+
+    const textarea = document.getElementById("note-textarea") as HTMLTextAreaElement;
+    textarea.value = "Keep this draft";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    document.getElementById("view-archived-button")?.click();
+
+    await vi.waitFor(() =>
+      expect(savedNotes).toEqual([{ id: libraryBookmark.id, note: "Keep this draft" }]),
+    );
+    expect(document.getElementById("note-editor")?.hidden).toBe(true);
+    expect(textarea.disabled).toBe(true);
+    expect(textarea.value).toBe("");
+    app.destroy();
+  });
+
+  it("keeps pagination scoped to the selected view", async () => {
+    const listPayloads: Array<{ view?: string; cursor?: string }> = [];
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        listPayloads.push(request.payload ?? {});
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            items: request.payload?.cursor ? [] : [libraryBookmark],
+            nextCursor: request.payload?.cursor ? null : "archived:next",
+          },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: libraryBookmark },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await app.ready;
+
+    document.getElementById("view-archived-button")?.click();
+    await vi.waitFor(() => expect(listPayloads).toHaveLength(2));
+    document.getElementById("load-more-bookmarks")?.click();
+    await vi.waitFor(() => expect(listPayloads).toHaveLength(3));
+
+    expect(listPayloads).toEqual([
+      { view: "inbox" },
+      { view: "archived" },
+      { view: "archived", cursor: "archived:next" },
+    ]);
     app.destroy();
   });
 
@@ -554,6 +756,7 @@ describe("popup app", () => {
     }) as typeof window.setTimeout;
     let statusCalls = 0;
     let listCalls = 0;
+    const listedViews: string[] = [];
     const sendMessage = ((request) => {
       if (request.type === "GET_STATUS") {
         statusCalls += 1;
@@ -570,6 +773,7 @@ describe("popup app", () => {
       }
       if (request.type === "LIST_BOOKMARKS") {
         listCalls += 1;
+        listedViews.push(request.payload?.view ?? "current");
         return Promise.resolve({
           ok: true as const,
           data: {
@@ -613,7 +817,90 @@ describe("popup app", () => {
     );
     expect(textarea.value).toBe("Draft written during capture");
     expect(document.getElementById("note-save-status")?.textContent).toBe("noteSaving");
+    expect(listedViews).toEqual(["inbox", "inbox"]);
     expect(scheduled.filter((item) => item.delay === 1_000)).toHaveLength(1);
+    app.destroy();
+  });
+
+  it("refreshes new uncategorized captures without opening their editor", async () => {
+    const newBookmark: NotedBookmark = {
+      ...libraryBookmark,
+      id: "new-from-capture",
+      text: "Needs categorization",
+      url: "https://x.com/person/status/new-from-capture",
+      note: "",
+    };
+    const runningScrape = {
+      ...readyStatus.scrape!,
+      id: "run-with-empty-inbox",
+      status: "running" as const,
+    };
+    const completedScrape = { ...runningScrape, status: "completed" as const };
+    const scheduled: Array<{ callback: () => void; delay: number }> = [];
+    const schedule = ((callback: () => void, delay = 0) => {
+      scheduled.push({ callback, delay });
+      return scheduled.length;
+    }) as typeof window.setTimeout;
+    let statusCalls = 0;
+    let listCalls = 0;
+    let detailCalls = 0;
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        statusCalls += 1;
+        const scrape =
+          statusCalls === 1
+            ? readyStatus.scrape
+            : statusCalls === 2
+              ? runningScrape
+              : completedScrape;
+        return Promise.resolve({
+          ok: true as const,
+          data: { ...readyStatus, scrape },
+        });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        listCalls += 1;
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            items: listCalls === 1 ? [] : [newBookmark],
+            nextCursor: null,
+          },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        detailCalls += 1;
+        return Promise.resolve({
+          ok: true as const,
+          data: { bookmark: newBookmark },
+        });
+      }
+      if (request.type === "START_SCRAPE") {
+        return Promise.resolve({ ok: true as const, data: runningScrape });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      schedule,
+      cancelSchedule: vi.fn(),
+    });
+    await app.ready;
+
+    expect(detailCalls).toBe(0);
+    document.getElementById("capture-button")?.click();
+    await vi.waitFor(() => expect(statusCalls).toBe(2));
+    scheduled.find((item) => item.delay === 1_000)?.callback();
+    await vi.waitFor(() => expect(listCalls).toBe(2));
+
+    expect(document.getElementById("bookmark-list")?.textContent).toContain(
+      "Needs categorization",
+    );
+    expect(detailCalls).toBe(0);
+    expect(document.getElementById("note-editor")?.hidden).toBe(true);
     app.destroy();
   });
 

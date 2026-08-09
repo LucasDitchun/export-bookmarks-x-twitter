@@ -109,23 +109,76 @@
               <span id="library-status" class="quiet-status" role="status"></span>
             </div>
 
-            <p id="library-empty" class="empty-note" hidden data-i18n="libraryEmpty">
-              Capture bookmarks to start your library.
-            </p>
-            <ul
-              id="bookmark-list"
-              class="bookmark-list"
-              aria-labelledby="library-heading"
-            ></ul>
-            <button
-              id="load-more-bookmarks"
-              class="button button-secondary load-more"
-              type="button"
-              hidden
-              data-i18n="loadMoreBookmarks"
+            <div
+              class="library-view-tabs"
+              role="tablist"
+              data-i18n-aria-label="libraryViewsLabel"
+              aria-label="Library views"
             >
-              Load more
-            </button>
+              <button
+                id="view-inbox-button"
+                class="library-view-button"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="library-view-panel"
+                tabindex="0"
+                data-view="inbox"
+                data-i18n="libraryViewInbox"
+              >
+                Uncategorized
+              </button>
+              <button
+                id="view-current-button"
+                class="library-view-button"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="library-view-panel"
+                tabindex="-1"
+                data-view="current"
+                data-i18n="libraryViewCurrent"
+              >
+                On X now
+              </button>
+              <button
+                id="view-archived-button"
+                class="library-view-button"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="library-view-panel"
+                tabindex="-1"
+                data-view="archived"
+                data-i18n="libraryViewArchived"
+              >
+                Archived
+              </button>
+            </div>
+
+            <div
+              id="library-view-panel"
+              role="tabpanel"
+              aria-labelledby="view-inbox-button"
+            >
+              <p id="library-empty" class="empty-note" hidden>
+                Capture bookmarks to start your library.
+              </p>
+              <ul
+                id="bookmark-list"
+                class="bookmark-list"
+                aria-labelledby="library-heading"
+              ></ul>
+              <button
+                id="load-more-bookmarks"
+                class="button button-secondary load-more"
+                type="button"
+                hidden
+                data-i18n="loadMoreBookmarks"
+              >
+                Load more
+              </button>
+            </div>
 
             <section
               id="note-editor"
