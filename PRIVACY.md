@@ -34,6 +34,14 @@ only on request and are then managed by Chrome and the operating system.
 The selected interface language and a public GitHub star-count cache are stored
 in `chrome.storage.local`.
 
+If the user explicitly enables semantic search, Bookmark X builds a local
+vector index from post text, author, private note, tags, and folder path. Model
+inference runs in a dedicated browser worker. Neither the source text nor the
+resulting embeddings are sent to the developer, Hugging Face, or another
+service. The model lifecycle preference and consent timestamp are stored in
+`chrome.storage.local`; embeddings are stored in a separate local IndexedDB
+database.
+
 ## Network access and sharing
 
 Bookmark X does not send captured data to its developer or any extension-owned
@@ -45,6 +53,13 @@ GitHub repository endpoint to display its star count. This request uses no
 cookies or credentials, contains no bookmark data, and is made at most once per
 24 hours while a valid local cache is available. If the request fails, only the
 number is hidden; the extension continues to work normally.
+
+Semantic search is disabled by default. Only after the user selects **Download
+and enable** can the extension request the pinned model weights, tokenizer, and
+configuration from `huggingface.co` and its `cdn.hf.co` data hosts. These
+requests contain no bookmark content or user credentials. The downloaded
+files are data consumed by executable JavaScript and WebAssembly already
+packaged in the extension; Bookmark X never downloads or executes remote code.
 
 X itself controls the page and network requests in the signed-in tab. Bookmark
 X reads the resulting page DOM but does not make X API calls or extract
@@ -58,6 +73,12 @@ Previously captured posts remain in the local archive until you choose
 bookmark on X does not automatically erase its archived copy. Downloaded TXT
 files must be deleted separately.
 
+The semantic-search settings provide separate actions to cancel an active
+download, rebuild the local index, disable semantic ranking, or remove the
+model cache and index. Removal also clears the locally recorded consent.
+Semantic model files, embeddings, and consent are deliberately excluded from
+JSON backups.
+
 ## Permissions
 
 - `activeTab`: lets the popup verify the current user-invoked tab.
@@ -65,6 +86,8 @@ files must be deleted separately.
 - `unlimitedStorage`: supports a durable local archive.
 - `https://api.github.com/*`: reads the project's public star count for the
   open-source card in Settings.
+- `https://huggingface.co/*` and `https://*.cdn.hf.co/*`: download only pinned
+  semantic-model data after explicit user consent.
 - The content script match is restricted to `https://x.com/*` and
   `https://www.x.com/*`. Outside `/i/bookmarks`, it processes post content only
   after an explicit bookmark-button click.

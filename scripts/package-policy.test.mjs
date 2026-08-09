@@ -83,11 +83,19 @@ describe("extension package permission policy", () => {
     );
   });
 
-  it("allows only the fixed public GitHub API origin", () => {
-    expect(EXPECTED_MANIFEST_HOST_PERMISSIONS).toEqual(["https://api.github.com/*"]);
+  it("allows only GitHub plus the pinned model host and its data CDN", () => {
+    expect(EXPECTED_MANIFEST_HOST_PERMISSIONS).toEqual([
+      "https://api.github.com/*",
+      "https://huggingface.co/*",
+      "https://*.cdn.hf.co/*",
+    ]);
     expect(() =>
       validateExactStringArray(
-        ["https://api.github.com/*"],
+        [
+          "https://*.cdn.hf.co/*",
+          "https://api.github.com/*",
+          "https://huggingface.co/*",
+        ],
         EXPECTED_MANIFEST_HOST_PERMISSIONS,
         "host_permissions",
       ),
@@ -97,8 +105,8 @@ describe("extension package permission policy", () => {
   it.each([
     { permissions: [] },
     { permissions: ["https://github.com/"] },
-    { permissions: ["https://api.github.com/"] },
-    { permissions: ["https://api.github.com/*", "https://x.com/*"] },
+    { permissions: ["https://huggingface.co/"] },
+    { permissions: [...EXPECTED_MANIFEST_HOST_PERMISSIONS, "https://x.com/*"] },
     { permissions: ["<all_urls>"] },
   ])(
     "rejects missing, path-wildcard, and broad host access: $permissions",
@@ -109,7 +117,9 @@ describe("extension package permission policy", () => {
           EXPECTED_MANIFEST_HOST_PERMISSIONS,
           "host_permissions",
         ),
-      ).toThrow("Manifest host_permissions must be exactly: https://api.github.com/*.");
+      ).toThrow(
+        "Manifest host_permissions must be exactly: https://*.cdn.hf.co/*, https://api.github.com/*, https://huggingface.co/*.",
+      );
     },
   );
 });

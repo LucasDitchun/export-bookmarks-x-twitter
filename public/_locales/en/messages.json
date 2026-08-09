@@ -242,6 +242,61 @@
   "liveBookmarkArchived": {
     "message": "Removed from current bookmarks and kept in Archived."
   },
+  "semanticTitle": { "message": "Optional semantic search" },
+  "semanticPrivacy": {
+    "message": "Find posts by meaning with a local multilingual model. Your posts, notes, tags, and folders never leave this device."
+  },
+  "semanticConsentTitle": { "message": "Before you download" },
+  "semanticConsentBody": {
+    "message": "Bookmark X downloads about 136 MB of model data from Hugging Face only after you choose Download and enable. The model then works offline."
+  },
+  "semanticQuotaHelp": {
+    "message": "The extension requests unlimited local storage, but available disk space still applies. The search index uses about 1.5 KB per saved post."
+  },
+  "semanticEnabled": { "message": "Use semantic results in search" },
+  "semanticInstall": { "message": "Download and enable" },
+  "semanticCancel": { "message": "Cancel" },
+  "semanticReindex": { "message": "Reindex saved posts" },
+  "semanticRemove": { "message": "Remove model and index" },
+  "semanticStorageEstimate": {
+    "message": "Extension storage used: $USAGE$ of $QUOTA$.",
+    "placeholders": {
+      "usage": { "content": "$1" },
+      "quota": { "content": "$2" }
+    }
+  },
+  "semanticReady": {
+    "message": "$BACKEND$ model ready · $COUNT$ posts indexed",
+    "placeholders": {
+      "backend": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
+  "semanticDownloading": { "message": "Downloading the model…" },
+  "semanticIndexing": { "message": "Indexing saved posts locally…" },
+  "semanticError": {
+    "message": "Semantic search needs attention. Text search still works."
+  },
+  "semanticNotInstalled": {
+    "message": "Semantic model not installed. Text search is active."
+  },
+  "semanticIndexProgress": {
+    "message": "Indexed $DONE$ of $TOTAL$ posts",
+    "placeholders": {
+      "done": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
+  },
+  "semanticDownloadProgress": {
+    "message": "Model download: $PERCENT$%",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": {
+    "message": "Could not install the model. Text search still works."
+  },
+  "semanticReindexError": { "message": "Could not rebuild the semantic index." },
+  "semanticRemoveError": { "message": "Could not remove all semantic search data." },
+  "semanticToggleError": { "message": "Could not change semantic search." },
   "liveBookmarkFailed": {
     "message": "X did not confirm this change. Your local archive was not changed."
   }

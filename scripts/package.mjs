@@ -154,9 +154,26 @@ async function validateBuild(packageVersion) {
   ) {
     fail("Manifest content security policy permits remote executable code.");
   }
+  if (
+    typeof extensionPagesPolicy !== "string" ||
+    !extensionPagesPolicy.includes("'wasm-unsafe-eval'") ||
+    !/worker-src\s+'self'/u.test(extensionPagesPolicy) ||
+    extensionPagesPolicy.includes("blob:")
+  ) {
+    fail("Manifest CSP must allow only packaged workers and local WebAssembly.");
+  }
 
   const files = await listFiles(distDirectory);
   const filePaths = new Set(files.map((file) => file.relativePath));
+  for (const pattern of [
+    /^assets\/ort-wasm-simd-threaded\.asyncify-[A-Za-z0-9_-]+\.mjs$/u,
+    /^assets\/ort-wasm-simd-threaded\.asyncify-[A-Za-z0-9_-]+\.wasm$/u,
+    /^assets\/semantic-worker-[A-Za-z0-9_-]+\.js$/u,
+  ]) {
+    if (![...filePaths].some((filePath) => pattern.test(filePath))) {
+      fail(`Packaged semantic search asset is missing: ${String(pattern)}`);
+    }
+  }
   const forbiddenExtensions = new Set([".map", ".pem", ".key"]);
   const forbiddenNames = new Set([".env", ".env.local"]);
   const referencedManifestFiles = [
@@ -193,7 +210,7 @@ async function validateBuild(packageVersion) {
       }
     }
 
-    if (extension === ".js") {
+    if (extension === ".js" || extension === ".mjs") {
       const javascript = await readFile(file.absolutePath, "utf8");
       if (
         /(?:\bimport\s*\(|\bfrom\s*|\bimportScripts\s*\()\s*["']https?:\/\//iu.test(

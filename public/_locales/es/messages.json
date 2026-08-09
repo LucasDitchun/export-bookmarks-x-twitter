@@ -332,6 +332,54 @@
   "liveBookmarkArchived": {
     "message": "Eliminado de los marcadores actuales y conservado en Archivados."
   },
+  "semanticTitle": { "message": "Búsqueda semántica opcional" },
+  "semanticPrivacy": {
+    "message": "Encuentra publicaciones por su significado con un modelo multilingüe local. Tus publicaciones, notas, etiquetas y carpetas nunca salen de este dispositivo."
+  },
+  "semanticConsentTitle": { "message": "Antes de descargar" },
+  "semanticConsentBody": {
+    "message": "Bookmark X descarga unos 136 MB de datos del modelo desde Hugging Face solo cuando eliges Descargar y activar. Después, el modelo funciona sin conexión."
+  },
+  "semanticQuotaHelp": {
+    "message": "La extensión solicita almacenamiento local ilimitado, pero el espacio disponible en disco sigue siendo el límite. El índice usa unos 1,5 KB por publicación guardada."
+  },
+  "semanticEnabled": { "message": "Usar resultados semánticos en la búsqueda" },
+  "semanticInstall": { "message": "Descargar y activar" },
+  "semanticCancel": { "message": "Cancelar" },
+  "semanticReindex": { "message": "Reindexar publicaciones guardadas" },
+  "semanticRemove": { "message": "Eliminar modelo e índice" },
+  "semanticStorageEstimate": {
+    "message": "Almacenamiento usado por la extensión: $USAGE$ de $QUOTA$.",
+    "placeholders": { "usage": { "content": "$1" }, "quota": { "content": "$2" } }
+  },
+  "semanticReady": {
+    "message": "Modelo $BACKEND$ listo · $COUNT$ publicaciones indexadas",
+    "placeholders": { "backend": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "semanticDownloading": { "message": "Descargando el modelo…" },
+  "semanticIndexing": { "message": "Indexando publicaciones guardadas localmente…" },
+  "semanticError": {
+    "message": "La búsqueda semántica necesita atención. La búsqueda de texto sigue funcionando."
+  },
+  "semanticNotInstalled": {
+    "message": "Modelo semántico no instalado. La búsqueda de texto está activa."
+  },
+  "semanticIndexProgress": {
+    "message": "$DONE$ de $TOTAL$ publicaciones indexadas",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "semanticDownloadProgress": {
+    "message": "Descarga del modelo: $PERCENT$%",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": {
+    "message": "No se pudo instalar el modelo. La búsqueda de texto sigue funcionando."
+  },
+  "semanticReindexError": { "message": "No se pudo reconstruir el índice semántico." },
+  "semanticRemoveError": {
+    "message": "No se pudieron eliminar todos los datos de búsqueda semántica."
+  },
+  "semanticToggleError": { "message": "No se pudo cambiar la búsqueda semántica." },
   "liveBookmarkFailed": {
     "message": "X no confirmó este cambio. Tu archivo local no se modificó."
   }

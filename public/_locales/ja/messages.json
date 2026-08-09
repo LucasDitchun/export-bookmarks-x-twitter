@@ -332,6 +332,58 @@
   "liveBookmarkArchived": {
     "message": "現在のブックマークから削除し、アーカイブに保持しました。"
   },
+  "semanticTitle": { "message": "任意のセマンティック検索" },
+  "semanticPrivacy": {
+    "message": "ローカルの多言語モデルで意味から投稿を探せます。投稿、メモ、タグ、フォルダーがこの端末の外へ送信されることはありません。"
+  },
+  "semanticConsentTitle": { "message": "ダウンロードする前に" },
+  "semanticConsentBody": {
+    "message": "［ダウンロードして有効化］を選んだ場合にのみ、Bookmark X は Hugging Face から約 136 MB のモデルデータをダウンロードします。その後はオフラインで動作します。"
+  },
+  "semanticQuotaHelp": {
+    "message": "拡張機能は無制限のローカルストレージを要求しますが、実際の空き容量が上限です。検索インデックスは保存済み投稿 1 件あたり約 1.5 KB 使用します。"
+  },
+  "semanticEnabled": { "message": "検索にセマンティック結果を使用する" },
+  "semanticInstall": { "message": "ダウンロードして有効化" },
+  "semanticCancel": { "message": "キャンセル" },
+  "semanticReindex": { "message": "保存済み投稿を再インデックス" },
+  "semanticRemove": { "message": "モデルとインデックスを削除" },
+  "semanticStorageEstimate": {
+    "message": "拡張機能の使用容量：$USAGE$ / $QUOTA$",
+    "placeholders": { "usage": { "content": "$1" }, "quota": { "content": "$2" } }
+  },
+  "semanticReady": {
+    "message": "$BACKEND$ モデル準備完了 · $COUNT$ 件をインデックス済み",
+    "placeholders": { "backend": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "semanticDownloading": { "message": "モデルをダウンロード中…" },
+  "semanticIndexing": { "message": "保存済み投稿を端末内でインデックス中…" },
+  "semanticError": {
+    "message": "セマンティック検索を確認してください。テキスト検索は引き続き利用できます。"
+  },
+  "semanticNotInstalled": {
+    "message": "セマンティックモデルは未インストールです。テキスト検索は有効です。"
+  },
+  "semanticIndexProgress": {
+    "message": "$TOTAL$ 件中 $DONE$ 件をインデックス済み",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "semanticDownloadProgress": {
+    "message": "モデルのダウンロード：$PERCENT$%",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": {
+    "message": "モデルをインストールできませんでした。テキスト検索は引き続き利用できます。"
+  },
+  "semanticReindexError": {
+    "message": "セマンティックインデックスを再構築できませんでした。"
+  },
+  "semanticRemoveError": {
+    "message": "セマンティック検索のデータをすべて削除できませんでした。"
+  },
+  "semanticToggleError": {
+    "message": "セマンティック検索の設定を変更できませんでした。"
+  },
   "liveBookmarkFailed": {
     "message": "X が変更を確認しなかったため、ローカルアーカイブは変更されませんでした。"
   }

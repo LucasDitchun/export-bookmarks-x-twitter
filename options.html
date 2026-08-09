@@ -149,6 +149,62 @@
             <input id="search-live-filter" type="checkbox" />
             <span data-i18n="settingLiveFilter">Filter results while typing</span>
           </label>
+          <div class="divider"></div>
+          <section class="semantic-settings" aria-labelledby="semantic-title">
+            <p class="group-label" id="semantic-title" data-i18n="semanticTitle">
+              Optional semantic search
+            </p>
+            <p class="field-help" data-i18n="semanticPrivacy">
+              Find posts by meaning with a local multilingual model. Your posts, notes,
+              tags, and folders never leave this device.
+            </p>
+            <div class="semantic-consent">
+              <strong data-i18n="semanticConsentTitle">Before you download</strong>
+              <p data-i18n="semanticConsentBody">
+                Bookmark X downloads about 136 MB of model data from Hugging Face only
+                after you choose Download and enable. The model then works offline.
+              </p>
+              <p data-i18n="semanticQuotaHelp">
+                The extension requests unlimited local storage, but available disk space
+                still applies. The search index uses about 1.5 KB per saved post.
+              </p>
+              <p id="semantic-storage" class="semantic-storage"></p>
+            </div>
+            <label class="choice" for="semantic-enabled">
+              <input id="semantic-enabled" type="checkbox" disabled />
+              <span data-i18n="semanticEnabled">Use semantic results in search</span>
+            </label>
+            <progress
+              id="semantic-progress"
+              class="semantic-progress"
+              max="100"
+              value="0"
+              aria-describedby="semantic-progress-copy"
+              hidden
+            ></progress>
+            <p id="semantic-progress-copy" class="field-help"></p>
+            <div class="semantic-actions">
+              <button id="semantic-install" type="button" class="primary-action">
+                <span data-i18n="semanticInstall">Download and enable</span>
+              </button>
+              <button id="semantic-cancel" type="button" hidden>
+                <span data-i18n="semanticCancel">Cancel</span>
+              </button>
+              <button id="semantic-reindex" type="button" hidden>
+                <span data-i18n="semanticReindex">Reindex saved posts</span>
+              </button>
+              <button id="semantic-remove" type="button" class="danger-action" hidden>
+                <span data-i18n="semanticRemove">Remove model and index</span>
+              </button>
+            </div>
+            <p
+              id="semantic-status"
+              class="semantic-status"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            ></p>
+          </section>
         </fieldset>
 
         <fieldset>

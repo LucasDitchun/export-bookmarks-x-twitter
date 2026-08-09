@@ -312,5 +312,45 @@
   "liveBookmarkPending": { "message": "正在等待 X 确认…" },
   "liveBookmarkSaved": { "message": "已保存到本地。可添加备注、文件夹或标签。" },
   "liveBookmarkArchived": { "message": "已从当前书签移除并保留在归档中。" },
+  "semanticTitle": { "message": "可选语义搜索" },
+  "semanticPrivacy": {
+    "message": "使用本地多语言模型按含义查找帖子。您的帖子、笔记、标签和文件夹绝不会离开此设备。"
+  },
+  "semanticConsentTitle": { "message": "下载前须知" },
+  "semanticConsentBody": {
+    "message": "只有在您选择“下载并启用”后，Bookmark X 才会从 Hugging Face 下载约 136 MB 的模型数据。之后模型可离线工作。"
+  },
+  "semanticQuotaHelp": {
+    "message": "扩展程序会申请无限本地存储空间，但仍受可用磁盘空间限制。搜索索引每个已保存帖子约占 1.5 KB。"
+  },
+  "semanticEnabled": { "message": "在搜索中使用语义结果" },
+  "semanticInstall": { "message": "下载并启用" },
+  "semanticCancel": { "message": "取消" },
+  "semanticReindex": { "message": "重新索引已保存帖子" },
+  "semanticRemove": { "message": "移除模型和索引" },
+  "semanticStorageEstimate": {
+    "message": "扩展程序已用存储空间：$USAGE$ / $QUOTA$。",
+    "placeholders": { "usage": { "content": "$1" }, "quota": { "content": "$2" } }
+  },
+  "semanticReady": {
+    "message": "$BACKEND$ 模型已就绪 · 已索引 $COUNT$ 个帖子",
+    "placeholders": { "backend": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "semanticDownloading": { "message": "正在下载模型…" },
+  "semanticIndexing": { "message": "正在本地索引已保存帖子…" },
+  "semanticError": { "message": "语义搜索需要处理。文本搜索仍可正常使用。" },
+  "semanticNotInstalled": { "message": "尚未安装语义模型。文本搜索已启用。" },
+  "semanticIndexProgress": {
+    "message": "已索引 $TOTAL$ 个帖子中的 $DONE$ 个",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "semanticDownloadProgress": {
+    "message": "模型下载：$PERCENT$%",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": { "message": "无法安装模型。文本搜索仍可正常使用。" },
+  "semanticReindexError": { "message": "无法重建语义索引。" },
+  "semanticRemoveError": { "message": "无法移除全部语义搜索数据。" },
+  "semanticToggleError": { "message": "无法更改语义搜索设置。" },
   "liveBookmarkFailed": { "message": "X 未确认此更改。本地归档未被修改。" }
 }

@@ -6,7 +6,11 @@
   "minimum_chrome_version": "116",
   "default_locale": "en",
   "permissions": ["activeTab", "sidePanel", "storage", "unlimitedStorage"],
-  "host_permissions": ["https://api.github.com/*"],
+  "host_permissions": [
+    "https://api.github.com/*",
+    "https://huggingface.co/*",
+    "https://*.cdn.hf.co/*"
+  ],
   "background": {
     "service_worker": "service-worker.js",
     "type": "module"
@@ -40,6 +44,6 @@
     "128": "icons/icon-128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; object-src 'self'"
   }
 }

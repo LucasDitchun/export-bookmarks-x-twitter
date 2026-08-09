@@ -78,6 +78,79 @@ beforeEach(() => {
 });
 
 describe("popup app", () => {
+  it("fuses optional semantic results and keeps lexical search on model failure", async () => {
+    const callbacks: Array<() => void> = [];
+    const schedule = ((callback: () => void, delay: number) => {
+      if (delay === 150) callbacks.push(callback);
+      return callbacks.length;
+    }) as typeof window.setTimeout;
+    const lexical = { ...libraryBookmark, id: "701", text: "Exact lexical result" };
+    const remembered = {
+      ...libraryBookmark,
+      id: "702",
+      text: "Conceptually related result",
+    };
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [libraryBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "SEARCH_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [lexical], total: 1, nextCursor: null },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({ ok: true as const, data: { bookmark: lexical } });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const semanticSearch = vi
+      .fn()
+      .mockResolvedValueOnce([remembered])
+      .mockRejectedValueOnce(new Error("offline"));
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      schedule,
+      cancelSchedule: vi.fn(),
+      semanticSearch,
+    });
+    await app.ready;
+    const input = document.getElementById("library-search") as HTMLInputElement;
+
+    input.value = "something I remember";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    callbacks.shift()?.();
+    await vi.waitFor(() =>
+      expect(document.getElementById("bookmark-list")?.textContent).toContain(
+        "Conceptually related result",
+      ),
+    );
+    expect(document.getElementById("bookmark-list")?.textContent).toContain(
+      "Exact lexical result",
+    );
+
+    input.value = "offline query";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    callbacks.shift()?.();
+    await vi.waitFor(() =>
+      expect(document.getElementById("bookmark-list")?.textContent).toContain(
+        "Exact lexical result",
+      ),
+    );
+    expect(semanticSearch).toHaveBeenCalledTimes(2);
+    app.destroy();
+  });
+
   it("filters the active view while typing and clears back to its paginated list", async () => {
     const scheduled: Array<{ callback: () => void; delay: number }> = [];
     const schedule = ((callback: () => void, delay: number) => {
