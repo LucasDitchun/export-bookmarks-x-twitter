@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BookmarkRecord, FolderRecord } from "../domain/types";
-import { exportBookmarks } from "../domain/export-bookmarks";
+import { buildBookmarkExport } from "../domain/export-bookmarks";
 import { ArchiveRepository } from "./archive-repository";
 import { BookmarkDatabase, transactionDone } from "./bookmark-database";
 import { BookmarkRepository } from "./bookmark-repository";
@@ -278,7 +278,29 @@ describe("FolderRepository", () => {
       note: "Keep this note",
       tagIds: ["tag-1"],
     });
-    const exported = exportBookmarks(hydrated, { format: "full", locale: "en" });
+    const exported = buildBookmarkExport(
+      { bookmarks: hydrated, folders: [], tags: [] },
+      {
+        format: "txt",
+        locale: "en",
+        folderId: null,
+        tagIds: [],
+        includeArchived: true,
+        fields: {
+          url: true,
+          text: true,
+          author: true,
+          postDate: true,
+          note: true,
+          breadcrumb: true,
+          tags: true,
+          images: true,
+          videos: true,
+          firstSavedAt: true,
+          lastSeenAt: true,
+        },
+      },
+    );
     expect(exported).toContain("Folder: No folder");
     expect(exported).not.toContain("Research");
     expect(exported).not.toContain("AI");

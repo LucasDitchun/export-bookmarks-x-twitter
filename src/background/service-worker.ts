@@ -8,6 +8,7 @@ import { BackupRepository } from "../storage/backup-repository";
 import { SearchRepository } from "../storage/search-repository";
 import { LiveBookmarkStateRepository } from "../storage/live-bookmark-state";
 import { LOCALE_STORAGE_KEY, resolvePreferredLocale } from "../popup/i18n";
+import { ExportRepository } from "../storage/export-repository";
 import { BackgroundController } from "./controller";
 import type { ContentControlRequest } from "../shared/protocol";
 import { metadataRefreshRequest } from "./metadata-refresh";
@@ -22,6 +23,7 @@ const bookmarks = new BookmarkRepository();
 const tags = new TagRepository();
 const folders = new FolderRepository();
 const search = new SearchRepository();
+const exports = new ExportRepository();
 const settings = new SettingsRepository({
   get: (keys) => chrome.storage.local.get(keys),
   set: (items) => chrome.storage.local.set(items),
@@ -93,6 +95,7 @@ const locale = {
 };
 const controller = new BackgroundController({
   archive,
+  exports,
   bookmarks,
   tags,
   folders,

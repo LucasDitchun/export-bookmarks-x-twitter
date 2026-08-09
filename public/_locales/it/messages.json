@@ -111,7 +111,7 @@
     "message": "Bookmark X"
   },
   "extensionDescription": {
-    "message": "Acquisisci i tuoi segnalibri X dalla pagina aperta ed esportali in un archivio TXT locale e privato."
+    "message": "Acquisisci e organizza localmente i segnalibri X ed esporta file TXT o Markdown privati."
   },
   "eyebrow": {
     "message": "Archivio X locale"
@@ -240,13 +240,30 @@
     "message": "Interrompi acquisizione"
   },
   "exportTitle": {
-    "message": "Scarica TXT"
+    "message": "Esporta libreria"
   },
-  "exportFullButton": {
-    "message": "Scarica l’archivio completo"
+  "exportLocalBadge": { "message": "Solo locale" },
+  "exportHelp": {
+    "message": "Scegli una cartella, i tag corrispondenti e se includere i post archiviati."
   },
-  "exportUrlsButton": {
-    "message": "Solo URL"
+  "exportFiltersSummary": { "message": "Scegli i filtri di esportazione" },
+  "exportFolderFilterLabel": { "message": "Cartella e sottocartelle" },
+  "exportAllFolders": { "message": "Tutte le cartelle" },
+  "exportTagFilterLabel": { "message": "Tag (uno qualsiasi selezionato)" },
+  "exportTagFilterHelp": {
+    "message": "Usa Ctrl o Command per selezionarne più di uno. Lascia vuoto per tutti i tag."
+  },
+  "exportIncludeArchived": { "message": "Includi post archiviati" },
+  "exportTxtButton": { "message": "Esporta .TXT" },
+  "exportTxtDescription": { "message": "Testo semplice leggibile" },
+  "exportMarkdownButton": { "message": "Esporta .MD" },
+  "exportMarkdownDescription": { "message": "Markdown strutturato" },
+  "exportFormatMenuLabel": { "message": "Scegli formato di esportazione" },
+  "exportPreparing": { "message": "Preparazione esportazione…" },
+  "exportDownloaded": { "message": "Esportazione scaricata" },
+  "exportFailed": { "message": "Impossibile creare l’esportazione." },
+  "exportFieldRequired": {
+    "message": "Attiva almeno un campo di esportazione nelle impostazioni."
   },
   "moreOptions": {
     "message": "Altre opzioni"
@@ -312,12 +329,17 @@
   "settingExportLink": { "message": "Link del post" },
   "settingExportText": { "message": "Testo del post" },
   "settingExportAuthor": { "message": "Autore" },
-  "settingExportDate": { "message": "Date" },
+  "settingExportDate": { "message": "Data del post" },
   "settingExportImages": { "message": "Link immagini" },
   "settingExportVideos": { "message": "Link video" },
   "settingExportNote": { "message": "Nota privata" },
   "settingExportTags": { "message": "Tag" },
   "settingExportFolder": { "message": "Percorso cartella" },
+  "settingExportFirstSaved": { "message": "Data della prima acquisizione" },
+  "settingExportLastSeen": { "message": "Data dell’ultima visualizzazione" },
+  "settingsExportFieldRequired": {
+    "message": "Mantieni attivo almeno un campo di esportazione."
+  },
   "settingsSearch": { "message": "Ricerca" },
   "settingLiveFilter": { "message": "Filtra i risultati durante la digitazione" },
   "settingsData": { "message": "Dati" },

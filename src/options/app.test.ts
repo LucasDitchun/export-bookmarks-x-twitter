@@ -160,6 +160,8 @@ describe("options app", () => {
       "export-note",
       "export-tags",
       "export-folder",
+      "export-first-saved",
+      "export-last-seen",
       "search-live-filter",
       "data-keep-archived",
     ];
@@ -167,6 +169,7 @@ describe("options app", () => {
       const control = document.getElementById(id) as HTMLInputElement;
       control.checked = !control.checked;
       control.dispatchEvent(new Event("change", { bubbles: true }));
+      if (id.startsWith("export-")) control.checked = true;
     }
     await vi.waitFor(() => expect(requests).toHaveLength(controlIds.length + 1));
 
@@ -178,6 +181,41 @@ describe("options app", () => {
       type: "SAVE_SETTINGS",
       payload: { settings: { behavior: { metadata: { note: false } } } },
     });
+    app.destroy();
+  });
+
+  it("keeps one export field enabled and announces the requirement", async () => {
+    const sendMessage = vi.fn(async () => ({
+      ok: true as const,
+      data: { settings: structuredClone(DEFAULT_SETTINGS) },
+    })) as SendMessage;
+    const app = createOptionsApp({ document, sendMessage, translate });
+    await app.ready;
+    const exportIds = [
+      "export-link",
+      "export-text",
+      "export-author",
+      "export-date",
+      "export-images",
+      "export-videos",
+      "export-note",
+      "export-tags",
+      "export-folder",
+      "export-first-saved",
+      "export-last-seen",
+    ];
+    for (const id of exportIds.slice(1)) {
+      (document.getElementById(id) as HTMLInputElement).checked = false;
+    }
+    const last = document.getElementById("export-link") as HTMLInputElement;
+    last.checked = false;
+    last.dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(last.checked).toBe(true);
+    expect(document.getElementById("settings-status")?.textContent).toBe(
+      "settingsExportFieldRequired",
+    );
+    expect(sendMessage).toHaveBeenCalledOnce();
     app.destroy();
   });
 

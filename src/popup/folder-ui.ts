@@ -14,6 +14,7 @@ interface FolderUiOptions {
   sendMessage: SendMessage;
   translate: Translator;
   onBookmarkUpdated: (bookmark: BookmarkRecord) => void;
+  onFoldersChanged?: (folders: readonly FolderRecord[]) => void;
 }
 
 interface FolderElements {
@@ -60,7 +61,8 @@ export function createFolderUi(options: FolderUiOptions): {
   ready: Promise<void>;
   setBookmark: (bookmark: BookmarkRecord | null) => void;
 } {
-  const { document, onBookmarkUpdated, sendMessage, translate } = options;
+  const { document, onBookmarkUpdated, onFoldersChanged, sendMessage, translate } =
+    options;
   const elements = getElements(document);
   let folders: FolderRecord[] = [];
   let bookmark: BookmarkRecord | null = null;
@@ -249,6 +251,7 @@ export function createFolderUi(options: FolderUiOptions): {
           folder.id === response.data.folder.id ? response.data.folder : folder,
         ),
       );
+      onFoldersChanged?.(folders);
       editingId = null;
       setStatus("folderSaved", "saved");
     } catch {
@@ -274,6 +277,7 @@ export function createFolderUi(options: FolderUiOptions): {
       }
       const deleted = new Set(response.data.deletedFolderIds);
       folders = folders.filter((folder) => !deleted.has(folder.id));
+      onFoldersChanged?.(folders);
       if (
         bookmark !== null &&
         bookmark.folderId !== null &&
@@ -337,6 +341,7 @@ export function createFolderUi(options: FolderUiOptions): {
       .then((response) => {
         if (!response.ok || !response.data?.folder) throw new Error("create failed");
         folders = sortFolders([...folders, response.data.folder]);
+        onFoldersChanged?.(folders);
         elements.createName.value = "";
         setStatus("folderCreated", "saved");
       })
@@ -353,6 +358,7 @@ export function createFolderUi(options: FolderUiOptions): {
         throw new Error("folder list failed");
       }
       folders = sortFolders(response.data.folders);
+      onFoldersChanged?.(folders);
       setStatus(null);
     })
     .catch(() => setStatus("folderLoadError", "error"))

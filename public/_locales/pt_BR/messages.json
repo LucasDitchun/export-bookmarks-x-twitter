@@ -109,7 +109,7 @@
   "folderLoadError": { "message": "Não foi possível carregar as pastas." },
   "extensionName": { "message": "Bookmark X" },
   "extensionDescription": {
-    "message": "Capture seus bookmarks do X pela página aberta e exporte um arquivo TXT local e privado."
+    "message": "Capture e organize bookmarks do X localmente e exporte arquivos TXT ou Markdown privados."
   },
   "eyebrow": { "message": "Arquivo local do X" },
   "loading": { "message": "Carregando" },
@@ -178,9 +178,30 @@
   },
   "captureButton": { "message": "Capturar bookmarks" },
   "cancelCaptureButton": { "message": "Parar captura" },
-  "exportTitle": { "message": "Baixar em TXT" },
-  "exportFullButton": { "message": "Baixar arquivo completo" },
-  "exportUrlsButton": { "message": "Somente URLs" },
+  "exportTitle": { "message": "Exportar biblioteca" },
+  "exportLocalBadge": { "message": "Somente local" },
+  "exportHelp": {
+    "message": "Escolha uma pasta, qualquer tag correspondente e se deseja incluir posts arquivados."
+  },
+  "exportFiltersSummary": { "message": "Escolher filtros de exportação" },
+  "exportFolderFilterLabel": { "message": "Pasta e subpastas" },
+  "exportAllFolders": { "message": "Todas as pastas" },
+  "exportTagFilterLabel": { "message": "Tags (qualquer uma selecionada)" },
+  "exportTagFilterHelp": {
+    "message": "Use Ctrl ou Command para selecionar várias. Deixe vazio para todas as tags."
+  },
+  "exportIncludeArchived": { "message": "Incluir posts arquivados" },
+  "exportTxtButton": { "message": "Exportar .TXT" },
+  "exportTxtDescription": { "message": "Texto simples e legível" },
+  "exportMarkdownButton": { "message": "Exportar .MD" },
+  "exportMarkdownDescription": { "message": "Markdown estruturado" },
+  "exportFormatMenuLabel": { "message": "Escolher formato de exportação" },
+  "exportPreparing": { "message": "Preparando exportação…" },
+  "exportDownloaded": { "message": "Exportação baixada" },
+  "exportFailed": { "message": "Não foi possível criar a exportação." },
+  "exportFieldRequired": {
+    "message": "Ative pelo menos um campo de exportação nas Configurações."
+  },
   "moreOptions": { "message": "Mais opções" },
   "languageLabel": { "message": "Idioma" },
   "localOnlyNote": {
@@ -234,12 +255,17 @@
   "settingExportLink": { "message": "Link da postagem" },
   "settingExportText": { "message": "Texto da postagem" },
   "settingExportAuthor": { "message": "Autor" },
-  "settingExportDate": { "message": "Datas" },
+  "settingExportDate": { "message": "Data da postagem" },
   "settingExportImages": { "message": "Links de imagens" },
   "settingExportVideos": { "message": "Links de vídeos" },
   "settingExportNote": { "message": "Nota privada" },
   "settingExportTags": { "message": "Tags" },
   "settingExportFolder": { "message": "Caminho da pasta" },
+  "settingExportFirstSaved": { "message": "Data da primeira captura" },
+  "settingExportLastSeen": { "message": "Data da última visualização" },
+  "settingsExportFieldRequired": {
+    "message": "Mantenha pelo menos um campo de exportação ativado."
+  },
   "settingsSearch": { "message": "Pesquisa" },
   "settingLiveFilter": { "message": "Filtrar resultados enquanto digita" },
   "settingsData": { "message": "Dados" },

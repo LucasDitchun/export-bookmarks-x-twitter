@@ -48,6 +48,8 @@ export function createOptionsApp(options: OptionsAppOptions): {
     exportNote: input(document, "export-note"),
     exportTags: input(document, "export-tags"),
     exportFolder: input(document, "export-folder"),
+    exportFirstSaved: input(document, "export-first-saved"),
+    exportLastSeen: input(document, "export-last-seen"),
     liveFilter: input(document, "search-live-filter"),
     keepArchived: input(document, "data-keep-archived"),
   };
@@ -77,6 +79,8 @@ export function createOptionsApp(options: OptionsAppOptions): {
     controls.exportNote.checked = next.export.includeNote;
     controls.exportTags.checked = next.export.includeTags;
     controls.exportFolder.checked = next.export.includeFolder;
+    controls.exportFirstSaved.checked = next.export.includeFirstSavedAt;
+    controls.exportLastSeen.checked = next.export.includeLastSeenAt;
     controls.liveFilter.checked = next.search.filterAsYouType;
     controls.keepArchived.checked = next.data.keepArchived;
   };
@@ -184,6 +188,16 @@ export function createOptionsApp(options: OptionsAppOptions): {
       () => ({ export: { includeFolder: controls.exportFolder.checked } }),
     ],
     [
+      controls.exportFirstSaved,
+      () => ({
+        export: { includeFirstSavedAt: controls.exportFirstSaved.checked },
+      }),
+    ],
+    [
+      controls.exportLastSeen,
+      () => ({ export: { includeLastSeenAt: controls.exportLastSeen.checked } }),
+    ],
+    [
       controls.liveFilter,
       () => ({ search: { filterAsYouType: controls.liveFilter.checked } }),
     ],
@@ -192,8 +206,31 @@ export function createOptionsApp(options: OptionsAppOptions): {
       () => ({ data: { keepArchived: controls.keepArchived.checked } }),
     ],
   ];
+  const exportControls = [
+    controls.exportLink,
+    controls.exportText,
+    controls.exportAuthor,
+    controls.exportDate,
+    controls.exportImages,
+    controls.exportVideos,
+    controls.exportNote,
+    controls.exportTags,
+    controls.exportFolder,
+    controls.exportFirstSaved,
+    controls.exportLastSeen,
+  ];
   const listeners = bindings.map(([control, patch]) => {
-    const listener = (): void => save(patch());
+    const listener = (): void => {
+      if (
+        exportControls.includes(control) &&
+        !exportControls.some(({ checked }) => checked)
+      ) {
+        control.checked = true;
+        status.textContent = translate("settingsExportFieldRequired");
+        return;
+      }
+      save(patch());
+    };
     control.addEventListener("change", listener);
     return [control, listener] as const;
   });

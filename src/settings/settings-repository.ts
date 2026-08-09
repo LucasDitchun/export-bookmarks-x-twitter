@@ -32,6 +32,8 @@ export interface ExtensionSettings {
     includeNote: boolean;
     includeTags: boolean;
     includeFolder: boolean;
+    includeFirstSavedAt: boolean;
+    includeLastSeenAt: boolean;
   };
   search: {
     filterAsYouType: boolean;
@@ -79,10 +81,24 @@ export const DEFAULT_SETTINGS: Readonly<ExtensionSettings> = Object.freeze({
     includeNote: true,
     includeTags: true,
     includeFolder: true,
+    includeFirstSavedAt: true,
+    includeLastSeenAt: true,
   }),
   search: Object.freeze({ filterAsYouType: true }),
   data: Object.freeze({ keepArchived: true }),
 });
+
+export function hasEnabledExportSetting(
+  settings: ExtensionSettings["export"],
+): boolean {
+  return Object.values(settings).some(Boolean);
+}
+
+function ensureEnabledExportSetting(settings: ExtensionSettings): ExtensionSettings {
+  return hasEnabledExportSetting(settings.export)
+    ? settings
+    : { ...settings, export: { ...settings.export, includeLink: true } };
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -150,13 +166,15 @@ export function isStoredSettingsEnvelope(
       "includeNote",
       "includeTags",
       "includeFolder",
+      "includeFirstSavedAt",
+      "includeLastSeenAt",
     ]) ||
     !isExactBooleanRecord(settings.search, ["filterAsYouType"]) ||
     !isExactBooleanRecord(settings.data, ["keepArchived"])
   ) {
     return false;
   }
-  return true;
+  return hasEnabledExportSetting(settings.export as ExtensionSettings["export"]);
 }
 
 function booleanOr(value: unknown, fallback: boolean): boolean {
@@ -231,6 +249,14 @@ function sanitizeSettings(
       includeFolder: booleanOr(
         exportSettings.includeFolder,
         fallback.export.includeFolder,
+      ),
+      includeFirstSavedAt: booleanOr(
+        exportSettings.includeFirstSavedAt,
+        fallback.export.includeFirstSavedAt,
+      ),
+      includeLastSeenAt: booleanOr(
+        exportSettings.includeLastSeenAt,
+        fallback.export.includeLastSeenAt,
       ),
     },
     search: {
@@ -307,6 +333,8 @@ export function isSettingsPatch(value: unknown): value is SettingsPatch {
       "includeNote",
       "includeTags",
       "includeFolder",
+      "includeFirstSavedAt",
+      "includeLastSeenAt",
     ])
   ) {
     return false;
@@ -328,16 +356,19 @@ export class SettingsRepository {
       stored.schemaVersion === SETTINGS_SCHEMA_VERSION &&
       isRecord(stored.settings)
     ) {
-      return sanitizeSettings(stored.settings);
+      return ensureEnabledExportSetting(sanitizeSettings(stored.settings));
     }
     // Pre-schema builds stored the settings object directly. Reading it here is the
     // only migration needed for schema v1; the next save writes the envelope.
-    return sanitizeSettings(stored);
+    return ensureEnabledExportSetting(sanitizeSettings(stored));
   }
 
   async save(patch: SettingsPatch): Promise<ExtensionSettings> {
     const current = await this.get();
     const settings = sanitizeSettings(patch, current);
+    if (!hasEnabledExportSetting(settings.export)) {
+      throw new RangeError("Select at least one field to export.");
+    }
     const stored: StoredSettingsEnvelope = {
       schemaVersion: SETTINGS_SCHEMA_VERSION,
       settings,

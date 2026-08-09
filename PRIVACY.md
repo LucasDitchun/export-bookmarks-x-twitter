@@ -3,7 +3,7 @@
 Last updated: August 9, 2026
 
 Bookmark X is a local-first Chrome extension that captures bookmarks rendered
-on the X bookmarks page and exports them as text. It has no backend, analytics,
+on the X bookmarks page and exports them as TXT or Markdown. It has no backend, analytics,
 advertising, telemetry, or X API integration.
 
 ## Data handled
@@ -30,8 +30,8 @@ email address, browsing history, or content from arbitrary pages.
 
 ## Purpose and processing
 
-Data is used only to build and display your local archive and create the TXT
-export you request. Bookmark records are stored in IndexedDB; small capture
+Data is used only to build and display your local archive and create the TXT or
+Markdown export you request. Bookmark records are stored in IndexedDB; small capture
 checkpoints are stored in `chrome.storage.local`. Exported files are created
 only on request and are then managed by Chrome and the operating system.
 The selected interface language and a public GitHub star-count cache are stored
@@ -73,8 +73,8 @@ only records validated URLs already rendered by X.
 
 Previously captured posts remain in the local archive until you choose
 **Clear archive**, clear extension data, or uninstall the extension. Removing a
-bookmark on X does not automatically erase its archived copy. Downloaded TXT
-files must be deleted separately.
+bookmark on X does not automatically erase its archived copy. Downloaded TXT,
+Markdown, and JSON files must be deleted separately.
 
 The semantic-search settings provide separate actions to cancel an active
 download, rebuild the local index, disable semantic ranking, or remove the

@@ -111,7 +111,7 @@
     "message": "Bookmark X"
   },
   "extensionDescription": {
-    "message": "Captura tus marcadores de X desde la página abierta y expórtalos a un archivo TXT local y privado."
+    "message": "Captura y organiza marcadores de X localmente y exporta archivos TXT o Markdown privados."
   },
   "eyebrow": {
     "message": "Archivo local de X"
@@ -240,13 +240,30 @@
     "message": "Detener captura"
   },
   "exportTitle": {
-    "message": "Descargar TXT"
+    "message": "Exportar biblioteca"
   },
-  "exportFullButton": {
-    "message": "Descargar archivo completo"
+  "exportLocalBadge": { "message": "Solo local" },
+  "exportHelp": {
+    "message": "Elige una carpeta, cualquier etiqueta coincidente y si quieres incluir publicaciones archivadas."
   },
-  "exportUrlsButton": {
-    "message": "Solo URL"
+  "exportFiltersSummary": { "message": "Elegir filtros de exportación" },
+  "exportFolderFilterLabel": { "message": "Carpeta y subcarpetas" },
+  "exportAllFolders": { "message": "Todas las carpetas" },
+  "exportTagFilterLabel": { "message": "Etiquetas (cualquiera seleccionada)" },
+  "exportTagFilterHelp": {
+    "message": "Usa Ctrl o Command para seleccionar varias. Déjalo vacío para todas las etiquetas."
+  },
+  "exportIncludeArchived": { "message": "Incluir publicaciones archivadas" },
+  "exportTxtButton": { "message": "Exportar .TXT" },
+  "exportTxtDescription": { "message": "Texto simple y legible" },
+  "exportMarkdownButton": { "message": "Exportar .MD" },
+  "exportMarkdownDescription": { "message": "Markdown estructurado" },
+  "exportFormatMenuLabel": { "message": "Elegir formato de exportación" },
+  "exportPreparing": { "message": "Preparando exportación…" },
+  "exportDownloaded": { "message": "Exportación descargada" },
+  "exportFailed": { "message": "No se pudo crear la exportación." },
+  "exportFieldRequired": {
+    "message": "Activa al menos un campo de exportación en Configuración."
   },
   "moreOptions": {
     "message": "Más opciones"
@@ -312,12 +329,17 @@
   "settingExportLink": { "message": "Enlace de la publicación" },
   "settingExportText": { "message": "Texto de la publicación" },
   "settingExportAuthor": { "message": "Autor" },
-  "settingExportDate": { "message": "Fechas" },
+  "settingExportDate": { "message": "Fecha de publicación" },
   "settingExportImages": { "message": "Enlaces de imágenes" },
   "settingExportVideos": { "message": "Enlaces de vídeos" },
   "settingExportNote": { "message": "Nota privada" },
   "settingExportTags": { "message": "Etiquetas" },
   "settingExportFolder": { "message": "Ruta de carpeta" },
+  "settingExportFirstSaved": { "message": "Fecha de primera captura" },
+  "settingExportLastSeen": { "message": "Fecha de última visualización" },
+  "settingsExportFieldRequired": {
+    "message": "Mantén activado al menos un campo de exportación."
+  },
   "settingsSearch": { "message": "Búsqueda" },
   "settingLiveFilter": { "message": "Filtrar resultados mientras escribes" },
   "settingsData": { "message": "Datos" },
