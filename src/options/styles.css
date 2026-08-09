@@ -117,6 +117,66 @@ legend {
   color: var(--quiet);
   margin: 4px 0 14px;
 }
+.semantic-settings {
+  margin-top: 14px;
+}
+.semantic-consent {
+  background: #f6f8f1;
+  border-left: 5px solid var(--ink);
+  margin: 14px 0;
+  padding: 14px 16px;
+}
+.semantic-consent p {
+  margin: 7px 0 0;
+  max-width: 68ch;
+}
+.semantic-storage {
+  color: var(--quiet);
+  font-weight: 700;
+}
+.semantic-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.semantic-actions button {
+  background: white;
+  border: 2px solid var(--ink);
+  border-radius: 9px;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 8px 14px;
+}
+.semantic-actions .primary-action {
+  background: var(--accent);
+}
+.semantic-actions .danger-action {
+  border-color: #8a1c13;
+  color: #6e130c;
+}
+.semantic-actions button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+.semantic-progress {
+  accent-color: var(--ink);
+  display: block;
+  height: 18px;
+  margin-top: 10px;
+  width: min(100%, 540px);
+}
+.semantic-progress[hidden] {
+  display: none;
+}
+.semantic-status {
+  font-weight: 700;
+  margin: 12px 0 0;
+  min-height: 1.5em;
+}
 .github-project {
   align-items: center;
   background: linear-gradient(120deg, #ffffff 0%, #fbfff0 100%);

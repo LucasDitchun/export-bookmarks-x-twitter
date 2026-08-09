@@ -90,7 +90,7 @@ function createFolderBreadcrumbResolver(
   };
 }
 
-function createDocuments(
+export function createSearchDocuments(
   bookmarks: readonly BookmarkRecord[],
   folders: readonly FolderRecord[],
   tags: readonly BookmarkTag[],
@@ -109,6 +109,7 @@ function createDocuments(
 
 export class SearchRepository {
   private readonly connection: BookmarkDatabase;
+  private documentsPromise: Promise<BookmarkSearchDocument[]> | null = null;
   private indexPromise: Promise<BookmarkSearchIndex> | null = null;
 
   constructor(databaseName = "bookmark-x") {
@@ -116,7 +117,14 @@ export class SearchRepository {
   }
 
   invalidate(): void {
+    this.documentsPromise = null;
     this.indexPromise = null;
+  }
+
+  /** Shared, enriched local corpus used by lexical and optional semantic search. */
+  listDocuments(): Promise<BookmarkSearchDocument[]> {
+    this.documentsPromise ??= this.loadDocuments();
+    return this.documentsPromise;
   }
 
   async search(options: BookmarkSearchOptions): Promise<BookmarkSearchPage> {
@@ -154,11 +162,11 @@ export class SearchRepository {
   }
 
   private getIndex(): Promise<BookmarkSearchIndex> {
-    this.indexPromise ??= this.loadIndex();
+    this.indexPromise ??= this.listDocuments().then(createBookmarkSearchIndex);
     return this.indexPromise;
   }
 
-  private async loadIndex(): Promise<BookmarkSearchIndex> {
+  private async loadDocuments(): Promise<BookmarkSearchDocument[]> {
     const database = await this.connection.open();
     const transaction = database.transaction(
       [BOOKMARKS_STORE, FOLDERS_STORE, TAGS_STORE],
@@ -178,6 +186,6 @@ export class SearchRepository {
       ),
     ]);
     await transactionDone(transaction);
-    return createBookmarkSearchIndex(createDocuments(bookmarks, folders, tags));
+    return createSearchDocuments(bookmarks, folders, tags);
   }
 }

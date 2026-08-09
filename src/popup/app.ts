@@ -5,6 +5,7 @@ import type {
   ScrapeRun,
   SupportedLocale,
 } from "../domain/types";
+import { reciprocalRankFusion } from "../domain/semantic-search";
 import { createBackupUi } from "./backup-ui";
 import { getLocaleTag, type Translator } from "./i18n";
 import { createFolderUi } from "./folder-ui";
@@ -38,6 +39,11 @@ interface PopupAppOptions {
   confirmRestore?: (message: string) => boolean;
   reload?: () => void;
   filterAsYouType?: boolean;
+  semanticSearch?: (
+    query: string,
+    view: BookmarkView,
+    limit: number,
+  ) => Promise<NotedBookmark[] | null>;
 }
 
 interface RequiredElements {
@@ -188,6 +194,7 @@ export function createPopupApp(options: PopupAppOptions): {
     confirmRestore = (message) => window.confirm(message),
     reload = () => window.location.reload(),
     filterAsYouType: initialFilterAsYouType = true,
+    semanticSearch,
   } = options;
   const elements = getElements(document);
   elements.tagInput.placeholder = translate("tagInputPlaceholder");
@@ -738,6 +745,10 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.librarySearchStatus.textContent = translate("searching");
     renderBookmarkList();
     try {
+      const semanticPromise =
+        cursor || semanticSearch === undefined
+          ? null
+          : semanticSearch(requestedQuery, requestedView, 50).catch(() => null);
       const response = await sendMessage<BookmarkSearchPage>({
         type: "SEARCH_BOOKMARKS",
         payload: {
@@ -746,6 +757,7 @@ export function createPopupApp(options: PopupAppOptions): {
           ...(cursor ? { cursor } : {}),
         },
       });
+      const semanticItems = semanticPromise === null ? null : await semanticPromise;
       if (
         destroyed ||
         generation !== libraryGeneration ||
@@ -764,8 +776,19 @@ export function createPopupApp(options: PopupAppOptions): {
         elements.librarySearchStatus.textContent = translate("searchLoadError");
         return;
       }
-      bookmarks = cursor ? [...bookmarks, ...response.data.items] : response.data.items;
-      nextBookmarkCursor = response.data.nextCursor;
+      const fused =
+        semanticItems === null
+          ? response.data.items
+          : reciprocalRankFusion(response.data.items, semanticItems)
+              .slice(0, 100)
+              .map(({ bookmark }) => bookmark);
+      bookmarks = cursor
+        ? [...bookmarks, ...fused].filter(
+            (bookmark, index, all) =>
+              all.findIndex(({ id }) => id === bookmark.id) === index,
+          )
+        : fused;
+      nextBookmarkCursor = semanticItems === null ? response.data.nextCursor : null;
       if (
         selectedBookmarkId &&
         !bookmarks.some((bookmark) => bookmark.id === selectedBookmarkId)
@@ -775,7 +798,7 @@ export function createPopupApp(options: PopupAppOptions): {
       elements.libraryStatus.textContent = "";
       elements.librarySearchStatus.textContent = translate(
         "searchResultsCount",
-        String(response.data.total),
+        String(semanticItems === null ? response.data.total : bookmarks.length),
       );
       renderBookmarkList();
       if (selectFirst && !selectedBookmarkId && bookmarks[0]) {

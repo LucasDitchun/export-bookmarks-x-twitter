@@ -13,6 +13,7 @@ import type {
   LibrarySurface,
   SettingsPatch,
 } from "../settings/settings-repository";
+import type { SemanticSourceDocument } from "../domain/semantic-search";
 
 export interface PopupStatus {
   pageReady: boolean;
@@ -31,6 +32,10 @@ export interface BookmarkListPage {
 
 export interface BookmarkSearchPage extends BookmarkListPage {
   total: number;
+}
+
+export interface SemanticCorpusResult {
+  documents: SemanticSourceDocument[];
 }
 
 export interface BookmarkDetailResult {
@@ -103,6 +108,7 @@ export interface LiveBookmarkIntentResult extends OpenSurfaceResult {
 export type UiRequest =
   | { type: "GET_STATUS" }
   | { type: "GET_SETTINGS" }
+  | { type: "GET_SEMANTIC_CORPUS" }
   | { type: "SAVE_SETTINGS"; payload: { settings: SettingsPatch } }
   | { type: "OPEN_SELECTED_SURFACE" }
   | { type: "OPEN_BOOKMARKS" }

@@ -205,8 +205,8 @@ const optionsDefaultsScenario = String.raw`
   const deadline = Date.now() + 5000;
   while (
     Date.now() < deadline &&
-    document.documentElement?.dataset.settingsState !== "ready" &&
-    document.documentElement?.dataset.settingsState !== "error"
+    (document.documentElement?.dataset.settingsState !== "ready" ||
+      !document.getElementById("semantic-status")?.textContent)
   ) {
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
@@ -232,6 +232,7 @@ const optionsDefaultsScenario = String.raw`
     "export-tags",
     "export-folder",
     "search-live-filter",
+    "semantic-enabled",
     "data-keep-archived",
   ];
   return {
@@ -240,6 +241,12 @@ const optionsDefaultsScenario = String.raw`
     checked: Object.fromEntries(
       ids.map((id) => [id, document.getElementById(id)?.checked ?? "missing"]),
     ),
+    semanticInstallHidden:
+      document.getElementById("semantic-install")?.hidden ?? "missing",
+    semanticStatus: document.getElementById("semantic-status")?.textContent ?? "",
+    huggingFaceRequests: performance
+      .getEntriesByType("resource")
+      .filter(({ name }) => /huggingface\.co|cdn\.hf\.co/u.test(name)).length,
   };
 })()
 `;
@@ -614,12 +621,23 @@ function assertOptionsDefaults(result) {
     "search-live-filter",
     "data-keep-archived",
   ];
-  const expectedFalse = ["appearance-reduce-motion", "surface-side-panel"];
+  const expectedFalse = [
+    "appearance-reduce-motion",
+    "surface-side-panel",
+    "semantic-enabled",
+  ];
   const mismatches = [
     ...expectedTrue.filter((id) => result.checked[id] !== true),
     ...expectedFalse.filter((id) => result.checked[id] !== false),
   ];
-  if (result.state !== "ready" || result.status !== "" || mismatches.length > 0) {
+  if (
+    result.state !== "ready" ||
+    result.status !== "" ||
+    result.semanticInstallHidden !== false ||
+    !result.semanticStatus ||
+    result.huggingFaceRequests !== 0 ||
+    mismatches.length > 0
+  ) {
     throw new Error(
       `The options defaults did not render: ${JSON.stringify({ ...result, mismatches })}`,
     );
@@ -836,7 +854,7 @@ async function main() {
       finalEvaluation.result.value,
     );
     console.log(
-      "Chrome smoke passed: settings, delayed-loader X-page scraping, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, TXT export, JSON backup round-trip, and clear.",
+      "Chrome smoke passed: settings, semantic-search consent defaults, delayed-loader X-page scraping, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, TXT export, JSON backup round-trip, and clear.",
     );
     if (VISUAL_CHECKPOINT_DIRECTORY) {
       console.log(`Visual checkpoints: ${VISUAL_CHECKPOINT_DIRECTORY}`);

@@ -60,6 +60,32 @@ async function seed(databaseName: string): Promise<void> {
 }
 
 describe("SearchRepository", () => {
+  it("exposes the same enriched local corpus for semantic indexing", async () => {
+    const databaseName = `search-corpus-${crypto.randomUUID()}`;
+    await seed(databaseName);
+    const repository = new SearchRepository(databaseName);
+
+    const documents = await repository.listDocuments();
+    expect(
+      documents.map(({ bookmark: stored, tagNames, folderBreadcrumb }) => ({
+        id: stored.id,
+        tagNames,
+        folderBreadcrumb,
+      })),
+    ).toEqual([
+      {
+        id: "100",
+        tagNames: ["Important"],
+        folderBreadcrumb: ["Research", "Project Alpha"],
+      },
+      {
+        id: "200",
+        tagNames: ["Important"],
+        folderBreadcrumb: ["Research", "Project Alpha"],
+      },
+    ]);
+  });
+
   it("searches tag names and complete folder breadcrumbs with explicit pagination", async () => {
     const databaseName = `search-${crypto.randomUUID()}`;
     await seed(databaseName);

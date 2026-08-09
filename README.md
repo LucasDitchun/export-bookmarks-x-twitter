@@ -134,6 +134,30 @@ To change the language manually, open the popup, expand **More options**, and
 choose a language from the **Language** selector. The preference is stored
 locally and used the next time you open Bookmark X.
 
+## Optional local semantic search
+
+Text search works immediately and remains the default. If you want to find a
+post from an incomplete memory of its meaning, open **More options → Search**
+and choose **Download and enable** under **Optional semantic search**.
+
+- nothing is downloaded until that explicit action;
+- the pinned multilingual E5 model download is about 136 MB and is cached in
+  this Chrome profile;
+- inference runs in a dedicated Web Worker on this device, using WebGPU when
+  available and packaged WebAssembly as the fallback;
+- post text, author, private note, tags, and folder path are embedded locally
+  and are never sent to Hugging Face or the project maintainer;
+- lexical and semantic rankings are combined deterministically, while any
+  model, offline, or device error falls back to normal text search;
+- **Cancel**, **Reindex saved posts**, and **Remove model and index** control
+  the complete local lifecycle. Removal also revokes consent.
+
+The local vector index uses roughly 1.5 KB per saved post, plus IndexedDB record
+overhead. Chrome's `unlimitedStorage` permission avoids the normal extension
+quota, but it cannot create disk space. E5 truncates long inputs at 512 tokens,
+and first-time indexing time depends on the number of posts and device speed.
+See [Semantic search architecture and limitations](docs/SEMANTIC_SEARCH.md).
+
 ## Back up and restore your local library
 
 Open **More options** and use **Download JSON backup** to save a complete local
@@ -153,6 +177,9 @@ Bookmark X validates the entire file before changing local data. A restore is
 blocked while bookmark capture is running. Keep a separate copy of important
 backup files, especially before using **Replace**.
 
+Semantic model files, embeddings, device consent, and lifecycle state are not
+included in JSON backups. Reindex after restoring if semantic search is enabled.
+
 ## Privacy and permissions
 
 All extension-managed bookmark data stays in IndexedDB inside the current
@@ -167,6 +194,9 @@ The extension requests only the capabilities needed for capture:
 - `https://api.github.com/*` reads only this project's public star count for the
   open-source card in Settings. The result is cached locally for 24 hours, and
   no bookmark data or GitHub credentials are included;
+- `https://huggingface.co/*` and `https://*.cdn.hf.co/*` download only the
+  pinned model weights, tokenizer, and configuration after explicit consent.
+  All executable JavaScript and WebAssembly is packaged with the extension;
 - the content script is restricted to `https://x.com/*` and
   `https://www.x.com/*`; outside the bookmarks page it processes a post only
   after an explicit bookmark-button click.

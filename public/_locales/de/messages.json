@@ -332,6 +332,58 @@
   "liveBookmarkArchived": {
     "message": "Aus aktuellen Lesezeichen entfernt und im Archiv behalten."
   },
+  "semanticTitle": { "message": "Optionale semantische Suche" },
+  "semanticPrivacy": {
+    "message": "Finde Beiträge nach ihrer Bedeutung mit einem lokalen mehrsprachigen Modell. Beiträge, Notizen, Tags und Ordner verlassen dieses Gerät nie."
+  },
+  "semanticConsentTitle": { "message": "Vor dem Download" },
+  "semanticConsentBody": {
+    "message": "Bookmark X lädt etwa 136 MB Modelldaten von Hugging Face erst herunter, wenn du Herunterladen und aktivieren auswählst. Danach funktioniert das Modell offline."
+  },
+  "semanticQuotaHelp": {
+    "message": "Die Erweiterung fordert unbegrenzten lokalen Speicher an, der verfügbare Speicherplatz gilt jedoch weiterhin. Der Suchindex benötigt etwa 1,5 KB pro gespeichertem Beitrag."
+  },
+  "semanticEnabled": { "message": "Semantische Ergebnisse in der Suche verwenden" },
+  "semanticInstall": { "message": "Herunterladen und aktivieren" },
+  "semanticCancel": { "message": "Abbrechen" },
+  "semanticReindex": { "message": "Gespeicherte Beiträge neu indizieren" },
+  "semanticRemove": { "message": "Modell und Index entfernen" },
+  "semanticStorageEstimate": {
+    "message": "Von der Erweiterung verwendet: $USAGE$ von $QUOTA$.",
+    "placeholders": { "usage": { "content": "$1" }, "quota": { "content": "$2" } }
+  },
+  "semanticReady": {
+    "message": "$BACKEND$-Modell bereit · $COUNT$ Beiträge indiziert",
+    "placeholders": { "backend": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "semanticDownloading": { "message": "Modell wird heruntergeladen…" },
+  "semanticIndexing": { "message": "Gespeicherte Beiträge werden lokal indiziert…" },
+  "semanticError": {
+    "message": "Die semantische Suche benötigt Aufmerksamkeit. Die Textsuche funktioniert weiterhin."
+  },
+  "semanticNotInstalled": {
+    "message": "Semantisches Modell nicht installiert. Die Textsuche ist aktiv."
+  },
+  "semanticIndexProgress": {
+    "message": "$DONE$ von $TOTAL$ Beiträgen indiziert",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "semanticDownloadProgress": {
+    "message": "Modelldownload: $PERCENT$ %",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": {
+    "message": "Das Modell konnte nicht installiert werden. Die Textsuche funktioniert weiterhin."
+  },
+  "semanticReindexError": {
+    "message": "Der semantische Index konnte nicht neu aufgebaut werden."
+  },
+  "semanticRemoveError": {
+    "message": "Nicht alle Daten der semantischen Suche konnten entfernt werden."
+  },
+  "semanticToggleError": {
+    "message": "Die semantische Suche konnte nicht geändert werden."
+  },
   "liveBookmarkFailed": {
     "message": "X hat diese Änderung nicht bestätigt. Dein lokales Archiv blieb unverändert."
   }

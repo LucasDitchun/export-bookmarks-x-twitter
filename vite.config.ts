@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
+  worker: { format: "es" },
   build: {
     outDir: "dist",
     emptyOutDir: true,

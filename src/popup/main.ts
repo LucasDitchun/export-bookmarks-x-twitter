@@ -21,6 +21,9 @@ import {
   LIVE_BOOKMARK_CONTEXT_KEY,
 } from "../storage/live-bookmark-state";
 import { renderLiveBookmarkStatus } from "./live-bookmark-status";
+import { SemanticStateRepository } from "../semantic/semantic-state-repository";
+import { SemanticSearchClient } from "../semantic/semantic-search-client";
+import type { SemanticCorpusResult } from "../shared/protocol";
 
 function applySurfaceContext(): void {
   const params = new URLSearchParams(window.location.search);
@@ -79,6 +82,23 @@ async function startPopup(): Promise<void> {
   }
 
   const sendMessage: SendMessage = (request) => chrome.runtime.sendMessage(request);
+  const semanticSearch = new SemanticSearchClient(
+    new SemanticStateRepository({
+      get: (key) => chrome.storage.local.get(key),
+      set: (items) => chrome.storage.local.set(items),
+    }),
+    async () => {
+      const response = await sendMessage<SemanticCorpusResult>({
+        type: "GET_SEMANTIC_CORPUS",
+      });
+      if (!response.ok) throw new Error(response.error.code);
+      return response.data.documents;
+    },
+    () =>
+      new Worker(new URL("../semantic/semantic-worker.ts", import.meta.url), {
+        type: "module",
+      }),
+  );
   applyLibraryUiSettings(document, DEFAULT_SETTINGS);
   let filterAsYouType = DEFAULT_SETTINGS.search.filterAsYouType;
   let app: ReturnType<typeof createPopupApp> | null = null;
@@ -119,12 +139,14 @@ async function startPopup(): Promise<void> {
     sendMessage,
     translate,
     filterAsYouType,
+    semanticSearch: (query, view, limit) => semanticSearch.search(query, view, limit),
   });
   window.addEventListener(
     "unload",
     () => {
       chrome.storage.onChanged.removeListener(refreshSettings);
       settingsUi.destroy();
+      semanticSearch.destroy();
       app?.destroy();
     },
     { once: true },

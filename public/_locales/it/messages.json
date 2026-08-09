@@ -330,6 +330,54 @@
   "liveBookmarkArchived": {
     "message": "Rimosso dai segnalibri correnti e conservato in Archivio."
   },
+  "semanticTitle": { "message": "Ricerca semantica facoltativa" },
+  "semanticPrivacy": {
+    "message": "Trova i post in base al significato con un modello multilingue locale. Post, note, tag e cartelle non lasciano mai questo dispositivo."
+  },
+  "semanticConsentTitle": { "message": "Prima del download" },
+  "semanticConsentBody": {
+    "message": "Bookmark X scarica circa 136 MB di dati del modello da Hugging Face solo dopo che scegli Scarica e attiva. In seguito il modello funziona offline."
+  },
+  "semanticQuotaHelp": {
+    "message": "L’estensione richiede spazio di archiviazione locale illimitato, ma resta valido lo spazio disponibile sul disco. L’indice usa circa 1,5 KB per post salvato."
+  },
+  "semanticEnabled": { "message": "Usa risultati semantici nella ricerca" },
+  "semanticInstall": { "message": "Scarica e attiva" },
+  "semanticCancel": { "message": "Annulla" },
+  "semanticReindex": { "message": "Reindicizza i post salvati" },
+  "semanticRemove": { "message": "Rimuovi modello e indice" },
+  "semanticStorageEstimate": {
+    "message": "Spazio usato dall’estensione: $USAGE$ su $QUOTA$.",
+    "placeholders": { "usage": { "content": "$1" }, "quota": { "content": "$2" } }
+  },
+  "semanticReady": {
+    "message": "Modello $BACKEND$ pronto · $COUNT$ post indicizzati",
+    "placeholders": { "backend": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "semanticDownloading": { "message": "Download del modello…" },
+  "semanticIndexing": { "message": "Indicizzazione locale dei post salvati…" },
+  "semanticError": {
+    "message": "La ricerca semantica richiede attenzione. La ricerca testuale continua a funzionare."
+  },
+  "semanticNotInstalled": {
+    "message": "Modello semantico non installato. La ricerca testuale è attiva."
+  },
+  "semanticIndexProgress": {
+    "message": "$DONE$ post indicizzati su $TOTAL$",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "semanticDownloadProgress": {
+    "message": "Download del modello: $PERCENT$%",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": {
+    "message": "Impossibile installare il modello. La ricerca testuale continua a funzionare."
+  },
+  "semanticReindexError": { "message": "Impossibile ricostruire l’indice semantico." },
+  "semanticRemoveError": {
+    "message": "Impossibile rimuovere tutti i dati della ricerca semantica."
+  },
+  "semanticToggleError": { "message": "Impossibile modificare la ricerca semantica." },
   "liveBookmarkFailed": {
     "message": "X non ha confermato questa modifica. L’archivio locale non è stato modificato."
   }

@@ -83,6 +83,7 @@ interface BackgroundDependencies {
       cursor?: string;
       limit: number;
     }): Promise<unknown>;
+    listDocuments(): Promise<unknown>;
     invalidate(): void;
   };
   tags: {
@@ -167,6 +168,7 @@ function isUiRequest(value: unknown): value is UiRequest {
   if (
     value.type === "GET_STATUS" ||
     value.type === "GET_SETTINGS" ||
+    value.type === "GET_SEMANTIC_CORPUS" ||
     value.type === "OPEN_SELECTED_SURFACE" ||
     value.type === "OPEN_BOOKMARKS" ||
     value.type === "START_SCRAPE" ||
@@ -423,6 +425,8 @@ export class BackgroundController {
           return success(await this.getStatus());
         case "GET_SETTINGS":
           return success({ settings: await this.dependencies.settings.get() });
+        case "GET_SEMANTIC_CORPUS":
+          return success({ documents: await this.dependencies.search.listDocuments() });
         case "SAVE_SETTINGS": {
           const settings = await this.dependencies.settings.save(
             request.payload.settings,

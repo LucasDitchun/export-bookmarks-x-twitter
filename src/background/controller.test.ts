@@ -66,6 +66,9 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
         total: 0,
         nextCursor: null,
       })),
+      listDocuments: vi.fn(async () => [
+        { bookmark, tagNames: ["Research"], folderBreadcrumb: ["AI"] },
+      ]),
       invalidate: vi.fn(),
     },
     tags: {
@@ -429,6 +432,24 @@ describe("BackgroundController", () => {
       cursor: "opaque:cursor",
       limit: 100,
     });
+  });
+
+  it("returns the enriched local corpus only to trusted extension pages", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "GET_SEMANTIC_CORPUS" }, POPUP_SENDER),
+    ).resolves.toEqual({
+      ok: true,
+      data: {
+        documents: [{ bookmark, tagNames: ["Research"], folderBreadcrumb: ["AI"] }],
+      },
+    });
+    expect(dependencies.search.listDocuments).toHaveBeenCalledOnce();
+    await expect(
+      controller.handle({ type: "GET_SEMANTIC_CORPUS" }, { id: "another-extension" }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
   });
 
   it("loads and saves settings, then applies the selected action surface", async () => {

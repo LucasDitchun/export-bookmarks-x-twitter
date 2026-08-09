@@ -10,6 +10,8 @@
       data, or telemetry.
 - [ ] Data disclosures cover post text, authors, dates, URLs, capture metadata,
       local retention, and separately downloaded exports.
+- [ ] The listing says semantic search is optional, downloads about 136 MB only
+      after consent, runs locally, and can be removed completely.
 - [ ] English, Brazilian Portuguese, Japanese, Spanish, Simplified Chinese,
       German, French, and Italian copy is reviewed.
 - [ ] Screenshots contain synthetic data only and do not imply affiliation with
@@ -21,6 +23,8 @@
 - [ ] `storage` is justified as storing local capture status and language
       preference.
 - [ ] `unlimitedStorage` is justified as supporting a durable local archive.
+- [ ] `https://huggingface.co/*` and `https://*.cdn.hf.co/*` are justified as
+      pinned model-data downloads after consent; no remote code is loaded.
 - [ ] The only content-script matches are `https://x.com/*` and
       `https://www.x.com/*`; outside `/i/bookmarks`, post processing requires
       an explicit bookmark-button click.
@@ -65,6 +69,12 @@
 - [ ] X failure/reversal changes no local record; rebookmark restores note,
       folder, and tags.
 - [ ] Arbitrary non-X sites cannot be captured.
+- [ ] Before consent, semantic search creates no worker download and text search
+      remains fully functional.
+- [ ] Model download progress is announced, cancellation terminates the worker,
+      and removal clears the dedicated cache, index, and consent state.
+- [ ] WebGPU and packaged WASM fallback both work; offline/model failures return
+      normal lexical results without blocking the UI.
 
 ## Publish
 
