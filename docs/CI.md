@@ -112,6 +112,10 @@ an unexpected SHA is treated as a hard failure.
 - Keep browser-harness smoke detection path-scoped inside the existing quality
   job. Ordinary feature pull requests must not pay for another browser launch
   or a second runner setup.
+- Load the unpacked extension through the browser-target
+  `Extensions.loadUnpacked` DevTools command. The disposable smoke profile may
+  enable extension debugging, but must not fall back to branded Chrome or
+  legacy `--load-extension` flags.
 - Add workflow-policy tests before changing triggers, permissions,
   cancellation, release scope, or gate placement.
 - Compare measured step durations before and after a CI change. Revert an
@@ -132,3 +136,5 @@ updates are automated, and policy tests protect the topology.
 - [`actions/setup-node` dependency caching](https://github.com/actions/setup-node#caching-global-packages-data)
 - [`actions/upload-artifact` compression behavior](https://github.com/actions/upload-artifact#altering-compressions-level-speed-v-size)
 - [Node.js release schedule](https://nodejs.org/en/about/previous-releases)
+- [Chrome DevTools Protocol Extensions domain](https://chromedevtools.github.io/devtools-protocol/tot/Extensions/)
+- [Chrome extension testing in new headless mode](https://developer.chrome.com/docs/extensions/how-to/test/end-to-end-testing)
