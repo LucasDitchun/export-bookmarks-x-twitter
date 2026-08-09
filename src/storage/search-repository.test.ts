@@ -147,32 +147,28 @@ describe("SearchRepository", () => {
     });
   });
 
-  it(
-    "loads 1,000+ bookmarks once instead of scanning IndexedDB per query",
-    async () => {
-      const databaseName = `search-large-${crypto.randomUUID()}`;
-      const database = await new BookmarkDatabase(databaseName).open();
-      const transaction = database.transaction(BOOKMARKS_STORE, "readwrite");
-      const store = transaction.objectStore(BOOKMARKS_STORE);
-      for (let index = 0; index < 1_250; index += 1) {
-        store.put({
-          ...bookmark(String(index), "2026-01-01T00:00:00.000Z"),
-          text: `Local search topic ${index}`,
-          folderId: null,
-          tagIds: [],
-        });
-      }
-      await transactionDone(transaction);
-      const getAll = vi.spyOn(IDBObjectStore.prototype, "getAll");
-      const repository = new SearchRepository(databaseName);
+  it("loads 1,000+ bookmarks once instead of scanning IndexedDB per query", async () => {
+    const databaseName = `search-large-${crypto.randomUUID()}`;
+    const database = await new BookmarkDatabase(databaseName).open();
+    const transaction = database.transaction(BOOKMARKS_STORE, "readwrite");
+    const store = transaction.objectStore(BOOKMARKS_STORE);
+    for (let index = 0; index < 1_250; index += 1) {
+      store.put({
+        ...bookmark(String(index), "2026-01-01T00:00:00.000Z"),
+        text: `Local search topic ${index}`,
+        folderId: null,
+        tagIds: [],
+      });
+    }
+    await transactionDone(transaction);
+    const getAll = vi.spyOn(IDBObjectStore.prototype, "getAll");
+    const repository = new SearchRepository(databaseName);
 
-      for (const query of ["topic 1", "topic 2", "topic 3", "topic 12"]) {
-        await repository.search({ query, view: "current", limit: 50 });
-      }
+    for (const query of ["topic 1", "topic 2", "topic 3", "topic 12"]) {
+      await repository.search({ query, view: "current", limit: 50 });
+    }
 
-      expect(getAll).toHaveBeenCalledTimes(3);
-      getAll.mockRestore();
-    },
-    15_000,
-  );
+    expect(getAll).toHaveBeenCalledTimes(3);
+    getAll.mockRestore();
+  }, 15_000);
 });
