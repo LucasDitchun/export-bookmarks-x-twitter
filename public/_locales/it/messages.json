@@ -4,7 +4,7 @@
     "message": "Seleziona un segnalibro per aggiungere una nota privata."
   },
   "libraryViewsLabel": { "message": "Viste della libreria dei segnalibri" },
-  "libraryViewInbox": { "message": "Senza categoria" },
+  "libraryViewInbox": { "message": "In arrivo" },
   "libraryViewCurrent": { "message": "Ora su X" },
   "libraryViewArchived": { "message": "Archiviati" },
   "libraryEmptyInbox": { "message": "Nessun segnalibro senza categoria." },
@@ -214,5 +214,58 @@
   },
   "errorGeneric": {
     "message": "Bookmark X non ha potuto completare l’azione. Riprova."
-  }
+  },
+  "openSettingsButton": { "message": "Apri impostazioni" },
+  "settingsTitle": { "message": "Impostazioni di Bookmark X" },
+  "skipToSettings": { "message": "Vai alle impostazioni" },
+  "settingsEyebrow": { "message": "Locale per scelta" },
+  "settingsIntro": {
+    "message": "Scegli l’aspetto, l’apertura e la preparazione del tuo archivio privato."
+  },
+  "settingsAppearance": { "message": "Aspetto" },
+  "settingLargeText": { "message": "Usa testo più grande" },
+  "settingHighContrast": { "message": "Usa contrasto elevato" },
+  "settingReduceMotion": { "message": "Riduci movimento" },
+  "settingsBehavior": { "message": "Comportamento" },
+  "settingSurface": { "message": "Apri la raccolta come" },
+  "settingSurfaceModal": { "message": "Finestra compatta" },
+  "settingSurfaceSidePanel": { "message": "Pannello laterale di Chrome" },
+  "settingPrompt": { "message": "Chiedi una nota dopo il salvataggio" },
+  "settingMetadataSummary": { "message": "Mostra stato di catalogazione" },
+  "settingBreadcrumb": { "message": "Mostra percorso cartella" },
+  "settingTags": { "message": "Mostra tag" },
+  "settingNote": { "message": "Mostra nota privata" },
+  "settingCategory": { "message": "Mostra indicatore senza categoria" },
+  "settingsExport": { "message": "Esportazione" },
+  "settingsExportHelp": {
+    "message": "Scegli i dettagli che le future esportazioni TXT e Markdown potranno includere."
+  },
+  "settingExportLink": { "message": "Link del post" },
+  "settingExportText": { "message": "Testo del post" },
+  "settingExportAuthor": { "message": "Autore" },
+  "settingExportDate": { "message": "Date" },
+  "settingExportImages": { "message": "Link immagini" },
+  "settingExportVideos": { "message": "Link video" },
+  "settingExportNote": { "message": "Nota privata" },
+  "settingExportTags": { "message": "Tag" },
+  "settingExportFolder": { "message": "Percorso cartella" },
+  "settingsSearch": { "message": "Ricerca" },
+  "settingLiveFilter": { "message": "Filtra i risultati durante la digitazione" },
+  "settingsData": { "message": "Dati" },
+  "settingKeepArchived": { "message": "Mantieni archiviati i post rimossi da X" },
+  "settingsDataHelp": {
+    "message": "Il contenuto resta in IndexedDB su questo dispositivo."
+  },
+  "settingsSaving": { "message": "Salvataggio…" },
+  "settingsSaved": { "message": "Salvato" },
+  "settingsSaveError": { "message": "Impossibile salvare le impostazioni." },
+  "settingsLoadError": { "message": "Impossibile caricare le impostazioni." },
+  "bookmarkPromptTitle": { "message": "Perché stai salvando questo contenuto?" },
+  "bookmarkPromptClose": { "message": "Chiudi" },
+  "bookmarkPromptSave": { "message": "Salva nota" },
+  "bookmarkPromptTags": { "message": "Tag" },
+  "bookmarkPromptFolder": { "message": "Cartella" },
+  "bookmarkPromptNote": { "message": "Nota privata" },
+  "bookmarkCategorized": { "message": "Categorizzato" },
+  "bookmarkNeedsCategory": { "message": "Da categorizzare" }
 }

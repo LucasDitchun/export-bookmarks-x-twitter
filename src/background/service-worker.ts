@@ -3,6 +3,7 @@ import { BookmarkRepository } from "../storage/bookmark-repository";
 import { ExtensionStateRepository } from "../storage/extension-state";
 import { TagRepository } from "../storage/tag-repository";
 import { FolderRepository } from "../storage/folder-repository";
+import { SettingsRepository } from "../settings/settings-repository";
 import { BackgroundController } from "./controller";
 
 const state = new ExtensionStateRepository({
@@ -14,11 +15,24 @@ const archive = new ArchiveRepository();
 const bookmarks = new BookmarkRepository();
 const tags = new TagRepository();
 const folders = new FolderRepository();
+const settings = new SettingsRepository({
+  get: (keys) => chrome.storage.local.get(keys),
+  set: (items) => chrome.storage.local.set(items),
+});
+
+async function configureSurface(surface: "modal" | "sidePanel"): Promise<void> {
+  const sidePanel = surface === "sidePanel";
+  await Promise.all([
+    chrome.action.setPopup({ popup: sidePanel ? "" : "popup.html" }),
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: sidePanel }),
+  ]);
+}
 const controller = new BackgroundController({
   archive,
   bookmarks,
   tags,
   folders,
+  settings,
   state,
   extensionId: chrome.runtime.id,
   browser: {
@@ -30,8 +44,25 @@ const controller = new BackgroundController({
       await chrome.tabs.create({ url: "https://x.com/i/bookmarks" });
     },
     sendToTab: (tabId, request) => chrome.tabs.sendMessage(tabId, request),
+    configureSurface,
+    openSidePanel: (tabId) => chrome.sidePanel.open({ tabId }),
   },
 });
+
+async function restoreSurfacePreference(): Promise<void> {
+  const current = await settings.get();
+  await configureSurface(current.behavior.surface);
+}
+
+function scheduleSurfaceRestore(): void {
+  void restoreSurfacePreference().catch((error: unknown) => {
+    console.error("Bookmark X could not restore its selected surface.", error);
+  });
+}
+
+scheduleSurfaceRestore();
+chrome.runtime.onInstalled.addListener(scheduleSurfaceRestore);
+chrome.runtime.onStartup.addListener(scheduleSurfaceRestore);
 
 void chrome.storage.local.setAccessLevel({
   accessLevel: "TRUSTED_CONTEXTS",

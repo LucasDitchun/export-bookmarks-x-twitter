@@ -3,9 +3,9 @@
   "name": "__MSG_extensionName__",
   "description": "__MSG_extensionDescription__",
   "version": "0.1.0",
-  "minimum_chrome_version": "102",
+  "minimum_chrome_version": "116",
   "default_locale": "en",
-  "permissions": ["activeTab", "storage", "unlimitedStorage"],
+  "permissions": ["activeTab", "sidePanel", "storage", "unlimitedStorage"],
   "background": {
     "service_worker": "service-worker.js",
     "type": "module"
@@ -17,6 +17,13 @@
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png"
     }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   },
   "content_scripts": [
     {

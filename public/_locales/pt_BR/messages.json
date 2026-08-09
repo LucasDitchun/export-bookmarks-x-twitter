@@ -4,7 +4,7 @@
     "message": "Selecione um favorito para adicionar uma nota privada."
   },
   "libraryViewsLabel": { "message": "Visualizações da biblioteca de favoritos" },
-  "libraryViewInbox": { "message": "Sem categoria" },
+  "libraryViewInbox": { "message": "Entrada" },
   "libraryViewCurrent": { "message": "No X agora" },
   "libraryViewArchived": { "message": "Arquivados" },
   "libraryEmptyInbox": { "message": "Nenhum favorito sem categoria." },
@@ -136,5 +136,60 @@
   "errorCaptureRunning": { "message": "Já existe uma captura em andamento." },
   "errorGeneric": {
     "message": "O Bookmark X não concluiu essa ação. Tente novamente."
-  }
+  },
+  "openSettingsButton": { "message": "Abrir configurações" },
+  "settingsTitle": { "message": "Configurações do Bookmark X" },
+  "skipToSettings": { "message": "Ir para as configurações" },
+  "settingsEyebrow": { "message": "Local por princípio" },
+  "settingsIntro": {
+    "message": "Escolha como o Bookmark X aparece, abre e prepara seu arquivo privado."
+  },
+  "settingsAppearance": { "message": "Aparência" },
+  "settingLargeText": { "message": "Usar texto maior" },
+  "settingHighContrast": { "message": "Usar alto contraste" },
+  "settingReduceMotion": { "message": "Reduzir movimento" },
+  "settingsBehavior": { "message": "Comportamento" },
+  "settingSurface": { "message": "Abrir a biblioteca como" },
+  "settingSurfaceModal": { "message": "Janela compacta" },
+  "settingSurfaceSidePanel": { "message": "Painel lateral do Chrome" },
+  "settingPrompt": { "message": "Pedir uma nota após salvar" },
+  "settingMetadataSummary": { "message": "Mostrar status do mapeamento" },
+  "settingBreadcrumb": { "message": "Mostrar caminho da pasta" },
+  "settingTags": { "message": "Mostrar tags" },
+  "settingNote": { "message": "Mostrar nota privada" },
+  "settingCategory": { "message": "Mostrar indicador sem categoria" },
+  "settingsExport": { "message": "Exportação" },
+  "settingsExportHelp": {
+    "message": "Escolha quais detalhes futuras exportações TXT e Markdown podem incluir."
+  },
+  "settingExportLink": { "message": "Link da postagem" },
+  "settingExportText": { "message": "Texto da postagem" },
+  "settingExportAuthor": { "message": "Autor" },
+  "settingExportDate": { "message": "Datas" },
+  "settingExportImages": { "message": "Links de imagens" },
+  "settingExportVideos": { "message": "Links de vídeos" },
+  "settingExportNote": { "message": "Nota privada" },
+  "settingExportTags": { "message": "Tags" },
+  "settingExportFolder": { "message": "Caminho da pasta" },
+  "settingsSearch": { "message": "Pesquisa" },
+  "settingLiveFilter": { "message": "Filtrar resultados enquanto digita" },
+  "settingsData": { "message": "Dados" },
+  "settingKeepArchived": {
+    "message": "Manter como arquivadas as postagens removidas do X"
+  },
+  "settingsDataHelp": {
+    "message": "O conteúdo dos bookmarks fica no IndexedDB deste dispositivo."
+  },
+  "settingsSaving": { "message": "Salvando…" },
+  "settingsSaved": { "message": "Salvo" },
+  "settingsSaveError": { "message": "Não foi possível salvar as configurações." },
+  "settingsLoadError": { "message": "Não foi possível carregar as configurações." },
+  "bookmarkPromptTitle": { "message": "Por que você está salvando isto?" },
+  "bookmarkPromptClose": { "message": "Fechar" },
+  "bookmarkPromptSave": { "message": "Salvar nota" },
+  "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptFolder": { "message": "Pasta" },
+  "bookmarkPromptNote": { "message": "Nota privada" },
+  "bookmarkCategorized": { "message": "Categorizado" },
+  "bookmarkNeedsCategory": { "message": "Precisa de categoria" }
 }

@@ -9,6 +9,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: resolve(import.meta.dirname, "popup.html"),
+        options: resolve(import.meta.dirname, "options.html"),
+        sidepanel: resolve(import.meta.dirname, "sidepanel.html"),
         "service-worker": resolve(
           import.meta.dirname,
           "src/background/service-worker.ts",

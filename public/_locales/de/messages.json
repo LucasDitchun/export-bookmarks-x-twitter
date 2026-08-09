@@ -4,7 +4,7 @@
     "message": "Wähle ein Lesezeichen aus, um eine private Notiz hinzuzufügen."
   },
   "libraryViewsLabel": { "message": "Ansichten der Lesezeichenbibliothek" },
-  "libraryViewInbox": { "message": "Nicht kategorisiert" },
+  "libraryViewInbox": { "message": "Eingang" },
   "libraryViewCurrent": { "message": "Jetzt auf X" },
   "libraryViewArchived": { "message": "Archiviert" },
   "libraryEmptyInbox": { "message": "Keine nicht kategorisierten Lesezeichen." },
@@ -216,5 +216,58 @@
   },
   "errorGeneric": {
     "message": "Bookmark X konnte diese Aktion nicht abschließen. Versuche es erneut."
-  }
+  },
+  "openSettingsButton": { "message": "Einstellungen öffnen" },
+  "settingsTitle": { "message": "Bookmark-X-Einstellungen" },
+  "skipToSettings": { "message": "Zu den Einstellungen" },
+  "settingsEyebrow": { "message": "Bewusst lokal" },
+  "settingsIntro": {
+    "message": "Lege fest, wie Bookmark X aussieht, geöffnet wird und dein privates Archiv vorbereitet."
+  },
+  "settingsAppearance": { "message": "Darstellung" },
+  "settingLargeText": { "message": "Größeren Text verwenden" },
+  "settingHighContrast": { "message": "Hohen Kontrast verwenden" },
+  "settingReduceMotion": { "message": "Bewegungen reduzieren" },
+  "settingsBehavior": { "message": "Verhalten" },
+  "settingSurface": { "message": "Bibliothek öffnen als" },
+  "settingSurfaceModal": { "message": "Kompaktes Fenster" },
+  "settingSurfaceSidePanel": { "message": "Chrome-Seitenleiste" },
+  "settingPrompt": { "message": "Nach dem Speichern nach einer Notiz fragen" },
+  "settingMetadataSummary": { "message": "Zuordnungsstatus anzeigen" },
+  "settingBreadcrumb": { "message": "Ordnerpfad anzeigen" },
+  "settingTags": { "message": "Tags anzeigen" },
+  "settingNote": { "message": "Private Notiz anzeigen" },
+  "settingCategory": { "message": "Hinweis ohne Kategorie anzeigen" },
+  "settingsExport": { "message": "Export" },
+  "settingsExportHelp": {
+    "message": "Lege fest, welche Details künftige TXT- und Markdown-Exporte enthalten dürfen."
+  },
+  "settingExportLink": { "message": "Beitragslink" },
+  "settingExportText": { "message": "Beitragstext" },
+  "settingExportAuthor": { "message": "Autor" },
+  "settingExportDate": { "message": "Daten" },
+  "settingExportImages": { "message": "Bildlinks" },
+  "settingExportVideos": { "message": "Videolinks" },
+  "settingExportNote": { "message": "Private Notiz" },
+  "settingExportTags": { "message": "Tags" },
+  "settingExportFolder": { "message": "Ordnerpfad" },
+  "settingsSearch": { "message": "Suche" },
+  "settingLiveFilter": { "message": "Ergebnisse beim Tippen filtern" },
+  "settingsData": { "message": "Daten" },
+  "settingKeepArchived": { "message": "Von X entfernte Beiträge archiviert behalten" },
+  "settingsDataHelp": {
+    "message": "Bookmark-Inhalte bleiben in IndexedDB auf diesem Gerät."
+  },
+  "settingsSaving": { "message": "Speichern…" },
+  "settingsSaved": { "message": "Gespeichert" },
+  "settingsSaveError": { "message": "Einstellungen konnten nicht gespeichert werden." },
+  "settingsLoadError": { "message": "Einstellungen konnten nicht geladen werden." },
+  "bookmarkPromptTitle": { "message": "Warum speicherst du das?" },
+  "bookmarkPromptClose": { "message": "Schließen" },
+  "bookmarkPromptSave": { "message": "Notiz speichern" },
+  "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptFolder": { "message": "Ordner" },
+  "bookmarkPromptNote": { "message": "Private Notiz" },
+  "bookmarkCategorized": { "message": "Kategorisiert" },
+  "bookmarkNeedsCategory": { "message": "Kategorie fehlt" }
 }

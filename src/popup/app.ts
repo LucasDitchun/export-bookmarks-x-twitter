@@ -69,6 +69,7 @@ interface RequiredElements {
   pageGuidance: HTMLElement;
   pageLabel: HTMLElement;
   selectedBookmarkAuthor: HTMLElement;
+  selectedCategoryIndicator: HTMLElement;
   selectedBookmarkTitle: HTMLElement;
   selectedTags: HTMLElement;
   tagInput: HTMLInputElement;
@@ -133,6 +134,7 @@ function getElements(document: Document): RequiredElements {
     pageGuidance: requireElement(document, "page-guidance"),
     pageLabel: requireElement(document, "page-label"),
     selectedBookmarkAuthor: requireElement(document, "selected-bookmark-author"),
+    selectedCategoryIndicator: requireElement(document, "selected-category-indicator"),
     selectedBookmarkTitle: requireElement(document, "selected-bookmark-title"),
     selectedTags: requireElement(document, "selected-tags"),
     tagInput: requireElement(document, "tag-input"),
@@ -461,6 +463,7 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.noteEditor.hidden = true;
     elements.selectedBookmarkTitle.textContent = "";
     elements.selectedBookmarkAuthor.textContent = "";
+    elements.selectedCategoryIndicator.textContent = "";
     elements.noteTextarea.value = "";
     elements.noteTextarea.disabled = true;
     folderUi?.setBookmark(null);
@@ -596,6 +599,7 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.noteEditor.hidden = true;
     elements.selectedBookmarkTitle.textContent = "";
     elements.selectedBookmarkAuthor.textContent = "";
+    elements.selectedCategoryIndicator.textContent = "";
     elements.noteTextarea.value = "";
     elements.noteTextarea.disabled = true;
     folderUi?.setBookmark(null);
@@ -616,6 +620,16 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.noteEditor.hidden = false;
     elements.selectedBookmarkTitle.textContent = bookmark.text || bookmark.url;
     elements.selectedBookmarkAuthor.textContent = `@${bookmark.author.username}`;
+    const isCategorized =
+      bookmark.note.trim().length > 0 &&
+      bookmark.folderId !== null &&
+      bookmark.tagIds.length > 0;
+    elements.selectedCategoryIndicator.textContent = translate(
+      isCategorized ? "bookmarkCategorized" : "bookmarkNeedsCategory",
+    );
+    elements.selectedCategoryIndicator.dataset.state = isCategorized
+      ? "categorized"
+      : "incomplete";
     elements.noteTextarea.value = bookmark.note;
     folderUi?.setBookmark(bookmark);
     editRevision += 1;

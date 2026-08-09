@@ -2,7 +2,7 @@
   "libraryTitle": { "message": "Biblioteca de marcadores" },
   "libraryHelp": { "message": "Selecciona un marcador para añadir una nota privada." },
   "libraryViewsLabel": { "message": "Vistas de la biblioteca de marcadores" },
-  "libraryViewInbox": { "message": "Sin categoría" },
+  "libraryViewInbox": { "message": "Bandeja" },
   "libraryViewCurrent": { "message": "En X ahora" },
   "libraryViewArchived": { "message": "Archivados" },
   "libraryEmptyInbox": { "message": "No hay marcadores sin categoría." },
@@ -214,5 +214,60 @@
   },
   "errorGeneric": {
     "message": "Bookmark X no pudo completar esa acción. Inténtalo de nuevo."
-  }
+  },
+  "openSettingsButton": { "message": "Abrir configuración" },
+  "settingsTitle": { "message": "Configuración de Bookmark X" },
+  "skipToSettings": { "message": "Ir a la configuración" },
+  "settingsEyebrow": { "message": "Local por diseño" },
+  "settingsIntro": {
+    "message": "Elige cómo se ve, se abre y prepara tu archivo privado Bookmark X."
+  },
+  "settingsAppearance": { "message": "Apariencia" },
+  "settingLargeText": { "message": "Usar texto más grande" },
+  "settingHighContrast": { "message": "Usar alto contraste" },
+  "settingReduceMotion": { "message": "Reducir movimiento" },
+  "settingsBehavior": { "message": "Comportamiento" },
+  "settingSurface": { "message": "Abrir la biblioteca como" },
+  "settingSurfaceModal": { "message": "Ventana compacta" },
+  "settingSurfaceSidePanel": { "message": "Panel lateral de Chrome" },
+  "settingPrompt": { "message": "Pedir una nota después de guardar" },
+  "settingMetadataSummary": { "message": "Mostrar estado del mapeo" },
+  "settingBreadcrumb": { "message": "Mostrar ruta de carpeta" },
+  "settingTags": { "message": "Mostrar etiquetas" },
+  "settingNote": { "message": "Mostrar nota privada" },
+  "settingCategory": { "message": "Mostrar indicador sin categoría" },
+  "settingsExport": { "message": "Exportación" },
+  "settingsExportHelp": {
+    "message": "Elige qué detalles pueden incluir futuras exportaciones TXT y Markdown."
+  },
+  "settingExportLink": { "message": "Enlace de la publicación" },
+  "settingExportText": { "message": "Texto de la publicación" },
+  "settingExportAuthor": { "message": "Autor" },
+  "settingExportDate": { "message": "Fechas" },
+  "settingExportImages": { "message": "Enlaces de imágenes" },
+  "settingExportVideos": { "message": "Enlaces de vídeos" },
+  "settingExportNote": { "message": "Nota privada" },
+  "settingExportTags": { "message": "Etiquetas" },
+  "settingExportFolder": { "message": "Ruta de carpeta" },
+  "settingsSearch": { "message": "Búsqueda" },
+  "settingLiveFilter": { "message": "Filtrar resultados mientras escribes" },
+  "settingsData": { "message": "Datos" },
+  "settingKeepArchived": {
+    "message": "Conservar como archivadas las publicaciones eliminadas de X"
+  },
+  "settingsDataHelp": {
+    "message": "El contenido guardado permanece en IndexedDB en este dispositivo."
+  },
+  "settingsSaving": { "message": "Guardando…" },
+  "settingsSaved": { "message": "Guardado" },
+  "settingsSaveError": { "message": "No se pudo guardar la configuración." },
+  "settingsLoadError": { "message": "No se pudo cargar la configuración." },
+  "bookmarkPromptTitle": { "message": "¿Por qué guardas esto?" },
+  "bookmarkPromptClose": { "message": "Cerrar" },
+  "bookmarkPromptSave": { "message": "Guardar nota" },
+  "bookmarkPromptTags": { "message": "Etiquetas" },
+  "bookmarkPromptFolder": { "message": "Carpeta" },
+  "bookmarkPromptNote": { "message": "Nota privada" },
+  "bookmarkCategorized": { "message": "Categorizado" },
+  "bookmarkNeedsCategory": { "message": "Falta categorizar" }
 }

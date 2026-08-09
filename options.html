@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="settingsTitle">Bookmark X settings</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#settings-main" data-i18n="skipToSettings">
+      Skip to settings
+    </a>
+    <header class="masthead">
+      <img src="/icons/icon.svg" alt="" width="46" height="46" />
+      <div>
+        <p class="eyebrow" data-i18n="settingsEyebrow">Local by design</p>
+        <h1 data-i18n="settingsTitle">Bookmark X settings</h1>
+      </div>
+    </header>
+    <main id="settings-main" tabindex="-1">
+      <p class="lede" data-i18n="settingsIntro">
+        Choose how Bookmark X looks, opens, and prepares your private archive.
+      </p>
+      <form id="settings-form">
+        <fieldset>
+          <legend data-i18n="settingsAppearance">Appearance</legend>
+          <label class="choice" for="appearance-large-text">
+            <input id="appearance-large-text" type="checkbox" />
+            <span data-i18n="settingLargeText">Use larger text</span>
+          </label>
+          <label class="choice" for="appearance-high-contrast">
+            <input id="appearance-high-contrast" type="checkbox" />
+            <span data-i18n="settingHighContrast">Use high contrast</span>
+          </label>
+          <label class="choice" for="appearance-reduce-motion">
+            <input id="appearance-reduce-motion" type="checkbox" />
+            <span data-i18n="settingReduceMotion">Reduce motion</span>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend data-i18n="settingsBehavior">Behavior</legend>
+          <p class="group-label" data-i18n="settingSurface">Open the library as</p>
+          <label class="choice" for="surface-modal">
+            <input id="surface-modal" name="surface" type="radio" value="modal" />
+            <span data-i18n="settingSurfaceModal">Compact window</span>
+          </label>
+          <label class="choice" for="surface-side-panel">
+            <input
+              id="surface-side-panel"
+              name="surface"
+              type="radio"
+              value="sidePanel"
+            />
+            <span data-i18n="settingSurfaceSidePanel">Chrome side panel</span>
+          </label>
+          <div class="divider" aria-hidden="true"></div>
+          <label class="choice" for="behavior-prompt">
+            <input id="behavior-prompt" type="checkbox" />
+            <span data-i18n="settingPrompt">Ask for a note after bookmarking</span>
+          </label>
+          <label class="choice" for="metadata-summary">
+            <input id="metadata-summary" type="checkbox" />
+            <span data-i18n="settingMetadataSummary">Show mapped status</span>
+          </label>
+          <label class="choice" for="metadata-breadcrumb">
+            <input id="metadata-breadcrumb" type="checkbox" />
+            <span data-i18n="settingBreadcrumb">Show folder breadcrumb</span>
+          </label>
+          <label class="choice" for="metadata-tags">
+            <input id="metadata-tags" type="checkbox" />
+            <span data-i18n="settingTags">Show tags</span>
+          </label>
+          <label class="choice" for="metadata-note">
+            <input id="metadata-note" type="checkbox" />
+            <span data-i18n="settingNote">Show private note</span>
+          </label>
+          <label class="choice" for="metadata-category">
+            <input id="metadata-category" type="checkbox" />
+            <span data-i18n="settingCategory">Show uncategorized indicator</span>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend data-i18n="settingsExport">Export</legend>
+          <p class="field-help" data-i18n="settingsExportHelp">
+            Choose which details future TXT and Markdown exports may include.
+          </p>
+          <div class="choice-grid">
+            <label class="choice" for="export-link"
+              ><input id="export-link" type="checkbox" /><span
+                data-i18n="settingExportLink"
+                >Post link</span
+              ></label
+            >
+            <label class="choice" for="export-text"
+              ><input id="export-text" type="checkbox" /><span
+                data-i18n="settingExportText"
+                >Post text</span
+              ></label
+            >
+            <label class="choice" for="export-author"
+              ><input id="export-author" type="checkbox" /><span
+                data-i18n="settingExportAuthor"
+                >Author</span
+              ></label
+            >
+            <label class="choice" for="export-date"
+              ><input id="export-date" type="checkbox" /><span
+                data-i18n="settingExportDate"
+                >Dates</span
+              ></label
+            >
+            <label class="choice" for="export-images"
+              ><input id="export-images" type="checkbox" /><span
+                data-i18n="settingExportImages"
+                >Image links</span
+              ></label
+            >
+            <label class="choice" for="export-videos"
+              ><input id="export-videos" type="checkbox" /><span
+                data-i18n="settingExportVideos"
+                >Video links</span
+              ></label
+            >
+            <label class="choice" for="export-note"
+              ><input id="export-note" type="checkbox" /><span
+                data-i18n="settingExportNote"
+                >Private note</span
+              ></label
+            >
+            <label class="choice" for="export-tags"
+              ><input id="export-tags" type="checkbox" /><span
+                data-i18n="settingExportTags"
+                >Tags</span
+              ></label
+            >
+            <label class="choice" for="export-folder"
+              ><input id="export-folder" type="checkbox" /><span
+                data-i18n="settingExportFolder"
+                >Folder path</span
+              ></label
+            >
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend data-i18n="settingsSearch">Search</legend>
+          <label class="choice" for="search-live-filter">
+            <input id="search-live-filter" type="checkbox" />
+            <span data-i18n="settingLiveFilter">Filter results while typing</span>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend data-i18n="settingsData">Data</legend>
+          <label class="choice" for="data-keep-archived">
+            <input id="data-keep-archived" type="checkbox" />
+            <span data-i18n="settingKeepArchived"
+              >Keep posts removed from X as archived</span
+            >
+          </label>
+          <p class="field-help" data-i18n="settingsDataHelp">
+            Bookmark content stays in IndexedDB on this device.
+          </p>
+        </fieldset>
+      </form>
+      <p
+        id="settings-status"
+        class="save-status"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      ></p>
+    </main>
+    <script type="module" src="/src/options/main.ts"></script>
+  </body>
+</html>
