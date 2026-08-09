@@ -27,14 +27,14 @@ authoritative result for each change, reuse work already accepted into
 
 ## Event and gate matrix
 
-| Event                                                  | Mode              | Work performed                                                                                                                        | Intentionally omitted                                     |
-| ------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Pull request to `develop`                              | `full`            | install, full dependency audit, formatting, lint, typecheck, policy and semantic contract tests, coverage, build, package             | Chrome smoke and real model download                      |
-| Push to `develop` changing the lockfile or CI workflow | `cache`           | fetch dependencies into the base-branch pnpm cache                                                                                    | source validation and build                               |
-| Release preparation dispatch on `develop`              | release candidate | audit, release policy, real pinned-model validation, version/changelog generation, build, package, Chrome smoke, archive verification | lint, typecheck, and coverage already proven by `develop` |
-| Automated preparation pull request to `develop`        | `release`         | scope/provenance checks, audit, generated-file formatting, build, package, content-by-content ZIP comparison                          | lint, typecheck, coverage, semantic contract tests        |
-| Reviewed `develop` pull request to `main`              | promotion         | provenance, version, changelog, and reviewed ZIP validation                                                                           | install, build, package, browser smoke, and test suite    |
-| Merge into `main`                                      | publish           | verify merge ancestry, create or resume the tag and GitHub Release                                                                    | every build and source-quality gate                       |
+| Event                                                  | Mode              | Work performed                                                                                                                                                                | Intentionally omitted                                     |
+| ------------------------------------------------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Pull request to `develop`                              | `full`            | install, full dependency audit, formatting, lint, typecheck, policy and semantic contract tests, coverage, build, package; Chrome smoke only when its browser harness changes | real model download                                       |
+| Push to `develop` changing the lockfile or CI workflow | `cache`           | fetch dependencies into the base-branch pnpm cache                                                                                                                            | source validation and build                               |
+| Release preparation dispatch on `develop`              | release candidate | audit, release policy, real pinned-model validation, version/changelog generation, build, package, Chrome smoke, archive verification                                         | lint, typecheck, and coverage already proven by `develop` |
+| Automated preparation pull request to `develop`        | `release`         | scope/provenance checks, audit, generated-file formatting, build, package, content-by-content ZIP comparison                                                                  | lint, typecheck, coverage, semantic contract tests        |
+| Reviewed `develop` pull request to `main`              | promotion         | provenance, version, changelog, and reviewed ZIP validation                                                                                                                   | install, build, package, browser smoke, and test suite    |
+| Merge into `main`                                      | publish           | verify merge ancestry, create or resume the tag and GitHub Release                                                                                                            | every build and source-quality gate                       |
 
 The `full`, `release`, and `cache` modes keep one stable required-check name
 while avoiding duplicate work. New features belong to the existing full gate;
@@ -109,6 +109,13 @@ an unexpected SHA is treated as a hard failure.
 - Keep the canonical `pnpm build`, `pnpm package`, and smoke commands in
   `package.json`. Workflows call those commands rather than copying their
   internals.
+- Keep browser-harness smoke detection path-scoped inside the existing quality
+  job. Ordinary feature pull requests must not pay for another browser launch
+  or a second runner setup.
+- Load the unpacked extension through the browser-target
+  `Extensions.loadUnpacked` DevTools command. The disposable smoke profile may
+  enable extension debugging, but must not fall back to branded Chrome or
+  legacy `--load-extension` flags.
 - Add workflow-policy tests before changing triggers, permissions,
   cancellation, release scope, or gate placement.
 - Compare measured step durations before and after a CI change. Revert an
@@ -129,3 +136,5 @@ updates are automated, and policy tests protect the topology.
 - [`actions/setup-node` dependency caching](https://github.com/actions/setup-node#caching-global-packages-data)
 - [`actions/upload-artifact` compression behavior](https://github.com/actions/upload-artifact#altering-compressions-level-speed-v-size)
 - [Node.js release schedule](https://nodejs.org/en/about/previous-releases)
+- [Chrome DevTools Protocol Extensions domain](https://chromedevtools.github.io/devtools-protocol/tot/Extensions/)
+- [Chrome extension testing in new headless mode](https://developer.chrome.com/docs/extensions/how-to/test/end-to-end-testing)

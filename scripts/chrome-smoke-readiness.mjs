@@ -1,6 +1,22 @@
 const defaultDelay = (milliseconds) =>
   new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 
+export function extensionDebugArguments() {
+  return ["--enable-unsafe-extension-debugging"];
+}
+
+export function isUnbrandedChromiumVersion(version) {
+  return /^Chromium\s+\d/u.test(version.trim());
+}
+
+export async function loadUnpackedExtension(devTools, path) {
+  const result = await devTools.send("Extensions.loadUnpacked", { path });
+  if (!result?.id) {
+    throw new Error("Chrome DevTools did not return an extension id.");
+  }
+  return result.id;
+}
+
 export async function navigateToExtensionContext(devTools, expectedUrl, options) {
   await devTools.send("Page.enable");
   await devTools.send("Page.navigate", { url: expectedUrl });

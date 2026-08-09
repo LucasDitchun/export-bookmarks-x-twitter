@@ -1,52 +1,59 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { delimiter, resolve } from "node:path";
 
 import {
+  extensionDebugArguments,
+  isUnbrandedChromiumVersion,
+  loadUnpackedExtension,
   navigateToExtensionContext,
   waitForExtensionContext,
 } from "./chrome-smoke-readiness.mjs";
 
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const DIST_DIRECTORY = resolve(PROJECT_ROOT, "dist");
-const STARTUP_TIMEOUT_MS = 15_000;
+const STARTUP_TIMEOUT_MS = 30_000;
 const VISUAL_CHECKPOINT_DIRECTORY = process.env.BOOKMARK_X_VISUAL_DIR;
 
 const delay = (milliseconds) =>
   new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 
 async function findChromeBinary() {
-  if (process.env.CHROME_BIN) return process.env.CHROME_BIN;
-  const absoluteCandidates = ["/snap/chromium/current/usr/lib/chromium-browser/chrome"];
-  for (const executable of absoluteCandidates) {
+  const candidates = [
+    process.env.CHROME_BIN,
+    "/snap/chromium/current/usr/lib/chromium-browser/chrome",
+  ];
+  for (const candidate of ["chromium", "chromium-browser"]) {
+    for (const directory of (process.env.PATH ?? "").split(delimiter)) {
+      if (directory) candidates.push(resolve(directory, candidate));
+    }
+  }
+
+  const checked = [];
+  for (const executable of new Set(candidates.filter(Boolean))) {
     try {
       await access(executable, constants.X_OK);
-      return executable;
     } catch {
-      // Continue with binaries available through PATH.
+      continue;
+    }
+
+    const result = spawnSync(executable, ["--version"], {
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    const version = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+    checked.push(`${executable}: ${version || `exit ${result.status ?? "unknown"}`}`);
+    if (result.status === 0 && isUnbrandedChromiumVersion(version)) {
+      return { executable, version };
     }
   }
-  const candidates = [
-    "chromium",
-    "chromium-browser",
-    "google-chrome-for-testing",
-    "google-chrome",
-  ];
-  for (const candidate of candidates) {
-    for (const directory of (process.env.PATH ?? "").split(delimiter)) {
-      const executable = resolve(directory, candidate);
-      try {
-        await access(executable, constants.X_OK);
-        return executable;
-      } catch {
-        // Continue until a Chrome-compatible executable is found.
-      }
-    }
-  }
+
   throw new Error(
-    "No compatible browser found. Set CHROME_BIN to Chromium or Chrome for Testing.",
+    `No unbranded Chromium executable was found. Checked: ${
+      checked.length > 0 ? checked.join("; ") : "no executable candidates"
+    }. Set CHROME_BIN to an unbranded Chromium binary.`,
   );
 }
 
@@ -65,7 +72,7 @@ async function waitForDevToolsPort(profileDirectory) {
   throw new Error("Chrome DevTools did not become available.");
 }
 
-async function waitForServiceWorker(port) {
+async function waitForServiceWorker(port, extensionId) {
   const deadline = Date.now() + STARTUP_TIMEOUT_MS;
   while (Date.now() < deadline) {
     const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) =>
@@ -74,7 +81,7 @@ async function waitForServiceWorker(port) {
     const worker = targets.find(
       (target) =>
         target.type === "service_worker" &&
-        target.url.startsWith("chrome-extension://"),
+        target.url.startsWith(`chrome-extension://${extensionId}/`),
     );
     if (worker) return worker;
     await delay(100);
@@ -989,7 +996,9 @@ async function stopChrome(chromeProcess) {
 
 async function main() {
   await access(resolve(DIST_DIRECTORY, "manifest.json"));
-  const chromeBinary = await findChromeBinary();
+  const { executable: chromeBinary, version: chromeVersion } = await findChromeBinary();
+  console.log(`[chrome-smoke] browser: ${chromeBinary}`);
+  console.log(`[chrome-smoke] version: ${chromeVersion}`);
   const profileDirectory = await mkdtemp(
     resolve(PROJECT_ROOT, "chrome-smoke-profile-"),
   );
@@ -1005,9 +1014,8 @@ async function main() {
       "--metrics-recording-only",
       "--no-first-run",
       "--no-default-browser-check",
+      ...extensionDebugArguments(),
       `--user-data-dir=${profileDirectory}`,
-      `--disable-extensions-except=${DIST_DIRECTORY}`,
-      `--load-extension=${DIST_DIRECTORY}`,
       "--remote-debugging-port=0",
       "about:blank",
     ],
@@ -1023,10 +1031,18 @@ async function main() {
   let optionsDevTools;
   let sidePanelDevTools;
   let pageDevTools;
+  let browserDevTools;
   try {
     const port = await waitForDevToolsPort(profileDirectory);
-    const worker = await waitForServiceWorker(port);
-    const extensionId = new URL(worker.url).host;
+    const browserTarget = await fetch(`http://127.0.0.1:${port}/json/version`).then(
+      (response) => response.json(),
+    );
+    if (!browserTarget.webSocketDebuggerUrl) {
+      throw new Error("Chrome did not expose its browser DevTools target.");
+    }
+    browserDevTools = await connectDevTools(browserTarget.webSocketDebuggerUrl);
+    const extensionId = await loadUnpackedExtension(browserDevTools, DIST_DIRECTORY);
+    await waitForServiceWorker(port, extensionId);
     const popupUrl = `chrome-extension://${extensionId}/popup.html`;
     const popupTarget = await openTarget(port, "about:blank");
     popupDevTools = await connectDevTools(popupTarget.webSocketDebuggerUrl);
@@ -1359,6 +1375,7 @@ async function main() {
     optionsDevTools?.close();
     sidePanelDevTools?.close();
     pageDevTools?.close();
+    browserDevTools?.close();
     await stopChrome(chromeProcess);
     await rm(profileDirectory, {
       recursive: true,

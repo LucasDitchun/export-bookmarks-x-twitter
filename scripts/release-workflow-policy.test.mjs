@@ -129,8 +129,12 @@ describe("release workflow permissions and gates", () => {
       readWorkflow("promote-release.yml"),
     ]);
 
-    expect(ci).not.toContain("pnpm smoke:chrome");
+    expect(ci.match(/pnpm smoke:chrome/gu)).toHaveLength(1);
+    expect(ci).toContain("Detect browser harness changes");
+    expect(ci).toContain("steps.browser-harness.outputs.run == 'true'");
+    expect(ci).toContain('git diff --name-only "$BASE_SHA" HEAD');
     expect(preparation.match(/pnpm smoke:chrome/gu)).toHaveLength(1);
+    expect(preparation).not.toContain("xvfb-run");
     expect(promotion).not.toMatch(/pnpm (?:build|package|smoke:chrome)/u);
   });
 
