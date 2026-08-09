@@ -3,13 +3,15 @@
 ## Listing and privacy
 
 - [ ] The listing states the single purpose: capture the signed-in user's X
-      bookmarks into a local archive and export TXT.
+      bookmarks into a local archive; organize, search, export TXT/Markdown,
+      and back it up as JSON.
 - [ ] It clearly says page scraping is used and that X interface changes can
       temporarily break capture.
 - [ ] It states there is no X API, backend, analytics, advertising, sale of
       data, or telemetry.
 - [ ] Data disclosures cover post text, authors, dates, URLs, capture metadata,
-      local retention, and separately downloaded exports.
+      private notes, tags/folders, local retention, and separately downloaded
+      TXT, Markdown, and JSON files.
 - [ ] The listing says semantic search is optional, downloads about 136 MB only
       after consent, runs locally, and can be removed completely.
 - [ ] English, Brazilian Portuguese, Japanese, Spanish, Simplified Chinese,
@@ -20,9 +22,12 @@
 ## Permissions
 
 - [ ] `activeTab` is justified as checking the current user-invoked tab.
+- [ ] `sidePanel` is justified as the optional user-selected library surface.
 - [ ] `storage` is justified as storing local capture status and language
       preference.
 - [ ] `unlimitedStorage` is justified as supporting a durable local archive.
+- [ ] `https://api.github.com/*` is justified only for the cached, public star
+      count in Settings; no credentials or bookmark data are sent.
 - [ ] `https://huggingface.co/*` and `https://*.cdn.hf.co/*` are justified as
       pinned model-data downloads after consent; no remote code is loaded.
 - [ ] The only content-script matches are `https://x.com/*` and
@@ -45,6 +50,9 @@
 - [ ] The ZIP has `manifest.json` at its root and contains no source maps,
       environment files, private keys, test fixtures, real bookmark data, or
       remote executable code.
+- [ ] The ZIP contains `THIRD_PARTY_NOTICES.md` and complete Apache-2.0/MIT
+      texts for Transformers.js, ONNX Runtime Web, and multilingual E5 model
+      data; it contains no sharp or libvips Node-only binaries/package trees.
 
 ## Manual acceptance
 
@@ -62,7 +70,16 @@
       records.
 - [ ] With **Keep archived bookmarks** off, only a proven full review deletes
       missing local records and leaves their folders intact.
-- [ ] Full and URL-only TXT exports open correctly.
+- [ ] Full and URL-only TXT exports open correctly; Markdown export is a
+      separate download and renders links, multiline text, and private notes.
+- [ ] Folder selection includes descendants, multiple tags use OR, combined
+      folder+tag filters use AND, and the archived toggle changes both TXT and
+      Markdown results without duplicates.
+- [ ] Every export field toggle is honored, including images, canonical video
+      post URLs, first-saved, and last-seen; at least one field remains enabled.
+- [ ] JSON backup downloads locally, validates before restore, and completes
+      both Merge and explicitly confirmed Replace round-trips with settings,
+      notes, folders, tags, archive state, and media intact.
 - [ ] Clearing the archive requires confirmation and does not alter X.
 - [ ] Reloading the X page recovers from an unavailable content script.
 - [ ] A bookmark click opens the selected surface pending; a stable confirmed
@@ -77,6 +94,13 @@
 - [ ] Arbitrary non-X sites cannot be captured.
 - [ ] Before consent, semantic search creates no worker download and text search
       remains fully functional.
+- [ ] Text search covers post text, author, private note, tags, and folder path;
+      current/inbox/archived filters and keyboard navigation work in both the
+      popup and the configured Chrome Side Panel.
+- [ ] After consent and indexing, semantic search finds meaning-based matches,
+      combines them deterministically with text results, and preserves the same
+      view filters. Options and Side Panel entry pages render without console
+      errors in a clean profile.
 - [ ] Model download progress is announced, cancellation terminates the worker,
       and removal clears the dedicated cache, index, and consent state.
 - [ ] WebGPU and packaged WASM fallback both work; offline/model failures return

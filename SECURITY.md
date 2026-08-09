@@ -16,16 +16,24 @@ mitigation if available.
 
 ## Security boundaries
 
-- The content script runs only on the X bookmarks route declared in the
-  manifest.
-- It reads rendered DOM; it must never access cookies, passwords, session
-  tokens, or bypass X authentication.
+- The content script is declared for `x.com` and `www.x.com` so it can mirror
+  explicit bookmark-button actions and decorate known posts across X. Automatic
+  storage lookups and injected metadata are restricted to visible numeric post
+  IDs that already exist in the local library. Full post extraction outside
+  `/i/bookmarks` happens only after an explicit user bookmark action.
+- Full timeline capture runs only on `/i/bookmarks` after the user starts it.
+  The content script reads rendered DOM; it must never access cookies,
+  passwords, session tokens, or bypass X authentication.
 - Messages from content scripts are untrusted. The service worker validates
   extension ID, tab URL and ID, capture run ID, batch size, post IDs, canonical
   URLs, and field types.
-- Bookmark data and capture checkpoints remain in the Chrome profile.
+- Bookmark data, settings, semantic-search consent, indexes, and capture
+  checkpoints remain in the Chrome profile. Optional model data is downloaded
+  only after explicit consent and inference stays local.
 - No remote executable code is permitted.
-- Downloaded TXT files are outside the extension's control after export.
+- TXT and Markdown exports, plus complete JSON backup files, are generated
+  locally. They are outside the extension's control after download and may
+  contain private notes and retained posts.
 - X page availability and DOM behavior remain controlled by X.
 
 If private data appears in a report, remove it and rotate any exposed

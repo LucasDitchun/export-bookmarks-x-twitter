@@ -20,6 +20,27 @@ export const EXPECTED_MINIMUM_CHROME_VERSION = "116";
 export const EXPECTED_SIDE_PANEL_PATH = "sidepanel.html";
 export const EXPECTED_OPTIONS_PAGE = "options.html";
 
+export const REQUIRED_LEGAL_RELEASE_FILES = Object.freeze([
+  "THIRD_PARTY_NOTICES.md",
+  "THIRD_PARTY_LICENSES/huggingface-transformers-Apache-2.0.txt",
+  "THIRD_PARTY_LICENSES/onnxruntime-web-MIT.txt",
+  "THIRD_PARTY_LICENSES/multilingual-e5-small-MIT.txt",
+]);
+
+export function validateReleaseLegalFiles(filePaths) {
+  const releaseFiles = new Set(filePaths);
+  for (const requiredFile of REQUIRED_LEGAL_RELEASE_FILES) {
+    if (!releaseFiles.has(requiredFile)) {
+      throw new Error(`Release legal file is missing: ${requiredFile}`);
+    }
+  }
+  for (const filePath of releaseFiles) {
+    if (/sharp|libvips/iu.test(filePath)) {
+      throw new Error(`Node-only release file is forbidden: ${filePath}`);
+    }
+  }
+}
+
 export function validateExactStringArray(actual, expected, fieldName) {
   if (!Array.isArray(actual) || actual.some((value) => typeof value !== "string")) {
     throw new Error(`Manifest ${fieldName} must be an array of strings.`);

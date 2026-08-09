@@ -77,6 +77,21 @@ async function waitForServiceWorker(port) {
   throw new Error("The Bookmark X service worker did not start.");
 }
 
+async function waitForPageTarget(port, predicate) {
+  const deadline = Date.now() + STARTUP_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) =>
+      response.json(),
+    );
+    const page = targets.find(
+      (target) => target.type === "page" && predicate(target.url),
+    );
+    if (page) return page;
+    await delay(100);
+  }
+  throw new Error("The expected extension page did not become available.");
+}
+
 async function openTarget(port, url) {
   const response = await fetch(
     `http://127.0.0.1:${port}/json/new?${encodeURIComponent(url)}`,
@@ -231,10 +246,13 @@ const optionsDefaultsScenario = String.raw`
     "export-note",
     "export-tags",
     "export-folder",
+    "export-first-saved",
+    "export-last-seen",
     "search-live-filter",
     "semantic-enabled",
     "data-keep-archived",
   ];
+  const semanticStorage = await chrome.storage.local.get("semanticSearchState");
   return {
     state: document.documentElement?.dataset.settingsState ?? "missing",
     status: document.getElementById("settings-status")?.textContent ?? "missing",
@@ -247,6 +265,30 @@ const optionsDefaultsScenario = String.raw`
     huggingFaceRequests: performance
       .getEntriesByType("resource")
       .filter(({ name }) => /huggingface\.co|cdn\.hf\.co/u.test(name)).length,
+    semanticStateStored: Object.hasOwn(semanticStorage, "semanticSearchState"),
+    semanticModelCachePresent: (await caches.keys()).includes(
+      "bookmark-x-transformers-v1",
+    ),
+  };
+})()
+`;
+
+const sidePanelScenario = String.raw`
+(async () => {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const loading = document.getElementById("loading-view");
+    if (
+      document.documentElement?.dataset.surface === "side-panel" &&
+      (!loading || loading.hidden)
+    ) break;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return {
+    url: location.href,
+    title: document.title,
+    surface: document.documentElement?.dataset.surface ?? "missing",
+    dashboardVisible: document.getElementById("dashboard-view")?.hidden === false,
   };
 })()
 `;
@@ -389,6 +431,32 @@ const metadataSetupScenario = String.raw`
       })
     : null;
   return { created, tagged, assigned };
+})()
+`;
+
+const filteredExportsScenario = (folderId, tagId) => String.raw`
+(async () => {
+  const txt = await chrome.runtime.sendMessage({
+    type: "EXPORT_BOOKMARKS",
+    payload: {
+      format: "txt",
+      locale: "en",
+      folderId: ${JSON.stringify(folderId)},
+      tagIds: [],
+      includeArchived: false,
+    },
+  });
+  const markdown = await chrome.runtime.sendMessage({
+    type: "EXPORT_BOOKMARKS",
+    payload: {
+      format: "md",
+      locale: "en",
+      folderId: ${JSON.stringify(folderId)},
+      tagIds: [${JSON.stringify(tagId)}],
+      includeArchived: false,
+    },
+  });
+  return { txt, markdown };
 })()
 `;
 
@@ -727,6 +795,8 @@ function assertScenario(
     !exported.data.content.includes("https://x.com/katherine/status/333") ||
     !exported.data.content.includes("https://x.com/grace/status/222") ||
     !exported.data.content.includes("https://x.com/ada/status/111") ||
+    !exported.data.content.includes("First saved:") ||
+    !exported.data.content.includes("Last seen:") ||
     !exported.data.filename.endsWith(".txt")
   ) {
     throw new Error("The runtime TXT export did not match the scraped bookmarks.");
@@ -789,7 +859,7 @@ function assertScenario(
   }
 }
 
-function assertOptionsDefaults(result) {
+function assertOptionsDefaults(result, modelRequests) {
   const expectedTrue = [
     "appearance-large-text",
     "appearance-high-contrast",
@@ -809,6 +879,8 @@ function assertOptionsDefaults(result) {
     "export-note",
     "export-tags",
     "export-folder",
+    "export-first-saved",
+    "export-last-seen",
     "search-live-filter",
     "data-keep-archived",
   ];
@@ -827,10 +899,62 @@ function assertOptionsDefaults(result) {
     result.semanticInstallHidden !== false ||
     !result.semanticStatus ||
     result.huggingFaceRequests !== 0 ||
+    result.semanticStateStored !== false ||
+    result.semanticModelCachePresent !== false ||
+    modelRequests.length !== 0 ||
     mismatches.length > 0
   ) {
     throw new Error(
-      `The options defaults did not render: ${JSON.stringify({ ...result, mismatches })}`,
+      `The options defaults did not render: ${JSON.stringify({ ...result, modelRequests, mismatches })}`,
+    );
+  }
+}
+
+function assertSidePanel(result) {
+  if (
+    !result.url.includes("popup.html?surface=side-panel") ||
+    !result.title.includes("Bookmark X") ||
+    result.surface !== "side-panel" ||
+    result.dashboardVisible !== true
+  ) {
+    throw new Error(`The Side Panel entry did not render: ${JSON.stringify(result)}`);
+  }
+}
+
+function assertFilteredExports(result) {
+  const txt = result.txt;
+  const markdown = result.markdown;
+  if (
+    !txt?.ok ||
+    !txt.data.filename.endsWith(".txt") ||
+    !txt.data.content.includes("1 item") ||
+    !txt.data.content.includes(
+      "Folder: Research and long-form artificial intelligence",
+    ) ||
+    !txt.data.content.includes("https://x.com/ada/status/111") ||
+    txt.data.content.includes("https://x.com/grace/status/222") ||
+    txt.data.content.includes("https://x.com/katherine/status/333") ||
+    !txt.data.content.includes("First saved:") ||
+    !txt.data.content.includes("Last seen:")
+  ) {
+    throw new Error(`The filtered TXT export failed: ${JSON.stringify(txt)}`);
+  }
+  if (
+    !markdown?.ok ||
+    !markdown.data.filename.endsWith(".md") ||
+    !markdown.data.content.includes("1 item") ||
+    !markdown.data.content.includes(
+      "**Folder:** Research and long\\-form artificial intelligence",
+    ) ||
+    !markdown.data.content.includes("**Tags:** Machine learning research") ||
+    !markdown.data.content.includes("https://x.com/ada/status/111") ||
+    markdown.data.content.includes("https://x.com/grace/status/222") ||
+    markdown.data.content.includes("https://x.com/katherine/status/333") ||
+    !markdown.data.content.includes("**First saved:**") ||
+    !markdown.data.content.includes("**Last seen:**")
+  ) {
+    throw new Error(
+      `The folder-and-tag Markdown export failed: ${JSON.stringify(markdown)}`,
     );
   }
 }
@@ -905,12 +1029,20 @@ async function main() {
     popupDevTools = await connectDevTools(popupTarget.webSocketDebuggerUrl);
     await popupDevTools.send("Runtime.enable");
 
-    const optionsTarget = await openTarget(
-      port,
-      `chrome-extension://${extensionId}/options.html`,
-    );
+    const optionsTarget = await openTarget(port, "about:blank");
     optionsDevTools = await connectDevTools(optionsTarget.webSocketDebuggerUrl);
     await optionsDevTools.send("Runtime.enable");
+    await optionsDevTools.send("Network.enable");
+    const modelRequests = [];
+    optionsDevTools.on("Network.requestWillBeSent", ({ request }) => {
+      if (/huggingface\.co|cdn\.hf\.co/u.test(request?.url ?? "")) {
+        modelRequests.push(request.url);
+      }
+    });
+    await optionsDevTools.send("Page.enable");
+    await optionsDevTools.send("Page.navigate", {
+      url: `chrome-extension://${extensionId}/options.html`,
+    });
     const optionsEvaluation = await optionsDevTools.send("Runtime.evaluate", {
       expression: optionsDefaultsScenario,
       awaitPromise: true,
@@ -922,20 +1054,34 @@ async function main() {
           optionsEvaluation.exceptionDetails.text,
       );
     }
-    assertOptionsDefaults(optionsEvaluation.result.value);
+    assertOptionsDefaults(optionsEvaluation.result.value, modelRequests);
+
+    await openTarget(port, `chrome-extension://${extensionId}/sidepanel.html`);
+    const sidePanelTarget = await waitForPageTarget(
+      port,
+      (url) =>
+        url === `chrome-extension://${extensionId}/popup.html?surface=side-panel`,
+    );
+    sidePanelDevTools = await connectDevTools(sidePanelTarget.webSocketDebuggerUrl);
+    await sidePanelDevTools.send("Runtime.enable");
+    const sidePanelEvaluation = await sidePanelDevTools.send("Runtime.evaluate", {
+      expression: sidePanelScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (sidePanelEvaluation.exceptionDetails) {
+      throw new Error(
+        sidePanelEvaluation.exceptionDetails.exception?.description ??
+          sidePanelEvaluation.exceptionDetails.text,
+      );
+    }
+    assertSidePanel(sidePanelEvaluation.result.value);
 
     if (VISUAL_CHECKPOINT_DIRECTORY) {
       await captureVisualCheckpoint(optionsDevTools, "options.png", {
         width: 1180,
         height: 900,
       });
-
-      const sidePanelTarget = await openTarget(
-        port,
-        `chrome-extension://${extensionId}/popup.html?surface=side-panel`,
-      );
-      sidePanelDevTools = await connectDevTools(sidePanelTarget.webSocketDebuggerUrl);
-      await sidePanelDevTools.send("Runtime.enable");
       await captureVisualCheckpoint(sidePanelDevTools, "side-panel.png", {
         width: 500,
         height: 900,
@@ -1072,6 +1218,21 @@ async function main() {
         `Could not prepare mapped metadata: ${JSON.stringify(metadataSetupEvaluation.result.value)}`,
       );
     }
+    const filteredExportsEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: filteredExportsScenario(
+        metadataSetupEvaluation.result.value.created.data.folder.id,
+        metadataSetupEvaluation.result.value.tagged.data.tag.id,
+      ),
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (filteredExportsEvaluation.exceptionDetails) {
+      throw new Error(
+        filteredExportsEvaluation.exceptionDetails.exception?.description ??
+          filteredExportsEvaluation.exceptionDetails.text,
+      );
+    }
+    assertFilteredExports(filteredExportsEvaluation.result.value);
     const mappedEvaluation = await pageDevTools.send("Runtime.evaluate", {
       expression: metadataStateScenario("mapped"),
       awaitPromise: true,
@@ -1176,7 +1337,7 @@ async function main() {
       finalEvaluation.result.value,
     );
     console.log(
-      "Chrome smoke passed: settings, semantic-search consent defaults, delayed-loader full review, checkpoint quick update, injected metadata states/localization, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, TXT export, JSON backup round-trip, and clear.",
+      "Chrome smoke passed: real Options and Side Panel pages, no pre-consent model cache/download, delayed-loader full review, checkpoint quick update, injected metadata states/localization, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, filtered TXT/Markdown exports with timestamps, JSON backup round-trip, and clear.",
     );
     if (VISUAL_CHECKPOINT_DIRECTORY) {
       console.log(`Visual checkpoints: ${VISUAL_CHECKPOINT_DIRECTORY}`);
