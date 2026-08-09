@@ -35,6 +35,11 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       getAll: vi.fn(async () => []),
       clear: vi.fn(async () => undefined),
     },
+    bookmarks: {
+      list: vi.fn(async (): Promise<unknown> => ({ items: [], nextCursor: null })),
+      get: vi.fn(async (): Promise<unknown> => null),
+      saveNote: vi.fn(async (): Promise<unknown> => null),
+    },
     state: {
       getScrapeRun: vi.fn(async () => currentRun),
       setScrapeRun: vi.fn(async (run: ScrapeRun) => {
@@ -65,6 +70,106 @@ describe("isBookmarksUrl", () => {
 });
 
 describe("BackgroundController", () => {
+  it("lists current bookmarks with a safe default page size", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        { type: "LIST_BOOKMARKS", payload: { view: "current" } },
+        POPUP_SENDER,
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      data: { items: [], nextCursor: null },
+    });
+    expect(dependencies.bookmarks.list).toHaveBeenCalledWith({
+      view: "current",
+      limit: 50,
+    });
+  });
+
+  it("forwards opaque cursors and caps requested bookmark pages at 100", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await controller.handle(
+      {
+        type: "LIST_BOOKMARKS",
+        payload: { view: "archived", cursor: "opaque:cursor", limit: 999 },
+      },
+      POPUP_SENDER,
+    );
+
+    expect(dependencies.bookmarks.list).toHaveBeenCalledWith({
+      view: "archived",
+      cursor: "opaque:cursor",
+      limit: 100,
+    });
+  });
+
+  it("gets one bookmark by its validated X status ID", async () => {
+    const dependencies = createDependencies();
+    const storedBookmark = { ...bookmark, note: "Remember this" };
+    dependencies.bookmarks.get.mockResolvedValueOnce(storedBookmark);
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "GET_BOOKMARK", payload: { id: "123" } }, POPUP_SENDER),
+    ).resolves.toEqual({
+      ok: true,
+      data: { bookmark: storedBookmark },
+    });
+    expect(dependencies.bookmarks.get).toHaveBeenCalledWith("123");
+  });
+
+  it("saves a plain-text bookmark note and returns the updated bookmark", async () => {
+    const dependencies = createDependencies();
+    const storedBookmark = { ...bookmark, note: "<b>Keep as text</b>" };
+    dependencies.bookmarks.saveNote.mockResolvedValueOnce(storedBookmark);
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        {
+          type: "SAVE_BOOKMARK_NOTE",
+          payload: { id: "123", note: "<b>Keep as text</b>" },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      data: { bookmark: storedBookmark },
+    });
+    expect(dependencies.bookmarks.saveNote).toHaveBeenCalledWith(
+      "123",
+      "<b>Keep as text</b>",
+    );
+  });
+
+  it("rejects invalid bookmark IDs and notes over 20,000 characters", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        { type: "GET_BOOKMARK", payload: { id: "../../123" } },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
+    await expect(
+      controller.handle(
+        {
+          type: "SAVE_BOOKMARK_NOTE",
+          payload: { id: "123", note: "x".repeat(20_001) },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
+    expect(dependencies.bookmarks.get).not.toHaveBeenCalled();
+    expect(dependencies.bookmarks.saveNote).not.toHaveBeenCalled();
+  });
+
   it("reports whether the active page is ready for capture", async () => {
     const controller = new BackgroundController(createDependencies());
 

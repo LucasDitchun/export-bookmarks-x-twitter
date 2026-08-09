@@ -1,4 +1,19 @@
 {
+  "libraryTitle": { "message": "Bibliothèque de favoris" },
+  "libraryHelp": { "message": "Sélectionnez un favori pour ajouter une note privée." },
+  "libraryEmpty": {
+    "message": "Capturez des favoris pour commencer votre bibliothèque."
+  },
+  "libraryLoading": { "message": "Chargement…" },
+  "libraryLoadError": { "message": "Impossible de charger les favoris." },
+  "loadMoreBookmarks": { "message": "Charger plus" },
+  "noteLabel": { "message": "Note privée" },
+  "noteHelp": { "message": "Texte brut, enregistré localement pendant la saisie." },
+  "noteLoading": { "message": "Chargement…" },
+  "noteLoadError": { "message": "Impossible d’ouvrir la note." },
+  "noteSaving": { "message": "Enregistrement…" },
+  "noteSaved": { "message": "Enregistrée" },
+  "noteSaveError": { "message": "Non enregistrée" },
   "extensionName": {
     "message": "Bookmark X"
   },

@@ -1,4 +1,17 @@
 {
+  "libraryTitle": { "message": "ブックマークライブラリ" },
+  "libraryHelp": { "message": "ブックマークを選択して非公開メモを追加します。" },
+  "libraryEmpty": { "message": "ブックマークを取得するとライブラリを利用できます。" },
+  "libraryLoading": { "message": "読み込み中…" },
+  "libraryLoadError": { "message": "ブックマークを読み込めませんでした。" },
+  "loadMoreBookmarks": { "message": "さらに読み込む" },
+  "noteLabel": { "message": "非公開メモ" },
+  "noteHelp": { "message": "プレーンテキスト。入力中にローカルへ保存されます。" },
+  "noteLoading": { "message": "読み込み中…" },
+  "noteLoadError": { "message": "メモを開けませんでした。" },
+  "noteSaving": { "message": "保存中…" },
+  "noteSaved": { "message": "保存済み" },
+  "noteSaveError": { "message": "保存できませんでした" },
   "extensionName": {
     "message": "Bookmark X"
   },

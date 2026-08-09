@@ -1,4 +1,19 @@
 {
+  "libraryTitle": { "message": "Lesezeichenbibliothek" },
+  "libraryHelp": {
+    "message": "Wähle ein Lesezeichen aus, um eine private Notiz hinzuzufügen."
+  },
+  "libraryEmpty": { "message": "Erfasse Lesezeichen, um deine Bibliothek zu starten." },
+  "libraryLoading": { "message": "Wird geladen…" },
+  "libraryLoadError": { "message": "Lesezeichen konnten nicht geladen werden." },
+  "loadMoreBookmarks": { "message": "Mehr laden" },
+  "noteLabel": { "message": "Private Notiz" },
+  "noteHelp": { "message": "Klartext, wird beim Tippen lokal gespeichert." },
+  "noteLoading": { "message": "Wird geladen…" },
+  "noteLoadError": { "message": "Notiz konnte nicht geöffnet werden." },
+  "noteSaving": { "message": "Wird gespeichert…" },
+  "noteSaved": { "message": "Gespeichert" },
+  "noteSaveError": { "message": "Nicht gespeichert" },
   "extensionName": {
     "message": "Bookmark X"
   },

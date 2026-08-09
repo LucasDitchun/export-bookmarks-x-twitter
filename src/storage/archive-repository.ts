@@ -1,9 +1,22 @@
-import type { ArchiveStats, BookmarkRecord, BookmarkSnapshot } from "../domain/types";
-
-const DATABASE_VERSION = 1;
-const BOOKMARKS_STORE = "bookmarks";
-const SEEN_STORE = "seen";
-const META_STORE = "meta";
+import type {
+  ArchiveStats,
+  BookmarkFolder,
+  BookmarkFolderMembership,
+  BookmarkRecord,
+  BookmarkSnapshot,
+  HydratedBookmarkRecord,
+} from "../domain/types";
+import {
+  BOOKMARK_FOLDERS_STORE,
+  BOOKMARKS_STORE,
+  BookmarkDatabase,
+  FOLDERS_STORE,
+  META_STORE,
+  requestAsPromise,
+  SEEN_STORE,
+  TAGS_STORE,
+  transactionDone,
+} from "./bookmark-database";
 
 interface SeenRecord {
   key: string;
@@ -16,66 +29,11 @@ interface MetaRecord<T> {
   value: T;
 }
 
-function requestAsPromise<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.addEventListener("success", () => resolve(request.result), {
-      once: true,
-    });
-    request.addEventListener(
-      "error",
-      () => reject(request.error ?? new Error("IndexedDB request failed.")),
-      { once: true },
-    );
-  });
-}
-
-function transactionDone(transaction: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    transaction.addEventListener("complete", () => resolve(), { once: true });
-    transaction.addEventListener(
-      "abort",
-      () => reject(transaction.error ?? new Error("IndexedDB transaction aborted.")),
-      { once: true },
-    );
-    transaction.addEventListener(
-      "error",
-      () => reject(transaction.error ?? new Error("IndexedDB transaction failed.")),
-      { once: true },
-    );
-  });
-}
-
 export class ArchiveRepository {
-  private databasePromise: Promise<IDBDatabase> | null = null;
+  private readonly connection: BookmarkDatabase;
 
-  constructor(private readonly databaseName = "bookmark-x") {}
-
-  private open(): Promise<IDBDatabase> {
-    this.databasePromise ??= new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.databaseName, DATABASE_VERSION);
-      request.addEventListener("upgradeneeded", () => {
-        const database = request.result;
-        if (!database.objectStoreNames.contains(BOOKMARKS_STORE)) {
-          database.createObjectStore(BOOKMARKS_STORE, { keyPath: "id" });
-        }
-        if (!database.objectStoreNames.contains(SEEN_STORE)) {
-          const seen = database.createObjectStore(SEEN_STORE, { keyPath: "key" });
-          seen.createIndex("runId", "runId", { unique: false });
-        }
-        if (!database.objectStoreNames.contains(META_STORE)) {
-          database.createObjectStore(META_STORE, { keyPath: "key" });
-        }
-      });
-      request.addEventListener("success", () => resolve(request.result), {
-        once: true,
-      });
-      request.addEventListener(
-        "error",
-        () => reject(request.error ?? new Error("IndexedDB open failed.")),
-        { once: true },
-      );
-    });
-    return this.databasePromise;
+  constructor(databaseName = "bookmark-x") {
+    this.connection = new BookmarkDatabase(databaseName);
   }
 
   async mergeBookmarks(
@@ -83,7 +41,7 @@ export class ArchiveRepository {
     runId: string,
     seenAt: string,
   ): Promise<{ added: number; updated: number }> {
-    const database = await this.open();
+    const database = await this.connection.open();
     const transaction = database.transaction(
       [BOOKMARKS_STORE, SEEN_STORE],
       "readwrite",
@@ -99,10 +57,14 @@ export class ArchiveRepository {
       );
       const record: BookmarkRecord = {
         ...bookmark,
-        folders: [],
-        firstArchivedAt: existing?.firstArchivedAt ?? seenAt,
+        note: existing?.note ?? "",
+        folderId: existing?.folderId ?? null,
+        tagIds: existing?.tagIds ?? [],
+        firstSavedAt: existing?.firstSavedAt ?? seenAt,
         lastSeenAt: seenAt,
-        isCurrent: existing?.isCurrent ?? false,
+        archivedAt: null,
+        metadataUpdatedAt: existing?.metadataUpdatedAt ?? seenAt,
+        status: "current",
       };
       bookmarkStore.put(record);
       const seen: SeenRecord = {
@@ -120,7 +82,7 @@ export class ArchiveRepository {
   }
 
   async finalizeCapture(runId: string, completedAt: string): Promise<void> {
-    const database = await this.open();
+    const database = await this.connection.open();
     const transaction = database.transaction(
       [BOOKMARKS_STORE, SEEN_STORE, META_STORE],
       "readwrite",
@@ -136,10 +98,12 @@ export class ArchiveRepository {
     const seenIds = new Set(seenRecords.map((seen) => seen.bookmarkId));
 
     for (const bookmark of bookmarks) {
+      if (seenIds.has(bookmark.id) || bookmark.status === "archived") continue;
       bookmarkStore.put({
         ...bookmark,
-        isCurrent: seenIds.has(bookmark.id),
-      });
+        archivedAt: completedAt,
+        status: "archived",
+      } satisfies BookmarkRecord);
     }
     seenStore.clear();
     const meta: MetaRecord<string> = {
@@ -150,14 +114,45 @@ export class ArchiveRepository {
     await transactionDone(transaction);
   }
 
-  async getAll(): Promise<BookmarkRecord[]> {
-    const database = await this.open();
-    const transaction = database.transaction(BOOKMARKS_STORE, "readonly");
-    const result = await requestAsPromise(
-      transaction.objectStore(BOOKMARKS_STORE).getAll() as IDBRequest<BookmarkRecord[]>,
+  async getAll(): Promise<HydratedBookmarkRecord[]> {
+    const database = await this.connection.open();
+    const transaction = database.transaction(
+      [BOOKMARK_FOLDERS_STORE, BOOKMARKS_STORE, FOLDERS_STORE],
+      "readonly",
     );
+    const [bookmarks, memberships, folders] = await Promise.all([
+      requestAsPromise(
+        transaction.objectStore(BOOKMARKS_STORE).getAll() as IDBRequest<
+          BookmarkRecord[]
+        >,
+      ),
+      requestAsPromise(
+        transaction.objectStore(BOOKMARK_FOLDERS_STORE).getAll() as IDBRequest<
+          BookmarkFolderMembership[]
+        >,
+      ),
+      requestAsPromise(
+        transaction.objectStore(FOLDERS_STORE).getAll() as IDBRequest<BookmarkFolder[]>,
+      ),
+    ]);
     await transactionDone(transaction);
-    return result;
+
+    const foldersById = new Map(folders.map((folder) => [folder.id, folder]));
+    const folderIdsByBookmark = new Map<string, Set<string>>();
+    for (const { bookmarkId, folderId } of memberships) {
+      const folderIds = folderIdsByBookmark.get(bookmarkId) ?? new Set<string>();
+      folderIds.add(folderId);
+      folderIdsByBookmark.set(bookmarkId, folderIds);
+    }
+
+    return bookmarks.map((bookmark) => {
+      const folderIds = folderIdsByBookmark.get(bookmark.id) ?? new Set<string>();
+      if (bookmark.folderId !== null) folderIds.add(bookmark.folderId);
+      const resolvedFolders = Array.from(folderIds)
+        .map((folderId) => foldersById.get(folderId))
+        .filter((folder): folder is BookmarkFolder => folder !== undefined);
+      return { ...bookmark, folders: resolvedFolders };
+    });
   }
 
   async getStats(): Promise<ArchiveStats> {
@@ -165,7 +160,7 @@ export class ArchiveRepository {
       this.getAll(),
       this.getMeta<string | null>("lastSuccessfulSyncAt", null),
     ]);
-    const current = bookmarks.filter((bookmark) => bookmark.isCurrent).length;
+    const current = bookmarks.filter(({ status }) => status === "current").length;
     return {
       total: bookmarks.length,
       current,
@@ -175,19 +170,33 @@ export class ArchiveRepository {
   }
 
   async clear(): Promise<void> {
-    const database = await this.open();
+    const database = await this.connection.open();
     const transaction = database.transaction(
-      [BOOKMARKS_STORE, SEEN_STORE, META_STORE],
+      [
+        BOOKMARK_FOLDERS_STORE,
+        BOOKMARKS_STORE,
+        FOLDERS_STORE,
+        META_STORE,
+        SEEN_STORE,
+        TAGS_STORE,
+      ],
       "readwrite",
     );
-    transaction.objectStore(BOOKMARKS_STORE).clear();
-    transaction.objectStore(SEEN_STORE).clear();
-    transaction.objectStore(META_STORE).clear();
+    for (const storeName of [
+      BOOKMARKS_STORE,
+      BOOKMARK_FOLDERS_STORE,
+      FOLDERS_STORE,
+      META_STORE,
+      SEEN_STORE,
+      TAGS_STORE,
+    ]) {
+      transaction.objectStore(storeName).clear();
+    }
     await transactionDone(transaction);
   }
 
   async setMeta<T>(key: string, value: T): Promise<void> {
-    const database = await this.open();
+    const database = await this.connection.open();
     const transaction = database.transaction(META_STORE, "readwrite");
     const record: MetaRecord<T> = { key, value };
     transaction.objectStore(META_STORE).put(record);
@@ -195,7 +204,7 @@ export class ArchiveRepository {
   }
 
   async getMeta<T>(key: string, fallback: T): Promise<T> {
-    const database = await this.open();
+    const database = await this.connection.open();
     const transaction = database.transaction(META_STORE, "readonly");
     const record = await requestAsPromise(
       transaction.objectStore(META_STORE).get(key) as IDBRequest<

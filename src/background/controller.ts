@@ -9,9 +9,10 @@ import type {
   ContentControlRequest,
   ContentEvent,
   ExportResult,
-  PopupRequest,
   PopupStatus,
   RuntimeResponse,
+  UiRequest,
+  BookmarkView,
 } from "../shared/protocol";
 import { BookmarkXError } from "../shared/errors";
 import type { ArchiveRepository } from "../storage/archive-repository";
@@ -43,6 +44,15 @@ interface BackgroundDependencies {
     ExtensionStateRepository,
     "getScrapeRun" | "setScrapeRun" | "clearScrapeRun"
   >;
+  bookmarks: {
+    list(options: {
+      view: BookmarkView;
+      cursor?: string;
+      limit: number;
+    }): Promise<unknown>;
+    get(id: string): Promise<unknown>;
+    saveNote(id: string, note: string): Promise<unknown>;
+  };
   browser: BrowserBridge;
   extensionId: string;
   now?: () => Date;
@@ -51,6 +61,10 @@ interface BackgroundDependencies {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isBookmarkId(value: unknown): value is string {
+  return typeof value === "string" && /^\d+$/.test(value);
 }
 
 export function isBookmarksUrl(value: string | undefined): boolean {
@@ -66,7 +80,7 @@ export function isBookmarksUrl(value: string | undefined): boolean {
   }
 }
 
-function isPopupRequest(value: unknown): value is PopupRequest {
+function isUiRequest(value: unknown): value is UiRequest {
   if (!isRecord(value) || typeof value.type !== "string") return false;
   if (
     value.type === "GET_STATUS" ||
@@ -76,6 +90,31 @@ function isPopupRequest(value: unknown): value is PopupRequest {
     value.type === "CLEAR_ARCHIVE"
   ) {
     return true;
+  }
+  if (value.type === "LIST_BOOKMARKS") {
+    if (value.payload === undefined) return true;
+    if (!isRecord(value.payload)) return false;
+    const { view, cursor, limit } = value.payload;
+    return (
+      (view === undefined ||
+        view === "current" ||
+        view === "inbox" ||
+        view === "archived") &&
+      (cursor === undefined || typeof cursor === "string") &&
+      (limit === undefined ||
+        (typeof limit === "number" && Number.isSafeInteger(limit) && limit > 0))
+    );
+  }
+  if (value.type === "GET_BOOKMARK") {
+    return isRecord(value.payload) && isBookmarkId(value.payload.id);
+  }
+  if (value.type === "SAVE_BOOKMARK_NOTE") {
+    return (
+      isRecord(value.payload) &&
+      isBookmarkId(value.payload.id) &&
+      typeof value.payload.note === "string" &&
+      value.payload.note.length <= 20_000
+    );
   }
   if (value.type !== "EXPORT_BOOKMARKS" || !isRecord(value.payload)) return false;
   const { format, locale } = value.payload;
@@ -176,7 +215,7 @@ export class BackgroundController {
     if (isContentEvent(request)) {
       return this.handleContentEvent(request, sender);
     }
-    if (!isPopupRequest(request) || sender.id !== this.dependencies.extensionId) {
+    if (!isUiRequest(request) || sender.id !== this.dependencies.extensionId) {
       return failure(
         new BookmarkXError("invalid_request", "The extension request is invalid."),
       );
@@ -186,6 +225,29 @@ export class BackgroundController {
       switch (request.type) {
         case "GET_STATUS":
           return success(await this.getStatus());
+        case "LIST_BOOKMARKS": {
+          const view = request.payload?.view ?? "current";
+          const limit = Math.min(request.payload?.limit ?? 50, 100);
+          const cursor = request.payload?.cursor;
+          return success(
+            await this.dependencies.bookmarks.list({
+              view,
+              limit,
+              ...(cursor === undefined ? {} : { cursor }),
+            }),
+          );
+        }
+        case "GET_BOOKMARK":
+          return success({
+            bookmark: await this.dependencies.bookmarks.get(request.payload.id),
+          });
+        case "SAVE_BOOKMARK_NOTE":
+          return success({
+            bookmark: await this.dependencies.bookmarks.saveNote(
+              request.payload.id,
+              request.payload.note,
+            ),
+          });
         case "OPEN_BOOKMARKS":
           await this.dependencies.browser.openBookmarks();
           return success(null);
@@ -372,7 +434,7 @@ export class BackgroundController {
   }
 
   private async createExport(
-    request: Extract<PopupRequest, { type: "EXPORT_BOOKMARKS" }>,
+    request: Extract<UiRequest, { type: "EXPORT_BOOKMARKS" }>,
   ): Promise<ExportResult> {
     const bookmarks: BookmarkRecord[] = await this.dependencies.archive.getAll();
     return {

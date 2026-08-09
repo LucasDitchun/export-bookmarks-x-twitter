@@ -1,4 +1,8 @@
-import type { BookmarkRecord, ExportOptions } from "./types";
+import type { BookmarkFolder, BookmarkRecord, ExportOptions } from "./types";
+
+type ExportableBookmark = BookmarkRecord & {
+  folders?: readonly BookmarkFolder[];
+};
 
 const UTF8_BOM = "\uFEFF";
 
@@ -9,11 +13,8 @@ const copy = {
     postDate: "Post date",
     folder: "Folder",
     noFolder: "No folder",
-    archivedAt: "First archived",
+    firstSavedAt: "First saved",
     lastSeenAt: "Last seen",
-    status: "Status",
-    current: "Current",
-    archived: "Archived",
     text: "Text",
   },
   pt_BR: {
@@ -22,11 +23,8 @@ const copy = {
     postDate: "Data do post",
     folder: "Pasta",
     noFolder: "Sem pasta",
-    archivedAt: "Primeiro arquivamento",
+    firstSavedAt: "Primeiro salvamento",
     lastSeenAt: "Visto por último",
-    status: "Situação",
-    current: "Atual",
-    archived: "Arquivado",
     text: "Texto",
   },
   ja: {
@@ -35,11 +33,8 @@ const copy = {
     postDate: "投稿日",
     folder: "フォルダー",
     noFolder: "フォルダーなし",
-    archivedAt: "初回保存日時",
+    firstSavedAt: "初回保存日時",
     lastSeenAt: "最終確認日時",
-    status: "状態",
-    current: "現在",
-    archived: "アーカイブ済み",
     text: "本文",
   },
   es: {
@@ -48,11 +43,8 @@ const copy = {
     postDate: "Fecha de publicación",
     folder: "Carpeta",
     noFolder: "Sin carpeta",
-    archivedAt: "Primer archivado",
+    firstSavedAt: "Primer guardado",
     lastSeenAt: "Visto por última vez",
-    status: "Estado",
-    current: "Actual",
-    archived: "Archivado",
     text: "Texto",
   },
   zh_CN: {
@@ -61,11 +53,8 @@ const copy = {
     postDate: "发布日期",
     folder: "文件夹",
     noFolder: "无文件夹",
-    archivedAt: "首次归档",
+    firstSavedAt: "首次保存",
     lastSeenAt: "最后查看",
-    status: "状态",
-    current: "当前",
-    archived: "已归档",
     text: "正文",
   },
   de: {
@@ -74,11 +63,8 @@ const copy = {
     postDate: "Beitragsdatum",
     folder: "Ordner",
     noFolder: "Kein Ordner",
-    archivedAt: "Erstmals archiviert",
+    firstSavedAt: "Erstmals gespeichert",
     lastSeenAt: "Zuletzt gesehen",
-    status: "Status",
-    current: "Aktuell",
-    archived: "Archiviert",
     text: "Text",
   },
   fr: {
@@ -87,11 +73,8 @@ const copy = {
     postDate: "Date de publication",
     folder: "Dossier",
     noFolder: "Aucun dossier",
-    archivedAt: "Premier archivage",
+    firstSavedAt: "Première sauvegarde",
     lastSeenAt: "Dernière consultation",
-    status: "Statut",
-    current: "Actuel",
-    archived: "Archivé",
     text: "Texte",
   },
   it: {
@@ -100,16 +83,13 @@ const copy = {
     postDate: "Data del post",
     folder: "Cartella",
     noFolder: "Nessuna cartella",
-    archivedAt: "Prima archiviazione",
+    firstSavedAt: "Primo salvataggio",
     lastSeenAt: "Ultima visualizzazione",
-    status: "Stato",
-    current: "Attuale",
-    archived: "Archiviato",
     text: "Testo",
   },
 } as const;
 
-function byNewestPost(first: BookmarkRecord, second: BookmarkRecord): number {
+function byNewestPost(first: ExportableBookmark, second: ExportableBookmark): number {
   return second.postCreatedAt.localeCompare(first.postCreatedAt);
 }
 
@@ -118,21 +98,20 @@ function normalizeText(text: string): string {
 }
 
 function renderFullBookmark(
-  bookmark: BookmarkRecord,
+  bookmark: ExportableBookmark,
   labels: (typeof copy)[keyof typeof copy],
 ): string {
   const folderNames =
-    bookmark.folders.length > 0
-      ? bookmark.folders.map((folder) => folder.name).join(", ")
+    bookmark.folders !== undefined && bookmark.folders.length > 0
+      ? bookmark.folders.map(({ name }) => name).join(", ")
       : labels.noFolder;
 
   return [
     `@${bookmark.author.username} — ${bookmark.author.name}`,
     `${labels.postDate}: ${bookmark.postCreatedAt}`,
     `${labels.folder}: ${folderNames}`,
-    `${labels.archivedAt}: ${bookmark.firstArchivedAt}`,
+    `${labels.firstSavedAt}: ${bookmark.firstSavedAt}`,
     `${labels.lastSeenAt}: ${bookmark.lastSeenAt}`,
-    `${labels.status}: ${bookmark.isCurrent ? labels.current : labels.archived}`,
     bookmark.url,
     "",
     `${labels.text}:`,
@@ -141,7 +120,7 @@ function renderFullBookmark(
 }
 
 export function exportBookmarks(
-  bookmarks: readonly BookmarkRecord[],
+  bookmarks: readonly ExportableBookmark[],
   options: ExportOptions,
 ): string {
   if (options.format === "urls") {

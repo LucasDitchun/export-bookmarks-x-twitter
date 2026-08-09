@@ -98,6 +98,71 @@
             No bookmarks captured yet.
           </p>
 
+          <section class="library" aria-labelledby="library-heading">
+            <div class="library-heading-row">
+              <div>
+                <h3 id="library-heading" data-i18n="libraryTitle">Bookmark library</h3>
+                <p class="library-help" data-i18n="libraryHelp">
+                  Select a bookmark to add a private note.
+                </p>
+              </div>
+              <span id="library-status" class="quiet-status" role="status"></span>
+            </div>
+
+            <p id="library-empty" class="empty-note" hidden data-i18n="libraryEmpty">
+              Capture bookmarks to start your library.
+            </p>
+            <ul
+              id="bookmark-list"
+              class="bookmark-list"
+              aria-labelledby="library-heading"
+            ></ul>
+            <button
+              id="load-more-bookmarks"
+              class="button button-secondary load-more"
+              type="button"
+              hidden
+              data-i18n="loadMoreBookmarks"
+            >
+              Load more
+            </button>
+
+            <section
+              id="note-editor"
+              class="note-editor"
+              aria-labelledby="note-heading"
+              hidden
+            >
+              <div class="editor-heading-row">
+                <div class="selected-bookmark">
+                  <h3 id="selected-bookmark-title"></h3>
+                  <p id="selected-bookmark-author"></p>
+                </div>
+                <span
+                  id="note-save-status"
+                  class="quiet-status"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                ></span>
+              </div>
+              <label id="note-heading" for="note-textarea" data-i18n="noteLabel">
+                Private note
+              </label>
+              <textarea
+                id="note-textarea"
+                rows="7"
+                maxlength="20000"
+                spellcheck="true"
+                disabled
+                aria-describedby="note-help"
+              ></textarea>
+              <p id="note-help" class="note-help" data-i18n="noteHelp">
+                Plain text, saved locally as you type.
+              </p>
+            </section>
+          </section>
+
           <div class="export-actions" aria-labelledby="export-heading">
             <h3 id="export-heading" data-i18n="exportTitle">Download TXT</h3>
             <button id="export-full-button" class="button button-download">

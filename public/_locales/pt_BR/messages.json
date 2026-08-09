@@ -1,4 +1,19 @@
 {
+  "libraryTitle": { "message": "Biblioteca de favoritos" },
+  "libraryHelp": {
+    "message": "Selecione um favorito para adicionar uma nota privada."
+  },
+  "libraryEmpty": { "message": "Capture favoritos para começar sua biblioteca." },
+  "libraryLoading": { "message": "Carregando…" },
+  "libraryLoadError": { "message": "Não foi possível carregar os favoritos." },
+  "loadMoreBookmarks": { "message": "Carregar mais" },
+  "noteLabel": { "message": "Nota privada" },
+  "noteHelp": { "message": "Texto simples, salvo localmente enquanto você digita." },
+  "noteLoading": { "message": "Carregando…" },
+  "noteLoadError": { "message": "Não foi possível abrir a nota." },
+  "noteSaving": { "message": "Salvando…" },
+  "noteSaved": { "message": "Salvo" },
+  "noteSaveError": { "message": "Não salvo" },
   "extensionName": { "message": "Bookmark X" },
   "extensionDescription": {
     "message": "Capture seus bookmarks do X pela página aberta e exporte um arquivo TXT local e privado."

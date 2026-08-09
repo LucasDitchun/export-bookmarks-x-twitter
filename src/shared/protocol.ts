@@ -1,5 +1,6 @@
 import type {
   ArchiveStats,
+  BookmarkRecord,
   BookmarkSnapshot,
   ExportFormat,
   ScrapeRun,
@@ -12,7 +13,20 @@ export interface PopupStatus {
   scrape: ScrapeRun | null;
 }
 
-export type PopupRequest =
+export type BookmarkView = "current" | "inbox" | "archived";
+
+export type NotedBookmark = BookmarkRecord & { note: string };
+
+export interface BookmarkListPage {
+  items: NotedBookmark[];
+  nextCursor: string | null;
+}
+
+export interface BookmarkDetailResult {
+  bookmark: NotedBookmark | null;
+}
+
+export type UiRequest =
   | { type: "GET_STATUS" }
   | { type: "OPEN_BOOKMARKS" }
   | { type: "START_SCRAPE" }
@@ -21,7 +35,16 @@ export type PopupRequest =
   | {
       type: "EXPORT_BOOKMARKS";
       payload: { format: ExportFormat; locale: SupportedLocale };
-    };
+    }
+  | {
+      type: "LIST_BOOKMARKS";
+      payload?: { view?: BookmarkView; cursor?: string; limit?: number };
+    }
+  | { type: "GET_BOOKMARK"; payload: { id: string } }
+  | { type: "SAVE_BOOKMARK_NOTE"; payload: { id: string; note: string } };
+
+/** @deprecated Use UiRequest. Kept as a source-compatible alias for popup callers. */
+export type PopupRequest = UiRequest;
 
 export type ContentControlRequest =
   { type: "START_SCRAPE"; runId: string } | { type: "CANCEL_SCRAPE"; runId: string };
@@ -54,4 +77,4 @@ export interface RuntimeError {
 export type RuntimeResponse<T> =
   { ok: true; data: T } | { ok: false; error: RuntimeError };
 
-export type SendMessage = <T>(request: PopupRequest) => Promise<RuntimeResponse<T>>;
+export type SendMessage = <T>(request: UiRequest) => Promise<RuntimeResponse<T>>;

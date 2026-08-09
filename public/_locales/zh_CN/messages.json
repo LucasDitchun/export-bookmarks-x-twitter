@@ -1,4 +1,17 @@
 {
+  "libraryTitle": { "message": "书签库" },
+  "libraryHelp": { "message": "选择一个书签以添加私人备注。" },
+  "libraryEmpty": { "message": "抓取书签即可开始使用书签库。" },
+  "libraryLoading": { "message": "正在加载…" },
+  "libraryLoadError": { "message": "无法加载书签。" },
+  "loadMoreBookmarks": { "message": "加载更多" },
+  "noteLabel": { "message": "私人备注" },
+  "noteHelp": { "message": "纯文本，输入时自动保存在本地。" },
+  "noteLoading": { "message": "正在加载…" },
+  "noteLoadError": { "message": "无法打开备注。" },
+  "noteSaving": { "message": "正在保存…" },
+  "noteSaved": { "message": "已保存" },
+  "noteSaveError": { "message": "未保存" },
   "extensionName": {
     "message": "Bookmark X"
   },

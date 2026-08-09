@@ -48,6 +48,7 @@ button {
 
 button:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 summary:focus-visible {
   outline: 4px solid var(--focus);
   outline-offset: 3px;
@@ -354,6 +355,133 @@ h3 {
   margin-top: 9px;
   color: var(--muted);
   font-size: 15px;
+}
+
+.library {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 2px solid #c9c8bb;
+}
+
+.library-heading-row,
+.editor-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.library-help,
+.note-help,
+.selected-bookmark p {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.quiet-status {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.quiet-status[data-state="noteSaveError"] {
+  color: var(--danger);
+}
+
+.bookmark-list {
+  display: grid;
+  max-height: 230px;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.bookmark-option {
+  display: grid;
+  width: 100%;
+  min-height: 58px;
+  gap: 3px;
+  padding: 9px 11px;
+  border: 2px solid #b8b7aa;
+  border-radius: 5px;
+  color: var(--ink);
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.bookmark-option:hover,
+.bookmark-option[aria-current="true"] {
+  border-color: var(--line);
+  background: #f1f7d5;
+}
+
+.bookmark-option-title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.bookmark-option-author {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.load-more {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  font-size: 15px;
+}
+
+.note-editor {
+  margin-top: 18px;
+  padding: 16px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.selected-bookmark {
+  min-width: 0;
+}
+
+.selected-bookmark h3 {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 16px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.note-editor label {
+  display: block;
+  margin-top: 16px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.note-editor textarea {
+  width: 100%;
+  min-height: 180px;
+  margin-top: 7px;
+  padding: 12px;
+  resize: vertical;
+  border: 2px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1.6;
 }
 
 .empty-note {

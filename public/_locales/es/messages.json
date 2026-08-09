@@ -1,4 +1,19 @@
 {
+  "libraryTitle": { "message": "Biblioteca de marcadores" },
+  "libraryHelp": { "message": "Selecciona un marcador para añadir una nota privada." },
+  "libraryEmpty": { "message": "Captura marcadores para empezar tu biblioteca." },
+  "libraryLoading": { "message": "Cargando…" },
+  "libraryLoadError": { "message": "No se pudieron cargar los marcadores." },
+  "loadMoreBookmarks": { "message": "Cargar más" },
+  "noteLabel": { "message": "Nota privada" },
+  "noteHelp": {
+    "message": "Texto sin formato, guardado localmente mientras escribes."
+  },
+  "noteLoading": { "message": "Cargando…" },
+  "noteLoadError": { "message": "No se pudo abrir la nota." },
+  "noteSaving": { "message": "Guardando…" },
+  "noteSaved": { "message": "Guardado" },
+  "noteSaveError": { "message": "No guardado" },
   "extensionName": {
     "message": "Bookmark X"
   },
