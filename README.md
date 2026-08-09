@@ -319,6 +319,9 @@ publishing job.
 The stable `download/bookmark-x.zip` file provides a simple link to the latest
 ready-to-install build.
 
+Maintainers can find the event matrix, performance budgets, cache strategy, and
+recovery rules in the [CI and release architecture guide](docs/CI.md).
+
 ## Frequently asked questions
 
 ### Does Bookmark X use the X or Twitter API?
