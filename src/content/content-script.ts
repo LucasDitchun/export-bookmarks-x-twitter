@@ -12,11 +12,42 @@ function send(event: ContentEvent): Promise<unknown> {
   return chrome.runtime.sendMessage(event);
 }
 
+class CaptureDeliveryError extends Error {
+  constructor(readonly code: string) {
+    super(`Capture event was rejected: ${code}`);
+  }
+}
+
+async function sendCaptureEvent(event: ContentEvent): Promise<void> {
+  const response = await send(event);
+  if (typeof response !== "object" || response === null) {
+    throw new CaptureDeliveryError("invalid_response");
+  }
+  const envelope = response as Record<string, unknown>;
+  if (envelope.ok === true) return;
+  const error = envelope.error;
+  const code =
+    typeof error === "object" &&
+    error !== null &&
+    typeof (error as Record<string, unknown>).code === "string"
+      ? String((error as Record<string, unknown>).code)
+      : "rejected";
+  throw new CaptureDeliveryError(code);
+}
+
 async function capture(runId: string, controller: AbortController): Promise<void> {
   try {
     const result = await runScrape({
       scan: () => extractBookmarks(document),
       isLoading: () => isPageLoading(document),
+      isPageValid: () => {
+        const location = new URL(window.location.href);
+        return (
+          (location.hostname === "x.com" || location.hostname === "www.x.com") &&
+          (location.pathname === "/i/bookmarks" ||
+            location.pathname.startsWith("/i/bookmarks/"))
+        );
+      },
       isAtEnd: () => {
         const scrollingElement = document.scrollingElement ?? document.documentElement;
         return hasReachedPageEnd({
@@ -44,24 +75,50 @@ async function capture(runId: string, controller: AbortController): Promise<void
         }),
       signal: controller.signal,
       onBatch: async (bookmarks) => {
-        await send({ type: "SCRAPE_BATCH", runId, bookmarks });
+        await sendCaptureEvent({ type: "SCRAPE_BATCH", runId, bookmarks });
       },
       onProgress: async ({ fetched }) => {
-        await send({ type: "SCRAPE_PROGRESS", runId, fetched });
+        await sendCaptureEvent({ type: "SCRAPE_PROGRESS", runId, fetched });
       },
     });
-    await send({
+    if (result.status === "incomplete") {
+      await sendCaptureEvent({
+        type: "SCRAPE_FAILED",
+        runId,
+        errorCode: result.errorCode ?? "scrape_incomplete",
+      });
+      return;
+    }
+    if (result.status === "completed") {
+      await sendCaptureEvent({
+        type: "SCRAPE_COMPLETE",
+        runId,
+        status: "completed",
+        fetched: result.fetched,
+        completionReason: "stable_end",
+      });
+      return;
+    }
+    await sendCaptureEvent({
       type: "SCRAPE_COMPLETE",
       runId,
-      status: result.status,
+      status: "cancelled",
       fetched: result.fetched,
     });
-  } catch {
-    await send({
-      type: "SCRAPE_FAILED",
-      runId,
-      errorCode: controller.signal.aborted ? "capture_cancelled" : "scrape_failed",
-    });
+  } catch (error) {
+    if (error instanceof CaptureDeliveryError && error.code === "stale_capture") {
+      return;
+    }
+    try {
+      await send({
+        type: "SCRAPE_FAILED",
+        runId,
+        errorCode: controller.signal.aborted ? "capture_cancelled" : "scrape_failed",
+      });
+    } catch {
+      // Navigation or worker shutdown can make the final best-effort status
+      // unreachable. The background never finalizes without stable-end proof.
+    }
   } finally {
     if (activeCapture?.runId === runId) {
       activeCapture = undefined;
@@ -110,6 +167,11 @@ const liveBookmarkObserver = startLiveBookmarkObserver({
   translate: (key) => chrome.i18n.getMessage(key) || key,
 });
 
-window.addEventListener("pagehide", () => liveBookmarkObserver.stop(), {
-  once: true,
-});
+window.addEventListener(
+  "pagehide",
+  () => {
+    activeCapture?.controller.abort();
+    liveBookmarkObserver.stop();
+  },
+  { once: true },
+);

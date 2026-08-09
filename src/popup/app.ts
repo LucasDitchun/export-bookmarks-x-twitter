@@ -244,6 +244,9 @@ export function createPopupApp(options: PopupAppOptions): {
       content_script_unavailable: "errorReloadPage",
       scrape_failed: "errorCapture",
       capture_timeout: "errorCapture",
+      capture_loading_timeout: "errorCapture",
+      capture_navigation_changed: "errorCapture",
+      scrape_incomplete: "errorCapture",
       stale_capture: "errorCapture",
       scrape_in_progress: "errorCaptureRunning",
       invalid_backup: "errorInvalidBackup",
@@ -936,6 +939,7 @@ export function createPopupApp(options: PopupAppOptions): {
     const running = scrape?.status === "running";
     const showCaptureControls = pageReady || running;
     elements.captureFeedback.hidden = !showCaptureControls;
+    elements.captureFeedback.setAttribute("aria-busy", String(running));
     elements.captureButton.hidden = !showCaptureControls;
     elements.captureState.textContent = captureLabel(scrape);
     elements.captureState.dataset.state = scrape?.status ?? "idle";

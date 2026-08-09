@@ -51,6 +51,12 @@
 - [ ] Media-only posts are retained.
 - [ ] Cancelling keeps captured records without archiving unseen records.
 - [ ] A complete second capture marks missing older posts archived.
+- [ ] A loader that disappears and returns delays completion; an endless loader
+      fails safely without reconciling unseen records.
+- [ ] Leaving the bookmarks route or closing the tab never reconciles unseen
+      records.
+- [ ] With **Keep archived bookmarks** off, only a proven full review deletes
+      missing local records and leaves their folders intact.
 - [ ] Full and URL-only TXT exports open correctly.
 - [ ] Clearing the archive requires confirmation and does not alter X.
 - [ ] Reloading the X page recovers from an unavailable content script.

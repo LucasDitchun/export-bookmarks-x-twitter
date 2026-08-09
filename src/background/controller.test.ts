@@ -48,7 +48,8 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
   return {
     archive: {
       mergeBookmarks: vi.fn(async () => ({ added: 1, updated: 0 })),
-      finalizeCapture: vi.fn(async () => undefined),
+      finalizeCapture: vi.fn(async () => ({ archived: 0, removed: 0 })),
+      discardCapture: vi.fn(async () => 0),
       getStats: vi.fn(async () => stats),
       getAll: vi.fn(async () => []),
       clear: vi.fn(async () => undefined),
@@ -1041,6 +1042,7 @@ describe("BackgroundController", () => {
           runId: "run-1",
           status: "completed",
           fetched: 1,
+          completionReason: "stable_end",
         },
         CONTENT_SENDER,
       ),
@@ -1057,8 +1059,64 @@ describe("BackgroundController", () => {
     expect(dependencies.archive.finalizeCapture).toHaveBeenCalledWith(
       "run-1",
       "2026-07-29T13:14:15.123Z",
+      true,
     );
     expect(dependencies.search.invalidate).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the keep-archived setting only after a full review completes", async () => {
+    const dependencies = createDependencies();
+    dependencies.settings.get.mockResolvedValue({
+      ...structuredClone(DEFAULT_SETTINGS),
+      data: { keepArchived: false },
+    });
+    const controller = new BackgroundController(dependencies);
+    await controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER);
+
+    await expect(
+      controller.handle(
+        {
+          type: "SCRAPE_COMPLETE",
+          runId: "run-1",
+          status: "completed",
+          fetched: 0,
+          completionReason: "stable_end",
+        },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: true, data: { status: "completed" } });
+
+    expect(dependencies.settings.get).toHaveBeenCalledOnce();
+    expect(dependencies.archive.finalizeCapture).toHaveBeenCalledWith(
+      "run-1",
+      "2026-07-29T13:14:15.123Z",
+      false,
+    );
+  });
+
+  it("rejects completion without stable-end proof and leaves reconciliation untouched", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    await controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER);
+
+    await expect(
+      controller.handle(
+        {
+          type: "SCRAPE_COMPLETE",
+          runId: "run-1",
+          status: "completed",
+          fetched: 0,
+        },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
+    expect(dependencies.archive.finalizeCapture).not.toHaveBeenCalled();
+    await expect(
+      controller.handle({ type: "GET_STATUS" }, POPUP_SENDER),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { scrape: { status: "running" } },
+    });
   });
 
   it("rejects malformed or untrusted capture messages", async () => {
@@ -1143,6 +1201,55 @@ describe("BackgroundController", () => {
       runId: "run-1",
     });
     expect(dependencies.archive.finalizeCapture).not.toHaveBeenCalled();
+    expect(dependencies.archive.discardCapture).toHaveBeenCalledWith("run-1");
+  });
+
+  it("keeps partial data but never reconciles missing posts after an error", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    await controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER);
+    await controller.handle(
+      { type: "SCRAPE_BATCH", runId: "run-1", bookmarks: [bookmark] },
+      CONTENT_SENDER,
+    );
+
+    await expect(
+      controller.handle(
+        {
+          type: "SCRAPE_FAILED",
+          runId: "run-1",
+          errorCode: "capture_navigation_changed",
+        },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { status: "error", errorCode: "capture_navigation_changed" },
+    });
+    expect(dependencies.archive.mergeBookmarks).toHaveBeenCalledOnce();
+    expect(dependencies.archive.finalizeCapture).not.toHaveBeenCalled();
+    expect(dependencies.archive.discardCapture).toHaveBeenCalledWith("run-1");
+  });
+
+  it("rejects stale run events without reconciling or discarding the active run", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    await controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER);
+
+    await expect(
+      controller.handle(
+        {
+          type: "SCRAPE_COMPLETE",
+          runId: "older-run",
+          status: "completed",
+          fetched: 99,
+          completionReason: "stable_end",
+        },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: false, error: { code: "stale_capture" } });
+    expect(dependencies.archive.finalizeCapture).not.toHaveBeenCalled();
+    expect(dependencies.archive.discardCapture).not.toHaveBeenCalled();
   });
 
   it("routes open, export, and clear actions", async () => {

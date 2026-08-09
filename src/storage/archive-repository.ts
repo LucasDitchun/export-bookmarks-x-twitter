@@ -98,13 +98,18 @@ export class ArchiveRepository {
     );
     const bookmarkStore = transaction.objectStore(BOOKMARKS_STORE);
     const seenStore = transaction.objectStore(SEEN_STORE);
+    const existingRecords = await Promise.all(
+      bookmarks.map((bookmark) =>
+        requestAsPromise(
+          bookmarkStore.get(bookmark.id) as IDBRequest<BookmarkRecord | undefined>,
+        ),
+      ),
+    );
     let added = 0;
     let updated = 0;
 
-    for (const bookmark of bookmarks) {
-      const existing = await requestAsPromise(
-        bookmarkStore.get(bookmark.id) as IDBRequest<BookmarkRecord | undefined>,
-      );
+    for (const [index, bookmark] of bookmarks.entries()) {
+      const existing = existingRecords[index];
       const record: BookmarkRecord = {
         ...bookmark,
         media: mergeBookmarkMedia(
@@ -135,29 +140,53 @@ export class ArchiveRepository {
     return { added, updated };
   }
 
-  async finalizeCapture(runId: string, completedAt: string): Promise<void> {
+  async finalizeCapture(
+    runId: string,
+    completedAt: string,
+    keepArchived = true,
+  ): Promise<{ archived: number; removed: number }> {
     const database = await this.connection.open();
     const transaction = database.transaction(
-      [BOOKMARKS_STORE, SEEN_STORE, META_STORE],
+      [BOOKMARK_FOLDERS_STORE, BOOKMARKS_STORE, SEEN_STORE, META_STORE],
       "readwrite",
     );
     const bookmarkStore = transaction.objectStore(BOOKMARKS_STORE);
+    const membershipStore = transaction.objectStore(BOOKMARK_FOLDERS_STORE);
     const seenStore = transaction.objectStore(SEEN_STORE);
-    const [bookmarks, seenRecords] = await Promise.all([
+    const [bookmarks, memberships, seenRecords] = await Promise.all([
       requestAsPromise(bookmarkStore.getAll() as IDBRequest<BookmarkRecord[]>),
+      requestAsPromise(
+        membershipStore.getAll() as IDBRequest<BookmarkFolderMembership[]>,
+      ),
       requestAsPromise(
         seenStore.index("runId").getAll(runId) as IDBRequest<SeenRecord[]>,
       ),
     ]);
     const seenIds = new Set(seenRecords.map((seen) => seen.bookmarkId));
+    const removedIds = new Set<string>();
+    let archived = 0;
 
     for (const bookmark of bookmarks) {
-      if (seenIds.has(bookmark.id) || bookmark.status === "archived") continue;
+      if (seenIds.has(bookmark.id)) continue;
+      if (!keepArchived) {
+        bookmarkStore.delete(bookmark.id);
+        removedIds.add(bookmark.id);
+        continue;
+      }
+      if (bookmark.status === "archived") continue;
       bookmarkStore.put({
         ...bookmark,
         archivedAt: completedAt,
         status: "archived",
       } satisfies BookmarkRecord);
+      archived += 1;
+    }
+    if (removedIds.size > 0) {
+      for (const membership of memberships) {
+        if (removedIds.has(membership.bookmarkId)) {
+          membershipStore.delete([membership.bookmarkId, membership.folderId]);
+        }
+      }
     }
     seenStore.clear();
     const meta: MetaRecord<string> = {
@@ -166,6 +195,17 @@ export class ArchiveRepository {
     };
     transaction.objectStore(META_STORE).put(meta);
     await transactionDone(transaction);
+    return { archived, removed: removedIds.size };
+  }
+
+  async discardCapture(runId: string): Promise<number> {
+    const database = await this.connection.open();
+    const transaction = database.transaction(SEEN_STORE, "readwrite");
+    const store = transaction.objectStore(SEEN_STORE);
+    const keys = await requestAsPromise(store.index("runId").getAllKeys(runId));
+    for (const key of keys) store.delete(key);
+    await transactionDone(transaction);
+    return keys.length;
   }
 
   async getAll(): Promise<HydratedBookmarkRecord[]> {

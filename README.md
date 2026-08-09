@@ -84,6 +84,22 @@ Bookmark X identifies each post by its canonical X status ID:
 Running capture again is therefore safe and does not create duplicate archive
 entries.
 
+## Full review and cross-device reconciliation
+
+Every **Capture bookmarks** run is a full review. Bookmark X advances through
+the entire virtualized timeline, sends new posts in batches of at most 100, and
+confirms the end only after repeated quiet checks at the real page bottom.
+Visible X progress indicators reset that confirmation, including a loader that
+disappears and later returns.
+
+Only a successfully confirmed full review reconciles posts that were removed
+on another device. Cancelling, leaving the bookmarks route, closing the tab,
+an endless loader, or any other error keeps already captured data but never
+archives or deletes an unseen post. By default, confirmed missing posts move to
+**Archived**. Turn off **Settings → Data → Keep archived bookmarks** to remove
+confirmed missing posts from the local library instead. This setting never
+changes the user's bookmarks on X.
+
 ## Live save and remove synchronization
 
 On X pages, Bookmark X observes only explicit clicks on X's bookmark button. It
@@ -242,7 +258,8 @@ you start capture. No API key or OAuth application is required.
 
 X loads bookmarks progressively. Bookmark X scrolls that page and waits while X
 is still loading more posts, so the tab must remain open until capture finishes
-or you cancel it.
+or you cancel it. A loader that does not finish ends the review safely with an
+error; it is never treated as proof that the list ended.
 
 ### Will repeated captures create duplicate bookmarks?
 
