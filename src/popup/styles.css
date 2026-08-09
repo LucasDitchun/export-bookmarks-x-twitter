@@ -47,6 +47,7 @@ button {
 }
 
 button:focus-visible,
+input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
@@ -467,6 +468,101 @@ h3 {
   margin-top: 16px;
   font-size: 15px;
   font-weight: 800;
+}
+
+.tag-editor {
+  margin-top: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #c9c8bb;
+}
+
+.tag-editor > label {
+  margin-top: 0;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selected-tags {
+  min-height: 28px;
+  margin-top: 8px;
+}
+
+.tag-badge {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  overflow: hidden;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-badge-remove {
+  min-height: 34px;
+  padding: 4px 8px 4px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tag-badge-remove:hover {
+  filter: brightness(0.94);
+}
+
+.tag-remove-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.bookmark-option-tags:empty {
+  display: none;
+}
+
+.bookmark-option-tags .tag-badge {
+  max-width: 145px;
+}
+
+.tag-editor input {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 8px;
+  padding: 9px 11px;
+  border: 2px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+  font-size: 16px;
+}
+
+.tag-editor input:disabled {
+  opacity: 0.6;
+}
+
+.tag-help-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tag-help-row .quiet-status {
+  margin-top: 5px;
+}
+
+.quiet-status[data-state="tagSaveError"] {
+  color: var(--danger);
 }
 
 .note-editor textarea {

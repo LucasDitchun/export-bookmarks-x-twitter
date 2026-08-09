@@ -5,6 +5,17 @@
   "libraryLoading": { "message": "正在加载…" },
   "libraryLoadError": { "message": "无法加载书签。" },
   "loadMoreBookmarks": { "message": "加载更多" },
+  "tagsLabel": { "message": "标签" },
+  "tagInputPlaceholder": { "message": "输入标签并按 Enter" },
+  "tagHelp": { "message": "按 Enter 添加。标签仅保存在本地。" },
+  "tagSaving": { "message": "正在保存…" },
+  "tagAdded": { "message": "已添加标签" },
+  "tagRemoved": { "message": "已移除标签" },
+  "tagSaveError": { "message": "未保存" },
+  "removeTagLabel": {
+    "message": "移除标签 $TAG$",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
   "noteLabel": { "message": "私人备注" },
   "noteHelp": { "message": "纯文本，输入时自动保存在本地。" },
   "noteLoading": { "message": "正在加载…" },

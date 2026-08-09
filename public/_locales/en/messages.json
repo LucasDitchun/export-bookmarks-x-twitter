@@ -25,6 +25,17 @@
   "libraryLoading": { "message": "Loading…" },
   "libraryLoadError": { "message": "Could not load bookmarks." },
   "loadMoreBookmarks": { "message": "Load more" },
+  "tagsLabel": { "message": "Tags" },
+  "tagInputPlaceholder": { "message": "Type a tag and press Enter" },
+  "tagHelp": { "message": "Press Enter to add. Tags are stored locally." },
+  "tagSaving": { "message": "Saving…" },
+  "tagAdded": { "message": "Tag added" },
+  "tagRemoved": { "message": "Tag removed" },
+  "tagSaveError": { "message": "Not saved" },
+  "removeTagLabel": {
+    "message": "Remove tag $TAG$",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
   "noteLabel": { "message": "Private note" },
   "noteHelp": { "message": "Plain text, saved locally as you type." },
   "noteLoading": { "message": "Loading…" },

@@ -146,6 +146,38 @@
                   aria-atomic="true"
                 ></span>
               </div>
+              <div class="tag-editor">
+                <label for="tag-input" data-i18n="tagsLabel">Tags</label>
+                <div
+                  id="selected-tags"
+                  class="tag-list selected-tags"
+                  role="list"
+                  aria-live="polite"
+                ></div>
+                <input
+                  id="tag-input"
+                  type="text"
+                  maxlength="50"
+                  list="tag-suggestions"
+                  autocomplete="off"
+                  disabled
+                  aria-describedby="tag-help tag-status"
+                  placeholder="Type a tag and press Enter"
+                />
+                <datalist id="tag-suggestions"></datalist>
+                <div class="tag-help-row">
+                  <p id="tag-help" class="note-help" data-i18n="tagHelp">
+                    Press Enter to add. Tags are stored locally.
+                  </p>
+                  <span
+                    id="tag-status"
+                    class="quiet-status"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                  ></span>
+                </div>
+              </div>
               <label id="note-heading" for="note-textarea" data-i18n="noteLabel">
                 Private note
               </label>

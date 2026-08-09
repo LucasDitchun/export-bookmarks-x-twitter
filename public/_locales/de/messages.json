@@ -7,6 +7,19 @@
   "libraryLoading": { "message": "Wird geladen…" },
   "libraryLoadError": { "message": "Lesezeichen konnten nicht geladen werden." },
   "loadMoreBookmarks": { "message": "Mehr laden" },
+  "tagsLabel": { "message": "Tags" },
+  "tagInputPlaceholder": { "message": "Tag eingeben und Enter drücken" },
+  "tagHelp": {
+    "message": "Zum Hinzufügen Enter drücken. Tags werden lokal gespeichert."
+  },
+  "tagSaving": { "message": "Wird gespeichert…" },
+  "tagAdded": { "message": "Tag hinzugefügt" },
+  "tagRemoved": { "message": "Tag entfernt" },
+  "tagSaveError": { "message": "Nicht gespeichert" },
+  "removeTagLabel": {
+    "message": "Tag $TAG$ entfernen",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
   "noteLabel": { "message": "Private Notiz" },
   "noteHelp": { "message": "Klartext, wird beim Tippen lokal gespeichert." },
   "noteLoading": { "message": "Wird geladen…" },

@@ -5,6 +5,19 @@
   "libraryLoading": { "message": "読み込み中…" },
   "libraryLoadError": { "message": "ブックマークを読み込めませんでした。" },
   "loadMoreBookmarks": { "message": "さらに読み込む" },
+  "tagsLabel": { "message": "タグ" },
+  "tagInputPlaceholder": { "message": "タグを入力して Enter キー" },
+  "tagHelp": {
+    "message": "Enter キーで追加。タグはローカルに保存されます。"
+  },
+  "tagSaving": { "message": "保存中…" },
+  "tagAdded": { "message": "タグを追加しました" },
+  "tagRemoved": { "message": "タグを削除しました" },
+  "tagSaveError": { "message": "保存できませんでした" },
+  "removeTagLabel": {
+    "message": "タグ「$TAG$」を削除",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
   "noteLabel": { "message": "非公開メモ" },
   "noteHelp": { "message": "プレーンテキスト。入力中にローカルへ保存されます。" },
   "noteLoading": { "message": "読み込み中…" },

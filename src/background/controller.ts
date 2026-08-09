@@ -53,6 +53,11 @@ interface BackgroundDependencies {
     get(id: string): Promise<unknown>;
     saveNote(id: string, note: string): Promise<unknown>;
   };
+  tags: {
+    list(): Promise<unknown>;
+    add(bookmarkId: string, name: string): Promise<unknown>;
+    remove(bookmarkId: string, tagId: string): Promise<unknown>;
+  };
   browser: BrowserBridge;
   extensionId: string;
   now?: () => Date;
@@ -65,6 +70,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isBookmarkId(value: unknown): value is string {
   return typeof value === "string" && /^\d+$/.test(value);
+}
+
+function isLocalEntityId(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 }
 
 export function isBookmarksUrl(value: string | undefined): boolean {
@@ -87,7 +96,8 @@ function isUiRequest(value: unknown): value is UiRequest {
     value.type === "OPEN_BOOKMARKS" ||
     value.type === "START_SCRAPE" ||
     value.type === "CANCEL_SCRAPE" ||
-    value.type === "CLEAR_ARCHIVE"
+    value.type === "CLEAR_ARCHIVE" ||
+    value.type === "LIST_TAGS"
   ) {
     return true;
   }
@@ -114,6 +124,23 @@ function isUiRequest(value: unknown): value is UiRequest {
       isBookmarkId(value.payload.id) &&
       typeof value.payload.note === "string" &&
       value.payload.note.length <= 20_000
+    );
+  }
+  if (value.type === "ADD_BOOKMARK_TAG") {
+    return (
+      isRecord(value.payload) &&
+      isBookmarkId(value.payload.id) &&
+      typeof value.payload.name === "string" &&
+      value.payload.name.length <= 200 &&
+      value.payload.name.trim().length > 0 &&
+      value.payload.name.trim().normalize("NFKC").length <= 50
+    );
+  }
+  if (value.type === "REMOVE_BOOKMARK_TAG") {
+    return (
+      isRecord(value.payload) &&
+      isBookmarkId(value.payload.id) &&
+      isLocalEntityId(value.payload.tagId)
     );
   }
   if (value.type !== "EXPORT_BOOKMARKS" || !isRecord(value.payload)) return false;
@@ -246,6 +273,19 @@ export class BackgroundController {
             bookmark: await this.dependencies.bookmarks.saveNote(
               request.payload.id,
               request.payload.note,
+            ),
+          });
+        case "LIST_TAGS":
+          return success({ tags: await this.dependencies.tags.list() });
+        case "ADD_BOOKMARK_TAG":
+          return success(
+            await this.dependencies.tags.add(request.payload.id, request.payload.name),
+          );
+        case "REMOVE_BOOKMARK_TAG":
+          return success({
+            bookmark: await this.dependencies.tags.remove(
+              request.payload.id,
+              request.payload.tagId,
             ),
           });
         case "OPEN_BOOKMARKS":

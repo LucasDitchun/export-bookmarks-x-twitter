@@ -7,6 +7,21 @@
   "libraryLoading": { "message": "Chargement…" },
   "libraryLoadError": { "message": "Impossible de charger les favoris." },
   "loadMoreBookmarks": { "message": "Charger plus" },
+  "tagsLabel": { "message": "Étiquettes" },
+  "tagInputPlaceholder": {
+    "message": "Saisissez une étiquette et appuyez sur Entrée"
+  },
+  "tagHelp": {
+    "message": "Appuyez sur Entrée pour l’ajouter. Les étiquettes sont stockées localement."
+  },
+  "tagSaving": { "message": "Enregistrement…" },
+  "tagAdded": { "message": "Étiquette ajoutée" },
+  "tagRemoved": { "message": "Étiquette supprimée" },
+  "tagSaveError": { "message": "Non enregistré" },
+  "removeTagLabel": {
+    "message": "Supprimer l’étiquette $TAG$",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
   "noteLabel": { "message": "Note privée" },
   "noteHelp": { "message": "Texte brut, enregistré localement pendant la saisie." },
   "noteLoading": { "message": "Chargement…" },

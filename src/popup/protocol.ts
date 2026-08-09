@@ -10,4 +10,7 @@ export type {
   RuntimeResponse,
   SendMessage,
   UiRequest,
+  TagAssignmentResult,
+  TagListResult,
+  TagRemovalResult,
 } from "../shared/protocol";

@@ -17,6 +17,7 @@ export interface BookmarkFolderMembership {
 export interface BookmarkTag {
   id: string;
   name: string;
+  normalizedName: string;
 }
 
 export type BookmarkStatus = "current" | "archived";
