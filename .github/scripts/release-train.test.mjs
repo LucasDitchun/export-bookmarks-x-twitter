@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  assertPreparedChangelog,
   calculateNextVersion,
   parseConventionalCommit,
   updateChangelog,
@@ -135,4 +136,39 @@ test("replaces an unshipped changelog section instead of accumulating prepared r
   assert.match(updated, /- initial release \(`bbbbbbb`\)/m);
   assert.match(updated, /### Features[\s\S]*- folders \(`ccccccc`\)/m);
   assert.match(updated, /### Fixes[\s\S]*- preserve notes \(`ddddddd`\)/m);
+});
+
+test("rejects a prepared changelog that omits a commit from the release range", () => {
+  const contents = [
+    "# Changelog",
+    "",
+    "All notable changes to Bookmark X are documented in this file.",
+    "",
+    "## [0.1.1] - 2026-08-09",
+    "",
+    "### Features",
+    "",
+    "- folders (`ccccccc`)",
+    "",
+    "## [0.1.0] - 2026-07-29",
+    "",
+    "### Features",
+    "",
+    "- initial release (`bbbbbbb`)",
+    "",
+  ].join("\n");
+
+  assert.throws(
+    () =>
+      assertPreparedChangelog({
+        contents,
+        baseVersion: "0.1.0",
+        version: "0.1.1",
+        commits: [
+          { sha: "cccccccc", subject: "feat: folders" },
+          { sha: "dddddddd", subject: "docs: document folders" },
+        ],
+      }),
+    /does not exactly match/i,
+  );
 });

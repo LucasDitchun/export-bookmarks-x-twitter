@@ -200,6 +200,31 @@ export function updateChangelog({ contents, baseVersion, version, date, commits 
   return `${[header, preparedSection, ...shippedSections].join("\n\n")}\n`;
 }
 
+export function assertPreparedChangelog({ contents, baseVersion, version, commits }) {
+  const escapedVersion = version.replaceAll(".", "\\.");
+  const heading = new RegExp(
+    `^## \\[${escapedVersion}\\] - (?<date>\\d{4}-\\d{2}-\\d{2})$`,
+    "mu",
+  );
+  const preparedDate = heading.exec(contents)?.groups?.date;
+  if (!preparedDate) {
+    throw new Error(`CHANGELOG.md has no release section for ${version}.`);
+  }
+
+  const expected = updateChangelog({
+    contents,
+    baseVersion,
+    version,
+    date: preparedDate,
+    commits,
+  });
+  if (contents !== expected) {
+    throw new Error(
+      `CHANGELOG.md does not exactly match the Conventional Commits in release ${version}.`,
+    );
+  }
+}
+
 function git(args) {
   return execFileSync("git", args, {
     cwd: ROOT,
@@ -325,13 +350,12 @@ async function verify(options) {
       `Prepared version must be ${plan.version}; package.json is ${packageJson.version} and manifest is ${manifest.version}.`,
     );
   }
-  const heading = new RegExp(
-    `^## \\[${plan.version.replaceAll(".", "\\.")}\\] - \\d{4}-\\d{2}-\\d{2}$`,
-    "mu",
-  );
-  if (!heading.test(changelog)) {
-    throw new Error(`CHANGELOG.md has no release section for ${plan.version}.`);
-  }
+  assertPreparedChangelog({
+    contents: changelog,
+    baseVersion: plan.baseVersion,
+    version: plan.version,
+    commits: plan.commits,
+  });
 
   if (options.requireArchive) {
     await readFile(DOWNLOAD_PATH).catch((error) => {

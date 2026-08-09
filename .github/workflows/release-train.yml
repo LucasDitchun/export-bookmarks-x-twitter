@@ -5,17 +5,6 @@ on:
     branches:
       - develop
   workflow_dispatch:
-    inputs:
-      bump:
-        description: Version increment (auto follows the documented ZeroVer policy)
-        required: true
-        default: auto
-        type: choice
-        options:
-          - auto
-          - patch
-          - minor
-          - major
 
 permissions: {}
 
@@ -87,7 +76,6 @@ jobs:
       contents: read
     outputs:
       archive: ${{ steps.release.outputs.archive }}
-      bump: ${{ steps.release.outputs.bump }}
       noop: ${{ steps.state.outputs.noop }}
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
@@ -120,13 +108,10 @@ jobs:
 
       - name: Calculate and write the release version
         id: release
-        env:
-          RELEASE_BUMP: ${{ inputs.bump }}
         run: |
           node .github/scripts/release-train.mjs prepare \
             --base-ref origin/main \
             --head-ref HEAD \
-            --bump "$RELEASE_BUMP" \
             --github-output "$GITHUB_OUTPUT"
 
       - name: Format generated metadata
@@ -176,13 +161,11 @@ jobs:
       - name: Verify prepared release
         if: steps.state.outputs.noop != 'true'
         env:
-          RELEASE_BUMP: ${{ inputs.bump }}
           RELEASE_ARCHIVE: ${{ steps.release.outputs.archive }}
         run: |
           node .github/scripts/release-train.mjs verify \
             --base-ref origin/main \
             --head-ref HEAD \
-            --bump "$RELEASE_BUMP" \
             --require-archive
           cmp --silent "$RELEASE_ARCHIVE" download/bookmark-x.zip
           git diff --check
