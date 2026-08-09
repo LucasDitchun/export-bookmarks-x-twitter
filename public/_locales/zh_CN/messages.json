@@ -308,5 +308,9 @@
   "bookmarkPromptFolder": { "message": "文件夹" },
   "bookmarkPromptNote": { "message": "私人笔记" },
   "bookmarkCategorized": { "message": "已分类" },
-  "bookmarkNeedsCategory": { "message": "待分类" }
+  "bookmarkNeedsCategory": { "message": "待分类" },
+  "liveBookmarkPending": { "message": "正在等待 X 确认…" },
+  "liveBookmarkSaved": { "message": "已保存到本地。可添加备注、文件夹或标签。" },
+  "liveBookmarkArchived": { "message": "已从当前书签移除并保留在归档中。" },
+  "liveBookmarkFailed": { "message": "X 未确认此更改。本地归档未被修改。" }
 }

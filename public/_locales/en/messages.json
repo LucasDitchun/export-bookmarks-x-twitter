@@ -236,5 +236,13 @@
   "bookmarkPromptFolder": { "message": "Folder" },
   "bookmarkPromptNote": { "message": "Private note" },
   "bookmarkCategorized": { "message": "Categorized" },
-  "bookmarkNeedsCategory": { "message": "Needs category" }
+  "bookmarkNeedsCategory": { "message": "Needs category" },
+  "liveBookmarkPending": { "message": "Waiting for X to confirm…" },
+  "liveBookmarkSaved": { "message": "Saved locally. Add a note, folder, or tags." },
+  "liveBookmarkArchived": {
+    "message": "Removed from current bookmarks and kept in Archived."
+  },
+  "liveBookmarkFailed": {
+    "message": "X did not confirm this change. Your local archive was not changed."
+  }
 }

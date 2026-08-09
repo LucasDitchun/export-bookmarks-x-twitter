@@ -84,6 +84,19 @@ Bookmark X identifies each post by its canonical X status ID:
 Running capture again is therefore safe and does not create duplicate archive
 entries.
 
+## Live save and remove synchronization
+
+On X pages, Bookmark X observes only explicit clicks on X's bookmark button. It
+does not block or replace X's own click handler. The note interface opens in a
+pending state, and the local archive changes only after X renders the new
+bookmark state and keeps it stable. If X rejects or reverses the action, the
+local archive remains unchanged.
+
+Removing a bookmark archives it locally. Bookmarking the same post again makes
+it current and restores its existing note, folder, and tags. Automatic opening
+is enabled by default and can be disabled in **Settings → Behavior**; the same
+setting chooses the in-page modal or Chrome Side Panel.
+
 ## Languages and manual language selection
 
 The popup supports:
@@ -136,11 +149,14 @@ The extension requests only the capabilities needed for capture:
 - `https://api.github.com/*` reads only this project's public star count for the
   open-source card in Settings. The result is cached locally for 24 hours, and
   no bookmark data or GitHub credentials are included;
-- the content script is restricted to `https://x.com/i/bookmarks*` and
-  `https://www.x.com/i/bookmarks*`.
+- the content script is restricted to `https://x.com/*` and
+  `https://www.x.com/*`; outside the bookmarks page it processes a post only
+  after an explicit bookmark-button click.
 
-Bookmark X does not read passwords, cookies, or unrelated X pages. Clearing the
-local archive removes extension data only; it does not remove bookmarks from X.
+Bookmark X does not read passwords or cookies. It never changes X on the
+user's behalf: it only mirrors a bookmark change after X confirms it. Clearing
+the local archive removes extension data only; it does not remove bookmarks
+from X.
 
 For details, read the [privacy policy](PRIVACY.md). Report security issues using
 the private process in the [security policy](SECURITY.md).

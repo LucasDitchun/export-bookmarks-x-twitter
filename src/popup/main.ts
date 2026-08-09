@@ -16,6 +16,11 @@ import {
   SETTINGS_STORAGE_KEY,
 } from "../settings/settings-repository";
 import { applyLibraryUiSettings, createSettingsUiController } from "./settings-ui";
+import {
+  isLiveBookmarkContext,
+  LIVE_BOOKMARK_CONTEXT_KEY,
+} from "../storage/live-bookmark-state";
+import { renderLiveBookmarkStatus } from "./live-bookmark-status";
 
 function applySurfaceContext(): void {
   const params = new URLSearchParams(window.location.search);
@@ -41,6 +46,24 @@ async function startPopup(): Promise<void> {
   const translate = await loadLocaleTranslator(locale);
   document.documentElement.lang = getLocaleTag(locale);
   applyTranslations(document, translate);
+  const liveBookmarkStatus = document.getElementById("live-bookmark-status");
+  const isSidePanel = document.documentElement.dataset.surface === "side-panel";
+  const renderLiveStatus = (value: unknown): void => {
+    if (!liveBookmarkStatus) return;
+    renderLiveBookmarkStatus(
+      liveBookmarkStatus,
+      isSidePanel && isLiveBookmarkContext(value) ? value : null,
+      translate,
+    );
+  };
+  if (isSidePanel) {
+    try {
+      const stored = await chrome.storage.local.get(LIVE_BOOKMARK_CONTEXT_KEY);
+      renderLiveStatus(stored[LIVE_BOOKMARK_CONTEXT_KEY]);
+    } catch {
+      renderLiveStatus(null);
+    }
+  }
 
   const languageSelect = document.getElementById(
     "language-select",
@@ -77,6 +100,13 @@ async function startPopup(): Promise<void> {
   ): void => {
     if (areaName === "local" && Object.hasOwn(changes, SETTINGS_STORAGE_KEY)) {
       void settingsUi.refresh();
+    }
+    if (areaName === "local" && Object.hasOwn(changes, LIVE_BOOKMARK_CONTEXT_KEY)) {
+      const value = changes[LIVE_BOOKMARK_CONTEXT_KEY]?.newValue;
+      renderLiveStatus(value);
+      if (isSidePanel && isLiveBookmarkContext(value)) {
+        void app?.handleLiveBookmarkContext(value);
+      }
     }
   };
   chrome.storage.onChanged.addListener(refreshSettings);

@@ -15,6 +15,8 @@ import type {
   RuntimeResponse,
   UiRequest,
   BookmarkView,
+  LiveBookmarkContext,
+  LiveBookmarkEvent,
 } from "../shared/protocol";
 import { BookmarkXError } from "../shared/errors";
 import {
@@ -52,7 +54,12 @@ interface MessageSender {
 interface BackgroundDependencies {
   archive: Pick<
     ArchiveRepository,
-    "mergeBookmarks" | "finalizeCapture" | "getAll" | "getStats" | "clear"
+    | "mergeBookmarks"
+    | "finalizeCapture"
+    | "applyLiveBookmark"
+    | "getAll"
+    | "getStats"
+    | "clear"
   >;
   state: Pick<
     ExtensionStateRepository,
@@ -93,6 +100,10 @@ interface BackgroundDependencies {
     save(patch: SettingsPatch): Promise<ExtensionSettings>;
   };
   backup: Pick<BackupRepository, "export" | "restore">;
+  liveState: {
+    get(tabId: number, intentId: string): Promise<LiveBookmarkContext | null>;
+    set(tabId: number, context: LiveBookmarkContext): Promise<void>;
+  };
   browser: BrowserBridge;
   extensionId: string;
   now?: () => Date;
@@ -134,6 +145,16 @@ export function isBookmarksUrl(value: string | undefined): boolean {
       (url.hostname === "x.com" || url.hostname === "www.x.com") &&
       (url.pathname === "/i/bookmarks" || url.pathname.startsWith("/i/bookmarks/"))
     );
+  } catch {
+    return false;
+  }
+}
+
+export function isXUrl(value: string | undefined): boolean {
+  if (!value) return false;
+  try {
+    const hostname = new URL(value).hostname;
+    return hostname === "x.com" || hostname === "www.x.com";
   } catch {
     return false;
   }
@@ -277,13 +298,22 @@ function isBookmarkSnapshot(value: unknown): value is BookmarkSnapshot {
 }
 
 function isContentEvent(value: unknown): value is ContentEvent {
-  if (
-    !isRecord(value) ||
-    typeof value.type !== "string" ||
-    typeof value.runId !== "string"
-  ) {
-    return false;
+  if (!isRecord(value) || typeof value.type !== "string") return false;
+  if (value.type === "LIVE_BOOKMARK_CANCELLED") {
+    return typeof value.intentId === "string" && value.intentId.length <= 128;
   }
+  if (
+    value.type === "LIVE_BOOKMARK_PENDING" ||
+    value.type === "LIVE_BOOKMARK_CONFIRMED"
+  ) {
+    return (
+      typeof value.intentId === "string" &&
+      value.intentId.length <= 128 &&
+      (value.action === "save" || value.action === "remove") &&
+      isBookmarkSnapshot(value.bookmark)
+    );
+  }
+  if (typeof value.runId !== "string") return false;
   if (value.type === "SCRAPE_BATCH") {
     return (
       Array.isArray(value.bookmarks) &&
@@ -302,6 +332,14 @@ function isContentEvent(value: unknown): value is ContentEvent {
     );
   }
   return value.type === "SCRAPE_FAILED" && typeof value.errorCode === "string";
+}
+
+function isLiveBookmarkEvent(event: ContentEvent): event is LiveBookmarkEvent {
+  return (
+    event.type === "LIVE_BOOKMARK_PENDING" ||
+    event.type === "LIVE_BOOKMARK_CONFIRMED" ||
+    event.type === "LIVE_BOOKMARK_CANCELLED"
+  );
 }
 
 function success<T>(data: T): RuntimeResponse<T> {
@@ -627,6 +665,9 @@ export class BackgroundController {
     event: ContentEvent,
     sender: MessageSender,
   ): Promise<RuntimeResponse<unknown>> {
+    if (isLiveBookmarkEvent(event)) {
+      return this.handleLiveBookmarkEvent(event, sender);
+    }
     if (
       sender.id !== this.dependencies.extensionId ||
       !isBookmarksUrl(sender.tab?.url ?? sender.url)
@@ -699,6 +740,85 @@ export class BackgroundController {
       }
       await this.dependencies.state.setScrapeRun(completed);
       return success(completed);
+    } catch (error) {
+      return failure(error);
+    }
+  }
+
+  private async handleLiveBookmarkEvent(
+    event: LiveBookmarkEvent,
+    sender: MessageSender,
+  ): Promise<RuntimeResponse<unknown>> {
+    const tabId = sender.tab?.id;
+    if (
+      sender.id !== this.dependencies.extensionId ||
+      typeof tabId !== "number" ||
+      !isXUrl(sender.tab?.url ?? sender.url)
+    ) {
+      return failure(
+        new BookmarkXError("invalid_sender", "The live bookmark message was rejected."),
+      );
+    }
+
+    try {
+      const timestamp = this.now().toISOString();
+      if (event.type === "LIVE_BOOKMARK_PENDING") {
+        const settings = await this.dependencies.settings.get();
+        const context: LiveBookmarkContext = {
+          intentId: event.intentId,
+          action: event.action,
+          state: "pending",
+          bookmark: event.bookmark,
+          updatedAt: timestamp,
+        };
+        await this.dependencies.liveState.set(tabId, context);
+        const prompt = settings.behavior.promptAfterBookmark;
+        const surface = settings.behavior.surface;
+        const opened = prompt && surface === "sidePanel";
+        if (opened) await this.dependencies.browser.openSidePanel(tabId);
+        return success({ prompt, surface, opened });
+      }
+
+      const pending = await this.dependencies.liveState.get(tabId, event.intentId);
+      if (pending?.intentId !== event.intentId || pending.state !== "pending") {
+        throw new BookmarkXError(
+          "stale_live_bookmark",
+          "This live bookmark action is no longer active.",
+        );
+      }
+
+      if (event.type === "LIVE_BOOKMARK_CANCELLED") {
+        await this.dependencies.liveState.set(tabId, {
+          ...pending,
+          state: "cancelled",
+          updatedAt: timestamp,
+        });
+        return success(null);
+      }
+
+      if (
+        pending.action !== event.action ||
+        pending.bookmark.id !== event.bookmark.id
+      ) {
+        throw new BookmarkXError(
+          "stale_live_bookmark",
+          "The confirmed bookmark does not match the pending action.",
+        );
+      }
+
+      const bookmark = await this.dependencies.archive.applyLiveBookmark(
+        event.bookmark,
+        event.action,
+        timestamp,
+      );
+      await this.dependencies.liveState.set(tabId, {
+        ...pending,
+        bookmark: event.bookmark,
+        action: event.action,
+        state: event.action === "save" ? "saved" : "archived",
+        updatedAt: timestamp,
+      });
+      return success({ bookmark });
     } catch (error) {
       return failure(error);
     }

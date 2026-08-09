@@ -293,6 +293,113 @@ describe("popup app", () => {
     app.destroy();
   });
 
+  it("shows and selects a newly completed live bookmark after an initially empty list", async () => {
+    const newBookmark = {
+      ...libraryBookmark,
+      id: "456",
+      text: "New live bookmark",
+      url: "https://x.com/person/status/456",
+      note: "",
+    };
+    let listCalls = 0;
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        listCalls += 1;
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: listCalls === 1 ? [] : [newBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        return Promise.resolve({ ok: true as const, data: { bookmark: newBookmark } });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await app.ready;
+
+    await app.handleLiveBookmarkContext({
+      intentId: "intent-live-empty",
+      action: "save",
+      state: "saved",
+      bookmark: newBookmark,
+      updatedAt: "2026-08-09T10:00:00.000Z",
+    });
+
+    expect(listCalls).toBe(2);
+    expect(document.getElementById("bookmark-list")?.textContent).toContain(
+      "New live bookmark",
+    );
+    expect(document.getElementById("selected-bookmark-title")?.textContent).toBe(
+      "New live bookmark",
+    );
+    app.destroy();
+  });
+
+  it("refreshes a completed live bookmark once without replacing the active draft", async () => {
+    const newBookmark = {
+      ...libraryBookmark,
+      id: "456",
+      text: "New live bookmark",
+      url: "https://x.com/person/status/456",
+      note: "",
+    };
+    let listCalls = 0;
+    let statusCalls = 0;
+    const sendMessage = ((request) => {
+      if (request.type === "GET_STATUS") {
+        statusCalls += 1;
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        listCalls += 1;
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            items: listCalls === 1 ? [libraryBookmark] : [newBookmark, libraryBookmark],
+            nextCursor: null,
+          },
+        });
+      }
+      if (request.type === "GET_BOOKMARK") {
+        const selected = request.payload.id === "456" ? newBookmark : libraryBookmark;
+        return Promise.resolve({ ok: true as const, data: { bookmark: selected } });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await app.ready;
+    const textarea = document.getElementById("note-textarea") as HTMLTextAreaElement;
+    textarea.value = "Unsaved active draft";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+
+    const completed = {
+      intentId: "intent-live",
+      action: "save" as const,
+      state: "saved" as const,
+      bookmark: newBookmark,
+      updatedAt: "2026-08-09T10:00:00.000Z",
+    };
+    await Promise.all([
+      app.handleLiveBookmarkContext(completed),
+      app.handleLiveBookmarkContext(completed),
+    ]);
+
+    expect(listCalls).toBe(2);
+    expect(statusCalls).toBe(2);
+    expect(document.getElementById("bookmark-list")?.textContent).toContain(
+      "New live bookmark",
+    );
+    expect(document.getElementById("selected-bookmark-title")?.textContent).toBe(
+      libraryBookmark.text,
+    );
+    expect(textarea.value).toBe("Unsaved active draft");
+    app.destroy();
+  });
+
   it("opens the uncategorized view by default and selects its first bookmark", async () => {
     const requests: Array<{ type: string; payload?: unknown }> = [];
     const sendMessage = ((request) => {

@@ -14,6 +14,7 @@ import type {
   BookmarkSearchPage,
   BookmarkView,
   ExportResult,
+  LiveBookmarkContext,
   NotedBookmark,
   PopupStatus,
   RuntimeError,
@@ -171,6 +172,7 @@ function defaultDownload(result: ExportResult): void {
 
 export function createPopupApp(options: PopupAppOptions): {
   destroy: () => void;
+  handleLiveBookmarkContext: (context: LiveBookmarkContext) => Promise<void>;
   ready: Promise<void>;
   setFilterAsYouType: (enabled: boolean) => void;
 } {
@@ -208,6 +210,7 @@ export function createPopupApp(options: PopupAppOptions): {
   let searchQuery = "";
   let searchHandle: number | null = null;
   let filterAsYouType = initialFilterAsYouType;
+  let libraryRefreshWaiters: Array<() => void> = [];
   let captureRefreshPending = false;
   let editRevision = 0;
   let noteSaveHandle: number | null = null;
@@ -216,6 +219,7 @@ export function createPopupApp(options: PopupAppOptions): {
   let noteSaveInFlight = false;
   let folderUi: ReturnType<typeof createFolderUi> | null = null;
   let backupUi: ReturnType<typeof createBackupUi> | null = null;
+  const handledLiveContexts = new Set<string>();
 
   const formatDate = (isoDate: string): string => {
     const date = new Date(isoDate);
@@ -507,6 +511,8 @@ export function createPopupApp(options: PopupAppOptions): {
     libraryGeneration += 1;
     libraryBusy = false;
     libraryRefreshPending = false;
+    for (const resolveWaiter of libraryRefreshWaiters) resolveWaiter();
+    libraryRefreshWaiters = [];
     bookmarks = [];
     nextBookmarkCursor = null;
     resetBookmarkSelection(discardDraft);
@@ -715,10 +721,7 @@ export function createPopupApp(options: PopupAppOptions): {
       if (!destroyed && generation === libraryGeneration) {
         libraryBusy = false;
         renderBookmarkList();
-        if (libraryRefreshPending) {
-          libraryRefreshPending = false;
-          void loadLibrary(undefined, false);
-        }
+        drainPendingLibraryRefresh();
       }
     }
   }
@@ -791,6 +794,7 @@ export function createPopupApp(options: PopupAppOptions): {
       ) {
         libraryBusy = false;
         renderBookmarkList();
+        drainPendingLibraryRefresh();
       }
     }
   }
@@ -799,6 +803,16 @@ export function createPopupApp(options: PopupAppOptions): {
     return searchQuery
       ? loadSearch(cursor, selectFirst)
       : loadLibrary(cursor, selectFirst);
+  }
+
+  function drainPendingLibraryRefresh(): void {
+    if (destroyed || libraryBusy || !libraryRefreshPending) return;
+    libraryRefreshPending = false;
+    const waiters = libraryRefreshWaiters;
+    libraryRefreshWaiters = [];
+    void loadActiveLibrary(undefined, false).finally(() => {
+      for (const resolveWaiter of waiters) resolveWaiter();
+    });
   }
 
   const cancelPendingSearch = (): void => {
@@ -841,6 +855,7 @@ export function createPopupApp(options: PopupAppOptions): {
     if (!filterAsYouType) {
       elements.librarySearchStatus.textContent = translate("searchReady");
       renderBookmarkList();
+      drainPendingLibraryRefresh();
       return;
     }
 
@@ -860,9 +875,35 @@ export function createPopupApp(options: PopupAppOptions): {
   async function refreshLibraryWhenAvailable(): Promise<void> {
     if (libraryBusy) {
       libraryRefreshPending = true;
+      await new Promise<void>((resolve) => {
+        libraryRefreshWaiters.push(resolve);
+      });
       return;
     }
     await loadActiveLibrary(undefined, false);
+  }
+
+  async function handleLiveBookmarkContext(
+    context: LiveBookmarkContext,
+  ): Promise<void> {
+    if (destroyed || (context.state !== "saved" && context.state !== "archived")) {
+      return;
+    }
+    const eventKey = `${context.intentId}:${context.state}`;
+    if (handledLiveContexts.has(eventKey)) return;
+    handledLiveContexts.add(eventKey);
+    if (handledLiveContexts.size > 100) {
+      const oldest = handledLiveContexts.values().next().value;
+      if (oldest !== undefined) handledLiveContexts.delete(oldest);
+    }
+    await Promise.all([loadStatus(false), refreshLibraryWhenAvailable()]);
+    if (
+      context.state === "saved" &&
+      selectedBookmarkId === null &&
+      bookmarks.some((bookmark) => bookmark.id === context.bookmark.id)
+    ) {
+      await selectBookmark(context.bookmark.id);
+    }
   }
 
   const render = (): void => {
@@ -1068,10 +1109,13 @@ export function createPopupApp(options: PopupAppOptions): {
     setFilterAsYouType: (enabled) => {
       if (!destroyed) setFilterAsYouType(enabled);
     },
+    handleLiveBookmarkContext,
     destroy: () => {
       if (destroyed) return;
       flushPendingNoteBeforeDestroy();
       destroyed = true;
+      for (const resolveWaiter of libraryRefreshWaiters) resolveWaiter();
+      libraryRefreshWaiters = [];
       if (refreshHandle !== null) cancelSchedule(refreshHandle);
       if (searchHandle !== null) cancelSchedule(searchHandle);
     },

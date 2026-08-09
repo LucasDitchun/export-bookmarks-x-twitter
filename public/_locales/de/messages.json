@@ -324,5 +324,15 @@
   "bookmarkPromptFolder": { "message": "Ordner" },
   "bookmarkPromptNote": { "message": "Private Notiz" },
   "bookmarkCategorized": { "message": "Kategorisiert" },
-  "bookmarkNeedsCategory": { "message": "Kategorie fehlt" }
+  "bookmarkNeedsCategory": { "message": "Kategorie fehlt" },
+  "liveBookmarkPending": { "message": "Warten auf die Bestätigung von X…" },
+  "liveBookmarkSaved": {
+    "message": "Lokal gespeichert. Füge eine Notiz, einen Ordner oder Tags hinzu."
+  },
+  "liveBookmarkArchived": {
+    "message": "Aus aktuellen Lesezeichen entfernt und im Archiv behalten."
+  },
+  "liveBookmarkFailed": {
+    "message": "X hat diese Änderung nicht bestätigt. Dein lokales Archiv blieb unverändert."
+  }
 }

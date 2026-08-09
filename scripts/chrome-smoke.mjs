@@ -257,6 +257,9 @@ const syntheticBookmarksPage = String.raw`
         <a href="/ada/status/111">
           <time datetime="2026-07-28T10:00:00.000Z">Jul 28</time>
         </a>
+        <button type="button" data-testid="removeBookmark" aria-pressed="true">
+          Remove bookmark
+        </button>
       </article>
       <article data-testid="tweet">
         <div data-testid="User-Name">
@@ -309,6 +312,58 @@ const runtimeScenario = String.raw`
     type: "EXPORT_BOOKMARKS",
     payload: { format: "urls", locale: "en" },
   });
+  const note = await chrome.runtime.sendMessage({
+    type: "SAVE_BOOKMARK_NOTE",
+    payload: { id: "111", note: "Preserved across live rebookmark" },
+  });
+
+  return { before, completed, exported, note };
+})()
+`;
+
+const liveBookmarkPageScenario = String.raw`
+(async () => {
+  const button = document.querySelector('button[data-testid="removeBookmark"]');
+  if (!button) return { error: "live_button_missing" };
+  const waitForModalState = async (state, fromIndex) => {
+    const deadline = Date.now() + 6000;
+    while (Date.now() < deadline) {
+      const hosts = [...document.querySelectorAll("bookmark-x-note-modal")];
+      const host = hosts[fromIndex] ?? hosts.at(-1);
+      const current = host?.shadowRoot?.querySelector('[role="status"]')?.dataset.state;
+      if (current === state) {
+        return {
+          state: current,
+          formHidden: host.shadowRoot.querySelector("form")?.hidden ?? null,
+        };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return { state: "timeout", formHidden: null };
+  };
+
+  button.click();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  button.dataset.testid = "bookmark";
+  button.setAttribute("aria-pressed", "false");
+  const removed = await waitForModalState("success", 0);
+
+  button.click();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  button.dataset.testid = "removeBookmark";
+  button.setAttribute("aria-pressed", "true");
+  const saved = await waitForModalState("ready", 0);
+  return { removed, saved, finalButton: button.dataset.testid };
+})()
+`;
+
+const finalRuntimeScenario = String.raw`
+(async () => {
+  const bookmark = await chrome.runtime.sendMessage({
+    type: "GET_BOOKMARK",
+    payload: { id: "111" },
+  });
+  const stored = await chrome.storage.local.get("liveBookmarkContext");
   const backup = await chrome.runtime.sendMessage({ type: "EXPORT_BACKUP" });
   const cleared = await chrome.runtime.sendMessage({ type: "CLEAR_ARCHIVE" });
   const restored = await chrome.runtime.sendMessage({
@@ -319,11 +374,9 @@ const runtimeScenario = String.raw`
   const restoredStatus = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
   const clearedAgain = await chrome.runtime.sendMessage({ type: "CLEAR_ARCHIVE" });
   const after = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
-
   return {
-    before,
-    completed,
-    exported,
+    bookmark,
+    liveContext: stored.liveBookmarkContext ?? null,
     backup,
     cleared,
     restored,
@@ -378,11 +431,11 @@ const startContentCaptureScenario = String.raw`
 })()
 `;
 
-function assertScenario(page, ui, start, result) {
+function assertScenario(page, ui, start, result, livePage, finalResult) {
+  const { before, completed, exported, note } = result;
   const {
-    before,
-    completed,
-    exported,
+    bookmark,
+    liveContext,
     backup,
     cleared,
     restored,
@@ -390,7 +443,7 @@ function assertScenario(page, ui, start, result) {
     restoredStatus,
     clearedAgain,
     after,
-  } = result;
+  } = finalResult;
   if (page.url !== "https://x.com/i/bookmarks" || page.articles !== 2) {
     throw new Error(`The synthetic X page was not ready: ${JSON.stringify(page)}`);
   }
@@ -442,6 +495,31 @@ function assertScenario(page, ui, start, result) {
     !exported.data.filename.endsWith("-urls.txt")
   ) {
     throw new Error("The runtime TXT export did not match the scraped bookmarks.");
+  }
+  if (!note.ok || note.data.bookmark?.note !== "Preserved across live rebookmark") {
+    throw new Error("The live bookmark setup note was not saved.");
+  }
+  if (
+    livePage.removed?.state !== "success" ||
+    livePage.removed?.formHidden !== true ||
+    livePage.saved?.state !== "ready" ||
+    livePage.saved?.formHidden !== false ||
+    livePage.finalButton !== "removeBookmark"
+  ) {
+    throw new Error(
+      `The synthetic live bookmark UI failed: ${JSON.stringify(livePage)}`,
+    );
+  }
+  if (
+    !bookmark.ok ||
+    bookmark.data.bookmark?.status !== "current" ||
+    bookmark.data.bookmark?.note !== "Preserved across live rebookmark" ||
+    liveContext?.state !== "saved" ||
+    liveContext?.bookmark?.id !== "111"
+  ) {
+    throw new Error(
+      `The live rebookmark did not preserve local metadata: ${JSON.stringify({ bookmark, liveContext })}`,
+    );
   }
   if (!cleared.ok || !after.ok || after.data.stats.total !== 0) {
     throw new Error("The runtime archive clear flow did not finish.");
@@ -669,14 +747,38 @@ async function main() {
           evaluation.exceptionDetails.text,
       );
     }
+    const livePageEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: liveBookmarkPageScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (livePageEvaluation.exceptionDetails) {
+      throw new Error(
+        livePageEvaluation.exceptionDetails.exception?.description ??
+          livePageEvaluation.exceptionDetails.text,
+      );
+    }
+    const finalEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: finalRuntimeScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (finalEvaluation.exceptionDetails) {
+      throw new Error(
+        finalEvaluation.exceptionDetails.exception?.description ??
+          finalEvaluation.exceptionDetails.text,
+      );
+    }
     assertScenario(
       pageEvaluation.result.value,
       uiEvaluation.result.value,
       startEvaluation.result.value,
       evaluation.result.value,
+      livePageEvaluation.result.value,
+      finalEvaluation.result.value,
     );
     console.log(
-      "Chrome smoke passed: settings defaults, X-page DOM scraping, UI, MV3 worker, IndexedDB, TXT export, JSON backup round-trip, and clear.",
+      "Chrome smoke passed: settings, X-page scraping, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, TXT export, JSON backup round-trip, and clear.",
     );
     if (VISUAL_CHECKPOINT_DIRECTORY) {
       console.log(`Visual checkpoints: ${VISUAL_CHECKPOINT_DIRECTORY}`);

@@ -21,9 +21,9 @@
 - [ ] `storage` is justified as storing local capture status and language
       preference.
 - [ ] `unlimitedStorage` is justified as supporting a durable local archive.
-- [ ] The only content-script matches are
-      `https://x.com/i/bookmarks*` and
-      `https://www.x.com/i/bookmarks*`.
+- [ ] The only content-script matches are `https://x.com/*` and
+      `https://www.x.com/*`; outside `/i/bookmarks`, post processing requires
+      an explicit bookmark-button click.
 - [ ] There are no broad host permissions, cookie/history permissions,
       externally connectable origins, or web-accessible resources.
 
@@ -54,7 +54,11 @@
 - [ ] Full and URL-only TXT exports open correctly.
 - [ ] Clearing the archive requires confirmation and does not alter X.
 - [ ] Reloading the X page recovers from an unavailable content script.
-- [ ] Unrelated X pages and arbitrary sites cannot be captured.
+- [ ] A bookmark click opens the selected surface pending; a stable confirmed
+      save adds it, and a stable confirmed remove archives it.
+- [ ] X failure/reversal changes no local record; rebookmark restores note,
+      folder, and tags.
+- [ ] Arbitrary non-X sites cannot be captured.
 
 ## Publish
 

@@ -1,10 +1,46 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  EXPECTED_CONTENT_SCRIPT_MATCHES,
   EXPECTED_MANIFEST_HOST_PERMISSIONS,
   EXPECTED_MANIFEST_PERMISSIONS,
   validateExactStringArray,
 } from "./package-policy.mjs";
+
+describe("content script host policy", () => {
+  it("allows exactly the two X hosts in any order", () => {
+    expect(EXPECTED_CONTENT_SCRIPT_MATCHES).toEqual([
+      "https://x.com/*",
+      "https://www.x.com/*",
+    ]);
+    expect(() =>
+      validateExactStringArray(
+        ["https://www.x.com/*", "https://x.com/*"],
+        EXPECTED_CONTENT_SCRIPT_MATCHES,
+        "content_scripts[0].matches",
+      ),
+    ).not.toThrow();
+  });
+
+  it.each([
+    ["all URLs", ["<all_urls>"]],
+    ["Twitter", ["https://twitter.com/*", "https://www.twitter.com/*"]],
+    [
+      "an extra host",
+      ["https://x.com/*", "https://www.x.com/*", "https://example.com/*"],
+    ],
+  ])("rejects %s", (_label, matches) => {
+    expect(() =>
+      validateExactStringArray(
+        matches,
+        EXPECTED_CONTENT_SCRIPT_MATCHES,
+        "content_scripts[0].matches",
+      ),
+    ).toThrow(
+      "Manifest content_scripts[0].matches must be exactly: https://www.x.com/*, https://x.com/*.",
+    );
+  });
+});
 
 describe("extension package permission policy", () => {
   it("requires the minimal Side Panel permission set in any order", () => {

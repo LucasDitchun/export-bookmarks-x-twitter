@@ -85,6 +85,21 @@ export interface JsonBackupRestoreResult {
   reloadRequired: true;
 }
 
+export type LiveBookmarkAction = "save" | "remove";
+export type LiveBookmarkState = "pending" | "saved" | "archived" | "cancelled";
+
+export interface LiveBookmarkContext {
+  intentId: string;
+  action: LiveBookmarkAction;
+  state: LiveBookmarkState;
+  bookmark: BookmarkSnapshot;
+  updatedAt: string;
+}
+
+export interface LiveBookmarkIntentResult extends OpenSurfaceResult {
+  prompt: boolean;
+}
+
 export type UiRequest =
   | { type: "GET_STATUS" }
   | { type: "GET_SETTINGS" }
@@ -157,7 +172,27 @@ export type ContentEvent =
       status: "completed" | "cancelled";
       fetched: number;
     }
-  | { type: "SCRAPE_FAILED"; runId: string; errorCode: string };
+  | { type: "SCRAPE_FAILED"; runId: string; errorCode: string }
+  | {
+      type: "LIVE_BOOKMARK_PENDING";
+      intentId: string;
+      action: LiveBookmarkAction;
+      bookmark: BookmarkSnapshot;
+    }
+  | {
+      type: "LIVE_BOOKMARK_CONFIRMED";
+      intentId: string;
+      action: LiveBookmarkAction;
+      bookmark: BookmarkSnapshot;
+    }
+  | { type: "LIVE_BOOKMARK_CANCELLED"; intentId: string };
+
+export type LiveBookmarkEvent = Extract<
+  ContentEvent,
+  | { type: "LIVE_BOOKMARK_PENDING" }
+  | { type: "LIVE_BOOKMARK_CONFIRMED" }
+  | { type: "LIVE_BOOKMARK_CANCELLED" }
+>;
 
 export interface ExportResult {
   content: string;
