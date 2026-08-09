@@ -30,7 +30,12 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    exclude: [...configDefaults.exclude, ".github/scripts/release-train.test.mjs"],
+    exclude: [
+      ...configDefaults.exclude,
+      ".github/scripts/release-train.test.mjs",
+      "scripts/semantic-model-gate.test.mjs",
+      "scripts/semantic-browser-gate.test.mjs",
+    ],
     setupFiles: ["./src/test/setup.ts"],
     coverage: {
       provider: "v8",
