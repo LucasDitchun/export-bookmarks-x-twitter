@@ -28,7 +28,9 @@ jobs:
     name: Validate the proposed release
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && github.event.action != 'closed')
+      (github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -296,8 +298,8 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git tag --annotate "$RELEASE_TAG" --message "Bookmark X $RELEASE_TAG"
-            git -c http.extraheader="AUTHORIZATION: bearer $GH_TOKEN" \
-              push origin "refs/tags/$RELEASE_TAG"
+            gh auth setup-git
+            git push origin "refs/tags/$RELEASE_TAG"
           fi
 
       - name: Create or validate the GitHub Release

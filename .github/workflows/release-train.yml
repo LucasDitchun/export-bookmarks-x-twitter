@@ -251,8 +251,8 @@ jobs:
             exit 1
           }
           git commit -m "chore(release): prepare $RELEASE_TAG"
-          git -c http.extraheader="AUTHORIZATION: bearer $GH_TOKEN" \
-            push origin HEAD:develop
+          gh auth setup-git
+          git push origin HEAD:develop
 
   sync-prepared-pr:
     name: Update and validate the prepared release PR
@@ -260,6 +260,7 @@ jobs:
       - prepare-batch
       - apply-prepared-release
     if: >-
+      always() &&
       github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/develop' &&
       needs.prepare-batch.result == 'success' &&
