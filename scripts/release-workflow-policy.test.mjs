@@ -74,6 +74,33 @@ describe("release workflow permissions and gates", () => {
     expect(pullRequestTrigger).not.toContain("paths-ignore:");
   });
 
+  it("warms one reusable develop cache without running the quality suite", async () => {
+    const workflow = await readWorkflow("ci.yml");
+
+    expect(workflow).toContain("  push:\n    branches:\n      - develop\n");
+    expect(workflow).toContain("      - pnpm-lock.yaml\n");
+    expect(workflow).toContain("      - .github/workflows/ci.yml\n");
+    expect(workflow).toContain("if: github.event_name == 'push'");
+    expect(workflow).toContain("run: pnpm fetch --frozen-lockfile");
+    expect(workflow).toContain("if: github.event_name != 'push'");
+  });
+
+  it("uses one full PR gate and a smaller artifact-only release gate", async () => {
+    const workflow = await readWorkflow("ci.yml");
+
+    expect(workflow).toContain("CI_MODE:");
+    expect(workflow).toContain("if: env.CI_MODE == 'full'");
+    expect(workflow).toContain(
+      "pnpm exec prettier --check package.json pnpm-lock.yaml public/manifest.json CHANGELOG.md",
+    );
+    expect(workflow.match(/pnpm lint/gu)).toHaveLength(1);
+    expect(workflow.match(/pnpm typecheck/gu)).toHaveLength(1);
+    expect(workflow.match(/pnpm test:coverage/gu)).toHaveLength(1);
+    expect(workflow.match(/pnpm build/gu)).toHaveLength(1);
+    expect(workflow.match(/pnpm package/gu)).toHaveLength(1);
+    expect(workflow.match(/pnpm verify:archive/gu)).toHaveLength(1);
+  });
+
   it("makes automation PR and dispatch runs validate the same head SHA", async () => {
     const workflow = await readWorkflow("ci.yml");
 
@@ -107,6 +134,49 @@ describe("release workflow permissions and gates", () => {
     expect(promotion).not.toMatch(/pnpm (?:build|package|smoke:chrome)/u);
   });
 
+  it("does not repeat source validation while preparing reviewed artifacts", async () => {
+    const preparation = await readWorkflow("release-train.yml");
+
+    expect(preparation).not.toMatch(/pnpm (?:lint|typecheck|test:coverage)/u);
+    expect(preparation).toContain(
+      "pnpm exec prettier --check package.json pnpm-lock.yaml public/manifest.json CHANGELOG.md",
+    );
+    expect(preparation).toContain("pnpm install --frozen-lockfile --prefer-offline");
+    expect(preparation).toContain("pnpm install --lockfile-only --offline");
+    expect(preparation).toContain("compression-level: 0");
+  });
+
+  it("uses the current LTS runtime consistently", async () => {
+    const [ci, preparation, nodeVersion] = await Promise.all([
+      readWorkflow("ci.yml"),
+      readWorkflow("release-train.yml"),
+      readFile(resolve(rootDirectory, ".node-version"), "utf8"),
+    ]);
+
+    expect(nodeVersion.trim()).toBe("24");
+    for (const workflow of [ci, preparation]) {
+      expect(workflow).not.toContain("node-version:");
+      expect(workflow).toContain("node-version-file: .node-version");
+    }
+  });
+
+  it("cancels only stale validation and sync work", async () => {
+    const [preparation, promotion] = await Promise.all([
+      readWorkflow("release-train.yml"),
+      readWorkflow("promote-release.yml"),
+    ]);
+
+    expect(preparation).toContain(
+      "group: bookmark-x-release-train-${{ github.event_name }}",
+    );
+    expect(preparation).toContain(
+      "cancel-in-progress: ${{ github.event_name == 'push' }}",
+    );
+    expect(promotion).toContain(
+      "cancel-in-progress: ${{ github.event.action != 'closed' }}",
+    );
+  });
+
   it("audits all dependencies in CI and release preparation", async () => {
     const [ci, preparation] = await Promise.all([
       readWorkflow("ci.yml"),
@@ -124,7 +194,10 @@ describe("release workflow permissions and gates", () => {
       "pnpm exec prettier --write pnpm-lock.yaml",
       refresh,
     );
-    const formatCheck = preparation.indexOf("pnpm format:check", refresh);
+    const formatCheck = preparation.indexOf(
+      "pnpm exec prettier --check package.json pnpm-lock.yaml public/manifest.json CHANGELOG.md",
+      refresh,
+    );
 
     expect(refresh).toBeGreaterThanOrEqual(0);
     expect(formatLockfile).toBeGreaterThan(refresh);

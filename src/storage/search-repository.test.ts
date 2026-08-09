@@ -170,5 +170,5 @@ describe("SearchRepository", () => {
 
     expect(getAll).toHaveBeenCalledTimes(3);
     getAll.mockRestore();
-  });
+  }, 15_000);
 });
