@@ -18,5 +18,11 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": ["src", "scripts", "vite.config.ts", "eslint.config.js"]
+  "include": [
+    "src",
+    "scripts",
+    "vite.config.ts",
+    "vite.content-script.config.ts",
+    "eslint.config.js"
+  ]
 }

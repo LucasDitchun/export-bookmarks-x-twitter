@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/LucasDitchun/export-bookmarks-x-twitter#readme",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.content-script.config.ts && node scripts/validate-content-script-bundle.mjs",
     "dev": "vite build --watch --mode development",
     "lint": "eslint .",
     "format": "prettier --write .",

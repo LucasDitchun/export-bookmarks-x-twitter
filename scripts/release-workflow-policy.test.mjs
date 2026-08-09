@@ -18,6 +18,25 @@ function jobSection(workflow, jobName, nextJobName) {
 }
 
 describe("release workflow permissions and gates", () => {
+  it("routes CI and packaging through one canonical two-stage build gate", async () => {
+    const [packageJsonText, ci, preparation] = await Promise.all([
+      readFile(resolve(rootDirectory, "package.json"), "utf8"),
+      readWorkflow("ci.yml"),
+      readWorkflow("release-train.yml"),
+    ]);
+    const packageJson = JSON.parse(packageJsonText);
+
+    expect(packageJson.scripts.build).toBe(
+      "vite build && vite build --config vite.content-script.config.ts && node scripts/validate-content-script-bundle.mjs",
+    );
+    expect(packageJson.scripts.package).toBe("node scripts/package.mjs");
+    for (const workflow of [ci, preparation]) {
+      expect(workflow.match(/pnpm build/gu)).toHaveLength(1);
+      expect(workflow).not.toContain("vite.content-script.config.ts");
+      expect(workflow).not.toContain("validate-content-script-bundle.mjs");
+    }
+  });
+
   it("isolates workflow dispatch to an actions-only job", async () => {
     const workflow = await readWorkflow("release-train.yml");
     const publication = jobSection(
