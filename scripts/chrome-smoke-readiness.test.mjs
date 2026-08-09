@@ -1,11 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  isUnbrandedChromiumVersion,
   navigateToExtensionContext,
   waitForExtensionContext,
 } from "./chrome-smoke-readiness.mjs";
 
 describe("Chrome smoke extension context readiness", () => {
+  it("accepts unbranded Chromium and rejects branded Chrome executables", () => {
+    expect(isUnbrandedChromiumVersion("Chromium 150.0.7871.0")).toBe(true);
+    expect(isUnbrandedChromiumVersion("Chromium 150.0.7871.0 snap")).toBe(true);
+    expect(isUnbrandedChromiumVersion("Google Chrome 150.0.7871.128")).toBe(false);
+    expect(isUnbrandedChromiumVersion("Google Chrome for Testing 150.0.7871.0")).toBe(
+      false,
+    );
+    expect(isUnbrandedChromiumVersion("")).toBe(false);
+  });
+
   it("attaches to a neutral target before navigating to an extension page", async () => {
     const send = vi
       .fn()

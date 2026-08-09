@@ -166,6 +166,25 @@ jobs:
       - name: Validate and package extension
         run: pnpm package
 
+      - name: Detect browser harness changes
+        id: browser-harness
+        if: env.CI_MODE == 'full' && github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          changed_paths="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          printf '%s\n' "$changed_paths"
+          if grep -Eq '^(\.github/workflows/(ci|release-train)\.yml|scripts/chrome-smoke(-readiness)?(\.test)?\.mjs)$' \
+            <<<"$changed_paths"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run Chrome smoke for browser harness changes
+        if: steps.browser-harness.outputs.run == 'true'
+        run: pnpm smoke:chrome
+
       - name: Compare the reviewed and rebuilt ZIP contents
         if: env.CI_MODE == 'release'
         run: >-
