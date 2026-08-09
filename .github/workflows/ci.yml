@@ -5,12 +5,17 @@ on:
     branches:
       - develop
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Full SHA of the prepared release commit
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -23,6 +28,22 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+          ref: ${{ inputs.expected_sha || (startsWith(github.head_ref, 'automation/prepare-v') && github.event.pull_request.head.sha) || github.sha }}
+
+      - name: Bind release automation to the prepared commit
+        if: >-
+          github.event_name == 'workflow_dispatch' ||
+          startsWith(github.head_ref, 'automation/prepare-v')
+        env:
+          EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha || github.event.pull_request.head.sha }}
+          RELEASE_REF_NAME: ${{ github.head_ref || github.ref_name }}
+          TRIGGER_RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.head.sha }}
+        run: |
+          node scripts/release-dispatch-policy.mjs validate \
+            --ref-name "$RELEASE_REF_NAME" \
+            --expected-sha "$EXPECTED_RELEASE_SHA" \
+            --event-sha "$TRIGGER_RELEASE_SHA" \
+            --actual-sha "$(git rev-parse HEAD)"
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -36,6 +57,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Audit all dependencies at HIGH severity
+        run: pnpm audit:high
 
       - name: Check formatting
         run: pnpm format:check
@@ -52,9 +76,48 @@ jobs:
           node --check scripts/version.mjs
           node --check scripts/package.mjs
           node --check scripts/chrome-smoke.mjs
+          node --check scripts/archive-integrity.mjs
+          node --check scripts/release-dispatch-policy.mjs
+          node --check scripts/release-preparation-policy.mjs
+
+      - name: Validate generated release PR scope
+        if: >-
+          github.event_name == 'workflow_dispatch' ||
+          startsWith(github.head_ref, 'automation/prepare-v')
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha }}
+          RELEASE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          RELEASE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            RELEASE_HEAD_SHA="$EXPECTED_RELEASE_SHA"
+            git fetch --no-tags --deepen=1 origin "$GITHUB_REF"
+            if [[ "$(git show -s --format=%P "$RELEASE_HEAD_SHA" | wc -w)" -ne 1 ]]; then
+              echo "::error::Prepared release must contain exactly one non-merge commit."
+              exit 1
+            fi
+            RELEASE_BASE_SHA="$(git rev-parse "$RELEASE_HEAD_SHA^")"
+          else
+            git fetch --no-tags --depth=1 origin "$RELEASE_BASE_SHA" "$RELEASE_HEAD_SHA"
+          fi
+          pnpm verify:release-preparation -- \
+            --base-ref "$RELEASE_BASE_SHA" \
+            --head-ref "$RELEASE_HEAD_SHA"
+
+      - name: Preserve the reviewed release ZIP
+        if: >-
+          github.event_name == 'workflow_dispatch' ||
+          startsWith(github.head_ref, 'automation/prepare-v')
+        run: cp download/bookmark-x.zip "$RUNNER_TEMP/reviewed-bookmark-x.zip"
 
       - name: Test release policy
         run: node --test .github/scripts/release-train.test.mjs
+
+      - name: Test the semantic model gate without downloading weights
+        run: |
+          pnpm semantic-model:gate:test
+          pnpm semantic-model:gate:dry-run
 
       - name: Test with coverage
         run: pnpm test:coverage
@@ -64,3 +127,12 @@ jobs:
 
       - name: Validate and package extension
         run: pnpm package
+
+      - name: Compare the reviewed and rebuilt ZIP contents
+        if: >-
+          github.event_name == 'workflow_dispatch' ||
+          startsWith(github.head_ref, 'automation/prepare-v')
+        run: >-
+          pnpm verify:archive --
+          "$RUNNER_TEMP/reviewed-bookmark-x.zip"
+          download/bookmark-x.zip

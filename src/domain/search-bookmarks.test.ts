@@ -64,6 +64,34 @@ describe("searchBookmarkDocuments", () => {
     expect(searchBookmarkDocuments(documents, "ada missing", "current")).toEqual([]);
   });
 
+  it.each([
+    ["en", "Architecture patterns", "architecture"],
+    ["pt_BR", "Acessibilidade semântica", "acessibilidade semantica"],
+    ["ja", "機械学習の入門", "機械学習"],
+    ["es", "Diseño accesible", "diseno accesible"],
+    ["zh_CN", "本地语义搜索", "语义搜索"],
+    ["de", "Überblick zur Datenbank", "uberblick datenbank"],
+    ["fr", "Résumé de recherche", "resume recherche"],
+    ["it", "Organizzazione locale", "organizzazione"],
+  ] as const)(
+    "matches a deterministic %s query without downloading a model",
+    (locale, text, query) => {
+      const result = searchBookmarkDocuments(
+        [
+          {
+            bookmark: bookmark(locale, { text }),
+            tagNames: [],
+            folderBreadcrumb: [],
+          },
+        ],
+        query,
+        "current",
+      );
+
+      expect(result.map(({ bookmark: item }) => item.id)).toEqual([locale]);
+    },
+  );
+
   it("respects library views and orders relevant ties deterministically", () => {
     const documents = [
       {

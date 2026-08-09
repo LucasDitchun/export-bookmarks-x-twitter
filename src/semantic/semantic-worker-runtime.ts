@@ -25,6 +25,7 @@ export interface EmbeddingModel {
   load(
     allowDownload: boolean,
     onProgress?: (progress: SemanticProgress) => void,
+    forceWasm?: boolean,
   ): Promise<SemanticBackend>;
   embedPassages(values: readonly string[]): Promise<Float32Array[]>;
   embedQuery(value: string): Promise<Float32Array>;
@@ -41,11 +42,14 @@ export class SemanticWorkerRuntime {
     private readonly onProgress: (progress: SemanticProgress) => void = () => {},
   ) {}
 
-  async load(allowDownload: boolean): Promise<{ backend: SemanticBackend }> {
+  async load(
+    allowDownload: boolean,
+    forceWasm = false,
+  ): Promise<{ backend: SemanticBackend }> {
     if (this.backend === null) {
       if (this.loading === null) {
         this.onProgress({ phase: "loading", completed: 0, total: 1 });
-        this.loading = this.model.load(allowDownload, this.onProgress);
+        this.loading = this.model.load(allowDownload, this.onProgress, forceWasm);
       }
       try {
         this.backend = await this.loading;

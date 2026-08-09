@@ -1,7 +1,10 @@
 /// <reference lib="webworker" />
 
 import { SemanticIndexRepository } from "./semantic-index-repository";
-import { TransformersEmbeddingModel } from "./transformers-embedding-model";
+import {
+  TransformersEmbeddingModel,
+  WebGpuPipelineLoadError,
+} from "./transformers-embedding-model";
 import { SemanticWorkerRuntime } from "./semantic-worker-runtime";
 import type {
   SemanticWorkerRequest,
@@ -27,7 +30,7 @@ const runtime = new SemanticWorkerRuntime(
 async function execute(request: SemanticWorkerRequest): Promise<unknown> {
   switch (request.type) {
     case "LOAD":
-      return runtime.load(request.allowDownload);
+      return runtime.load(request.allowDownload, request.forceWasm);
     case "SYNC":
       return runtime.synchronize(request.documents);
     case "SEARCH":
@@ -54,12 +57,17 @@ scope.addEventListener("message", (event: MessageEvent<SemanticWorkerRequest>) =
         data,
       };
       scope.postMessage(response);
-    } catch {
+    } catch (error) {
       const response: SemanticWorkerResponse = {
         kind: "result",
         requestId: request.requestId,
         ok: false,
-        error: { code: "semantic_worker_failed" },
+        error: {
+          code:
+            error instanceof WebGpuPipelineLoadError
+              ? "semantic_webgpu_failed"
+              : "semantic_worker_failed",
+        },
       };
       scope.postMessage(response);
     }

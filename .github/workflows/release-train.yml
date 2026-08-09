@@ -103,8 +103,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit all dependencies at HIGH severity
+        run: pnpm audit:high
+
       - name: Test the release policy
         run: node --test .github/scripts/release-train.test.mjs
+
+      - name: Validate the pinned semantic model release candidate
+        run: pnpm semantic-model:gate
 
       - name: Calculate and write the release version
         id: release
@@ -158,6 +164,10 @@ jobs:
         if: steps.state.outputs.noop != 'true'
         run: pnpm package
 
+      - name: Smoke-test the packaged extension in Chrome
+        if: steps.state.outputs.noop != 'true'
+        run: pnpm smoke:chrome
+
       - name: Verify prepared release
         if: steps.state.outputs.noop != 'true'
         env:
@@ -207,11 +217,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      actions: write
+      actions: read
       contents: write
       pull-requests: write
     outputs:
       branch: ${{ steps.publish.outputs.branch }}
+      commit: ${{ steps.publish.outputs.commit }}
       pull-request: ${{ steps.publish.outputs.pull-request }}
     steps:
       - name: Check out the dispatched develop revision
@@ -293,16 +304,39 @@ jobs:
               --body "This automated PR contains only the verified version, changelog, lockfile, manifest, and ZIP for $RELEASE_TAG. Merge it with squash after CI passes; the draft \`develop\` to \`main\` PR remains the only publishing path."
           fi
           echo "branch=$preparation_branch" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "pull-request=$number" >> "$GITHUB_OUTPUT"
 
-      - name: Dispatch CI for the generated commit
+  dispatch-prepared-release-ci:
+    name: Dispatch CI for the prepared commit
+    needs:
+      - prepare-batch
+      - open-prepared-release-pr
+    if: needs.prepare-batch.outputs.noop != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch only the exact prepared release
         env:
           GH_TOKEN: ${{ github.token }}
-          PREPARATION_BRANCH: ${{ steps.publish.outputs.branch }}
+          PREPARATION_BRANCH: ${{ needs.open-prepared-release-pr.outputs.branch }}
+          PREPARED_SHA: ${{ needs.open-prepared-release-pr.outputs.commit }}
+          RELEASE_TAG: ${{ needs.prepare-batch.outputs.tag }}
         run: |
+          if [[ "$PREPARATION_BRANCH" != "automation/prepare-$RELEASE_TAG" ]]; then
+            echo "::error::Refusing to dispatch CI for unexpected branch $PREPARATION_BRANCH."
+            exit 1
+          fi
+          if [[ ! "$PREPARED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Prepared release did not expose a full commit SHA."
+            exit 1
+          fi
           gh workflow run ci.yml \
             --repo "$GITHUB_REPOSITORY" \
-            --ref "$PREPARATION_BRANCH"
+            --ref "$PREPARATION_BRANCH" \
+            --field expected_sha="$PREPARED_SHA"
 
   wrong-branch:
     name: Require develop for release preparation

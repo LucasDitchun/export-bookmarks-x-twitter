@@ -16,12 +16,11 @@ export default defineConfig({
           import.meta.dirname,
           "src/background/service-worker.ts",
         ),
-        "content-script": resolve(import.meta.dirname, "src/content/content-script.ts"),
       },
       output: {
         entryFileNames: (chunk) =>
-          chunk.name === "service-worker" || chunk.name === "content-script"
-            ? `${chunk.name}.js`
+          chunk.name === "service-worker"
+            ? "service-worker.js"
             : "assets/[name]-[hash].js",
         chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash][extname]",
@@ -30,7 +29,12 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    exclude: [...configDefaults.exclude, ".github/scripts/release-train.test.mjs"],
+    exclude: [
+      ...configDefaults.exclude,
+      ".github/scripts/release-train.test.mjs",
+      "scripts/semantic-model-gate.test.mjs",
+      "scripts/semantic-browser-gate.node-test.mjs",
+    ],
     setupFiles: ["./src/test/setup.ts"],
     coverage: {
       provider: "v8",

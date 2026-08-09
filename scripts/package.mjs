@@ -9,7 +9,7 @@ import {
   rm,
   stat,
 } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import process from "node:process";
 import { ZipArchive } from "archiver";
@@ -18,7 +18,12 @@ import {
   EXPECTED_CONTENT_SCRIPT_MATCHES,
   EXPECTED_MANIFEST_HOST_PERMISSIONS,
   EXPECTED_MANIFEST_PERMISSIONS,
+  EXPECTED_OPTIONS_PAGE,
+  EXPECTED_SIDE_PANEL_PATH,
+  REQUIRED_LEGAL_RELEASE_FILES,
   validateExactStringArray,
+  validateManifestEntrypoints,
+  validateReleaseLegalFiles,
 } from "./package-policy.mjs";
 
 const rootDirectory = resolve(import.meta.dirname, "..");
@@ -63,12 +68,20 @@ async function validateBuild(packageVersion) {
   }
 
   await copyFile(resolve(rootDirectory, "LICENSE"), resolve(distDirectory, "LICENSE"));
+  for (const relativePath of REQUIRED_LEGAL_RELEASE_FILES) {
+    const destination = resolve(distDirectory, relativePath);
+    await mkdir(dirname(destination), { recursive: true });
+    await copyFile(resolve(rootDirectory, relativePath), destination);
+  }
 
   const requiredFiles = [
     "LICENSE",
+    ...REQUIRED_LEGAL_RELEASE_FILES,
     "manifest.json",
+    EXPECTED_OPTIONS_PAGE,
     "popup.html",
     "service-worker.js",
+    EXPECTED_SIDE_PANEL_PATH,
     "content-script.js",
   ];
   for (const fileName of requiredFiles) {
@@ -102,6 +115,7 @@ async function validateBuild(packageVersion) {
   if (manifest.default_locale !== "en") {
     fail("Manifest default_locale must be en.");
   }
+  validateManifestEntrypoints(manifest);
 
   validateExactStringArray(
     manifest.permissions,
@@ -165,6 +179,7 @@ async function validateBuild(packageVersion) {
 
   const files = await listFiles(distDirectory);
   const filePaths = new Set(files.map((file) => file.relativePath));
+  validateReleaseLegalFiles(filePaths);
   for (const pattern of [
     /^assets\/ort-wasm-simd-threaded\.asyncify-[A-Za-z0-9_-]+\.mjs$/u,
     /^assets\/ort-wasm-simd-threaded\.asyncify-[A-Za-z0-9_-]+\.wasm$/u,

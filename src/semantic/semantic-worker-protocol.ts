@@ -7,7 +7,7 @@ interface RequestBase {
 }
 
 export type SemanticWorkerRequest =
-  | (RequestBase & { type: "LOAD"; allowDownload: boolean })
+  | (RequestBase & { type: "LOAD"; allowDownload: boolean; forceWasm?: boolean })
   | (RequestBase & { type: "SYNC"; documents: SemanticSourceDocument[] })
   | (RequestBase & {
       type: "SEARCH";

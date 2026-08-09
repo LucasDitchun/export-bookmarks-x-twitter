@@ -32,8 +32,16 @@ interface CacheRemover {
 }
 
 interface PendingRequest {
+  workerGeneration: number;
   resolve(value: unknown): void;
   reject(reason: Error): void;
+}
+
+class SemanticWorkerResponseError extends Error {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = "SemanticWorkerResponseError";
+  }
 }
 
 export class SemanticOperationCancelledError extends Error {
@@ -50,6 +58,7 @@ export class SemanticSearchClient {
   private readonly cache: CacheRemover;
   private requestSequence = 0;
   private operationGeneration = 0;
+  private workerGeneration = 0;
 
   constructor(
     private readonly state: SemanticStateRepository,
@@ -79,9 +88,7 @@ export class SemanticSearchClient {
     await this.state.beginConsentInstall();
     try {
       this.assertCurrent(generation);
-      const { backend } = await this.request<{ backend: SemanticBackend }>("LOAD", {
-        allowDownload: true,
-      });
+      const { backend } = await this.loadWithFallback(true);
       this.assertCurrent(generation);
       await this.state.markIndexing(backend);
       const documents = await this.loadCorpus();
@@ -103,9 +110,7 @@ export class SemanticSearchClient {
     }
     try {
       this.assertCurrent(generation);
-      const { backend } = await this.request<{ backend: SemanticBackend }>("LOAD", {
-        allowDownload: false,
-      });
+      const { backend } = await this.loadWithFallback(false);
       this.assertCurrent(generation);
       await this.state.markIndexing(backend);
       const documents = await this.loadCorpus();
@@ -133,7 +138,7 @@ export class SemanticSearchClient {
       return null;
     }
     try {
-      await this.request("LOAD", { allowDownload: false });
+      await this.loadWithFallback(false);
       const documents = await this.loadCorpus();
       await this.request("SYNC", { documents });
       return await this.request<BookmarkRecord[]>("SEARCH", { query, view, limit });
@@ -185,13 +190,16 @@ export class SemanticSearchClient {
   ): Promise<T> {
     const requestId = `semantic-${Date.now()}-${++this.requestSequence}`;
     const message = { requestId, type, ...payload } as SemanticWorkerRequest;
+    const worker = this.getWorker();
+    const workerGeneration = this.workerGeneration;
     return new Promise<T>((resolve, reject) => {
       this.pending.set(requestId, {
+        workerGeneration,
         resolve: (value) => resolve(value as T),
         reject,
       });
       try {
-        this.getWorker().postMessage(message);
+        worker.postMessage(message);
       } catch (error) {
         this.pending.delete(requestId);
         reject(error instanceof Error ? error : new Error("Semantic worker failed."));
@@ -199,9 +207,37 @@ export class SemanticSearchClient {
     });
   }
 
+  private async loadWithFallback(
+    allowDownload: boolean,
+  ): Promise<{ backend: SemanticBackend }> {
+    try {
+      return await this.request<{ backend: SemanticBackend }>("LOAD", {
+        allowDownload,
+      });
+    } catch (error) {
+      if (
+        !(error instanceof SemanticWorkerResponseError) ||
+        error.code !== "semantic_webgpu_failed"
+      ) {
+        throw error;
+      }
+      const failedGeneration = this.workerGeneration;
+      this.destroyWorker();
+      this.rejectWorkerGeneration(
+        failedGeneration,
+        new Error("Semantic worker restarted for WASM fallback."),
+      );
+      return this.request<{ backend: SemanticBackend }>("LOAD", {
+        allowDownload,
+        forceWasm: true,
+      });
+    }
+  }
+
   private getWorker(): SemanticWorkerLike {
     if (this.worker === null) {
       this.worker = this.createWorker();
+      this.workerGeneration += 1;
       this.worker.addEventListener("message", this.handleMessage);
       this.worker.addEventListener("error", this.handleWorkerFailure);
       this.worker.addEventListener("messageerror", this.handleWorkerFailure);
@@ -222,7 +258,7 @@ export class SemanticSearchClient {
     if (pending === undefined) return;
     this.pending.delete(response.requestId);
     if (response.ok) pending.resolve(response.data);
-    else pending.reject(new Error(response.error.code));
+    else pending.reject(new SemanticWorkerResponseError(response.error.code));
   };
 
   private readonly handleWorkerFailure = (): void => {
@@ -233,6 +269,14 @@ export class SemanticSearchClient {
   private rejectAll(error: Error): void {
     for (const pending of this.pending.values()) pending.reject(error);
     this.pending.clear();
+  }
+
+  private rejectWorkerGeneration(workerGeneration: number, error: Error): void {
+    for (const [requestId, pending] of this.pending) {
+      if (pending.workerGeneration !== workerGeneration) continue;
+      pending.reject(error);
+      this.pending.delete(requestId);
+    }
   }
 
   private destroyWorker(): void {

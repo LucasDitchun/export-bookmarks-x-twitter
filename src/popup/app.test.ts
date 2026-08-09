@@ -536,6 +536,14 @@ describe("popup app", () => {
     expect(document.getElementById("selected-category-indicator")?.textContent).toBe(
       "bookmarkNeedsCategory",
     );
+    app.setCategorizationFields({
+      note: false,
+      tags: false,
+      breadcrumb: false,
+    });
+    expect(document.getElementById("selected-category-indicator")?.textContent).toBe(
+      "bookmarkCategorized",
+    );
     app.destroy();
   });
 
@@ -1008,6 +1016,7 @@ describe("popup app", () => {
   });
 
   it("serializes and coalesces autosaves without applying stale responses", async () => {
+    const bookmarkWithoutNote = { ...libraryBookmark, note: "" };
     const firstSave = deferred<{
       ok: true;
       data: { bookmark: NotedBookmark };
@@ -1036,13 +1045,13 @@ describe("popup app", () => {
       if (request.type === "LIST_BOOKMARKS") {
         return Promise.resolve({
           ok: true as const,
-          data: { items: [libraryBookmark], nextCursor: null },
+          data: { items: [bookmarkWithoutNote], nextCursor: null },
         });
       }
       if (request.type === "GET_BOOKMARK") {
         return Promise.resolve({
           ok: true as const,
-          data: { bookmark: libraryBookmark },
+          data: { bookmark: bookmarkWithoutNote },
         });
       }
       if (request.type === "SAVE_BOOKMARK_NOTE") {
@@ -1058,8 +1067,12 @@ describe("popup app", () => {
       translate,
       schedule,
       cancelSchedule: vi.fn(),
+      categorizationFields: { note: true, tags: false, breadcrumb: false },
     });
     await app.ready;
+    expect(document.getElementById("selected-category-indicator")?.textContent).toBe(
+      "bookmarkNeedsCategory",
+    );
 
     const textarea = document.getElementById("note-textarea") as HTMLTextAreaElement;
     textarea.value = "first draft";
@@ -1076,7 +1089,7 @@ describe("popup app", () => {
 
     firstSave.resolve({
       ok: true,
-      data: { bookmark: { ...libraryBookmark, note: "first draft" } },
+      data: { bookmark: { ...bookmarkWithoutNote, note: "first draft" } },
     });
     await vi.waitFor(() => expect(saveRequests).toHaveLength(2));
     expect(textarea.value).toBe("newest draft");
@@ -1084,7 +1097,7 @@ describe("popup app", () => {
 
     secondSave.resolve({
       ok: true,
-      data: { bookmark: { ...libraryBookmark, note: "newest draft" } },
+      data: { bookmark: { ...bookmarkWithoutNote, note: "newest draft" } },
     });
     await vi.waitFor(() =>
       expect(document.getElementById("note-save-status")?.textContent).toBe(
@@ -1092,6 +1105,9 @@ describe("popup app", () => {
       ),
     );
     expect(textarea.value).toBe("newest draft");
+    expect(document.getElementById("selected-category-indicator")?.textContent).toBe(
+      "bookmarkCategorized",
+    );
     app.destroy();
   });
 

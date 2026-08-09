@@ -286,8 +286,12 @@ pnpm package
 The package command validates the build, creates
 `release/bookmark-x-<version>.zip`, and refreshes the stable
 `download/bookmark-x.zip` file. The Chrome smoke test uses an isolated temporary
-profile to exercise the popup, Manifest V3 service worker, IndexedDB, runtime
-messaging, TXT/Markdown export, JSON backup round-trip, and archive clearing.
+profile to exercise the popup, real Options and Side Panel entry pages,
+Manifest V3 service worker, IndexedDB, runtime messaging, folder/tag-filtered
+TXT and Markdown exports (including first-saved and last-seen fields), JSON
+backup round-trip, and archive clearing. It also verifies that visiting Options
+does not create semantic-search consent, a model cache, or a Hugging Face model
+request.
 
 ## Versioning and releases
 
@@ -364,3 +368,7 @@ Chrome profiles do not automatically share this archive with one another.
 ## License
 
 Bookmark X is open-source software released under the [MIT License](LICENSE).
+Release ZIPs also include [third-party notices](THIRD_PARTY_NOTICES.md) and the
+complete license texts for the packaged Transformers.js and ONNX Runtime Web
+code and the optional multilingual E5 model data. Node-only sharp/libvips build
+tools are not included in the browser ZIP.
