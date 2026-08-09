@@ -113,7 +113,7 @@
     "message": "Bookmark X"
   },
   "extensionDescription": {
-    "message": "開いているページからXのブックマークを取得し、非公開のローカルTXTアーカイブとして書き出します。"
+    "message": "Xのブックマークをローカルで取得・整理し、非公開のTXTまたはMarkdownファイルとして書き出します。"
   },
   "eyebrow": {
     "message": "Xのローカルアーカイブ"
@@ -242,13 +242,30 @@
     "message": "取得を停止"
   },
   "exportTitle": {
-    "message": "TXTをダウンロード"
+    "message": "ライブラリをエクスポート"
   },
-  "exportFullButton": {
-    "message": "完全なアーカイブをダウンロード"
+  "exportLocalBadge": { "message": "ローカルのみ" },
+  "exportHelp": {
+    "message": "フォルダー、一致するタグ、アーカイブ済み投稿を含めるかを選択します。"
   },
-  "exportUrlsButton": {
-    "message": "URLのみ"
+  "exportFiltersSummary": { "message": "エクスポートフィルターを選択" },
+  "exportFolderFilterLabel": { "message": "フォルダーとサブフォルダー" },
+  "exportAllFolders": { "message": "すべてのフォルダー" },
+  "exportTagFilterLabel": { "message": "タグ（選択したいずれかに一致）" },
+  "exportTagFilterHelp": {
+    "message": "複数選択には Ctrl または Command を使います。すべてのタグを含める場合は空のままにします。"
+  },
+  "exportIncludeArchived": { "message": "アーカイブ済み投稿を含める" },
+  "exportTxtButton": { "message": ".TXT をエクスポート" },
+  "exportTxtDescription": { "message": "読みやすいプレーンテキスト" },
+  "exportMarkdownButton": { "message": ".MD をエクスポート" },
+  "exportMarkdownDescription": { "message": "構造化 Markdown" },
+  "exportFormatMenuLabel": { "message": "エクスポート形式を選択" },
+  "exportPreparing": { "message": "エクスポートを準備中…" },
+  "exportDownloaded": { "message": "エクスポートをダウンロードしました" },
+  "exportFailed": { "message": "エクスポートを作成できませんでした。" },
+  "exportFieldRequired": {
+    "message": "設定で少なくとも1つのエクスポート項目を有効にしてください。"
   },
   "moreOptions": {
     "message": "その他のオプション"
@@ -314,12 +331,17 @@
   "settingExportLink": { "message": "投稿リンク" },
   "settingExportText": { "message": "投稿本文" },
   "settingExportAuthor": { "message": "投稿者" },
-  "settingExportDate": { "message": "日付" },
+  "settingExportDate": { "message": "投稿日" },
   "settingExportImages": { "message": "画像リンク" },
   "settingExportVideos": { "message": "動画リンク" },
   "settingExportNote": { "message": "非公開メモ" },
   "settingExportTags": { "message": "タグ" },
   "settingExportFolder": { "message": "フォルダー階層" },
+  "settingExportFirstSaved": { "message": "初回取得日時" },
+  "settingExportLastSeen": { "message": "最終確認日時" },
+  "settingsExportFieldRequired": {
+    "message": "少なくとも1つのエクスポート項目を有効にしてください。"
+  },
   "settingsSearch": { "message": "検索" },
   "settingLiveFilter": { "message": "入力中に結果を絞り込む" },
   "settingsData": { "message": "データ" },

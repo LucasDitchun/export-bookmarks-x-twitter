@@ -39,6 +39,8 @@ describe("SettingsRepository", () => {
       true,
       true,
     ]);
+    expect(DEFAULT_SETTINGS.export.includeFirstSavedAt).toBe(true);
+    expect(DEFAULT_SETTINGS.export.includeLastSeenAt).toBe(true);
   });
 
   it("merges valid stored values without trusting malformed or unknown data", async () => {
@@ -88,6 +90,37 @@ describe("SettingsRepository", () => {
     expect(JSON.parse(JSON.stringify(storage.values))).toEqual(storage.values);
   });
 
+  it("requires at least one enabled export field and preserves stored settings", async () => {
+    const storage = new MemoryStorageArea();
+    const repository = new SettingsRepository(storage);
+    await repository.save(DEFAULT_SETTINGS);
+    const disabled = Object.fromEntries(
+      Object.keys(DEFAULT_SETTINGS.export).map((key) => [key, false]),
+    );
+
+    await expect(repository.save({ export: disabled })).rejects.toThrow(
+      "Select at least one field",
+    );
+    await expect(repository.get()).resolves.toEqual(DEFAULT_SETTINGS);
+  });
+
+  it("repairs a legacy all-disabled export configuration with the URL field", async () => {
+    const storage = new MemoryStorageArea();
+    storage.values[SETTINGS_STORAGE_KEY] = {
+      schemaVersion: SETTINGS_SCHEMA_VERSION,
+      settings: {
+        ...structuredClone(DEFAULT_SETTINGS),
+        export: Object.fromEntries(
+          Object.keys(DEFAULT_SETTINGS.export).map((key) => [key, false]),
+        ),
+      },
+    };
+
+    const settings = await new SettingsRepository(storage).get();
+    expect(settings.export.includeLink).toBe(true);
+    expect(Object.values(settings.export).filter(Boolean)).toHaveLength(1);
+  });
+
   it("strictly validates complete versioned envelopes at import boundaries", () => {
     const valid = {
       schemaVersion: SETTINGS_SCHEMA_VERSION,
@@ -117,6 +150,15 @@ describe("SettingsRepository", () => {
         settings: {
           ...valid.settings,
           export: { ...valid.settings.export, includeVideos: undefined },
+        },
+      },
+      {
+        ...valid,
+        settings: {
+          ...valid.settings,
+          export: Object.fromEntries(
+            Object.keys(valid.settings.export).map((key) => [key, false]),
+          ),
         },
       },
     ]) {

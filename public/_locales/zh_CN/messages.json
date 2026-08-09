@@ -101,7 +101,7 @@
     "message": "Bookmark X"
   },
   "extensionDescription": {
-    "message": "从已打开的页面获取 X 书签，并导出为本地私密 TXT 存档。"
+    "message": "在本地获取和整理 X 书签，并导出为私密 TXT 或 Markdown 文件。"
   },
   "eyebrow": {
     "message": "X 本地存档"
@@ -230,14 +230,27 @@
     "message": "停止获取"
   },
   "exportTitle": {
-    "message": "下载 TXT"
+    "message": "导出资料库"
   },
-  "exportFullButton": {
-    "message": "下载完整存档"
+  "exportLocalBadge": { "message": "仅限本地" },
+  "exportHelp": { "message": "选择文件夹、任一匹配标签，以及是否包含已归档帖子。" },
+  "exportFiltersSummary": { "message": "选择导出筛选条件" },
+  "exportFolderFilterLabel": { "message": "文件夹和子文件夹" },
+  "exportAllFolders": { "message": "所有文件夹" },
+  "exportTagFilterLabel": { "message": "标签（匹配任一已选项）" },
+  "exportTagFilterHelp": {
+    "message": "使用 Ctrl 或 Command 可多选。留空则包含所有标签。"
   },
-  "exportUrlsButton": {
-    "message": "仅 URL"
-  },
+  "exportIncludeArchived": { "message": "包含已归档帖子" },
+  "exportTxtButton": { "message": "导出 .TXT" },
+  "exportTxtDescription": { "message": "易读的纯文本" },
+  "exportMarkdownButton": { "message": "导出 .MD" },
+  "exportMarkdownDescription": { "message": "结构化 Markdown" },
+  "exportFormatMenuLabel": { "message": "选择导出格式" },
+  "exportPreparing": { "message": "正在准备导出…" },
+  "exportDownloaded": { "message": "导出文件已下载" },
+  "exportFailed": { "message": "无法创建导出文件。" },
+  "exportFieldRequired": { "message": "请在设置中至少启用一个导出字段。" },
   "moreOptions": {
     "message": "更多选项"
   },
@@ -300,12 +313,15 @@
   "settingExportLink": { "message": "帖子链接" },
   "settingExportText": { "message": "帖子文本" },
   "settingExportAuthor": { "message": "作者" },
-  "settingExportDate": { "message": "日期" },
+  "settingExportDate": { "message": "发布日期" },
   "settingExportImages": { "message": "图片链接" },
   "settingExportVideos": { "message": "视频链接" },
   "settingExportNote": { "message": "私人笔记" },
   "settingExportTags": { "message": "标签" },
   "settingExportFolder": { "message": "文件夹路径" },
+  "settingExportFirstSaved": { "message": "首次捕获日期" },
+  "settingExportLastSeen": { "message": "最后查看日期" },
+  "settingsExportFieldRequired": { "message": "请至少保留一个导出字段。" },
   "settingsSearch": { "message": "搜索" },
   "settingLiveFilter": { "message": "输入时筛选结果" },
   "settingsData": { "message": "数据" },

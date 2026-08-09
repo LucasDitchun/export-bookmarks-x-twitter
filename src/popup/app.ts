@@ -1,7 +1,7 @@
 import type {
   ArchiveStats,
   BookmarkTag,
-  ExportFormat,
+  FolderRecord,
   ScrapeRun,
   SupportedLocale,
 } from "../domain/types";
@@ -26,6 +26,7 @@ import type {
   UiRequest,
 } from "./protocol";
 import { getTagBadgeColors } from "./tag-colors";
+import { createExportUi } from "./export-ui";
 
 interface PopupAppOptions {
   document: Document;
@@ -64,8 +65,6 @@ interface RequiredElements {
   dashboardView: HTMLElement;
   duplicateSummary: HTMLElement;
   emptyNote: HTMLElement;
-  exportFullButton: HTMLButtonElement;
-  exportUrlsButton: HTMLButtonElement;
   fullReviewReminder: HTMLElement;
   lastSync: HTMLElement;
   libraryEmpty: HTMLElement;
@@ -136,8 +135,6 @@ function getElements(document: Document): RequiredElements {
     dashboardView: requireElement(document, "dashboard-view"),
     duplicateSummary: requireElement(document, "duplicate-summary"),
     emptyNote: requireElement(document, "empty-note"),
-    exportFullButton: requireElement(document, "export-full-button"),
-    exportUrlsButton: requireElement(document, "export-urls-button"),
     fullReviewReminder: requireElement(document, "full-review-reminder"),
     lastSync: requireElement(document, "last-sync"),
     libraryEmpty: requireElement(document, "library-empty"),
@@ -174,7 +171,9 @@ function getElements(document: Document): RequiredElements {
 function defaultDownload(result: ExportResult): void {
   const type = result.filename.endsWith(".json")
     ? "application/json;charset=utf-8"
-    : "text/plain;charset=utf-8";
+    : result.filename.endsWith(".md")
+      ? "text/markdown;charset=utf-8"
+      : "text/plain;charset=utf-8";
   const blob = new Blob([result.content], { type });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -235,6 +234,7 @@ export function createPopupApp(options: PopupAppOptions): {
   let noteSaveInFlight = false;
   let folderUi: ReturnType<typeof createFolderUi> | null = null;
   let backupUi: ReturnType<typeof createBackupUi> | null = null;
+  let exportUi: ReturnType<typeof createExportUi> | null = null;
   const handledLiveContexts = new Set<string>();
 
   const formatDate = (isoDate: string): string => {
@@ -268,6 +268,7 @@ export function createPopupApp(options: PopupAppOptions): {
       invalid_backup: "errorInvalidBackup",
       restore_capture_running: "errorRestoreCaptureRunning",
       restore_settings_failed: "errorRestoreSettingsFailed",
+      export_fields_required: "exportFieldRequired",
     };
     return translate(keys[error.code] ?? "errorGeneric");
   };
@@ -305,8 +306,7 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.confirmClearButton.disabled = busy;
     elements.openClearDialogButton.disabled = busy;
     const archiveEmpty = (status?.stats.total ?? 0) === 0;
-    elements.exportFullButton.disabled = busy || archiveEmpty;
-    elements.exportUrlsButton.disabled = busy || archiveEmpty;
+    exportUi?.setDisabled(busy || archiveEmpty);
     backupUi?.setDisabled(busy, running);
     document.body.toggleAttribute("aria-busy", busy);
   };
@@ -441,6 +441,7 @@ export function createPopupApp(options: PopupAppOptions): {
       if (!tags.some((tag) => tag.id === response.data.tag.id)) {
         tags = [...tags, response.data.tag];
       }
+      exportUi?.setTags(tags);
       updateBookmarkTags(response.data.bookmark);
       renderTagSuggestions();
       if (selectedBookmarkId === bookmarkId) {
@@ -503,6 +504,7 @@ export function createPopupApp(options: PopupAppOptions): {
       const response = await sendMessage<TagListResult>({ type: "LIST_TAGS" });
       if (response.ok && Array.isArray(response.data?.tags)) {
         tags = mergeTags(response.data.tags, tags);
+        exportUi?.setTags(tags);
         renderTagSuggestions();
         renderBookmarkList();
         renderSelectedTags();
@@ -1106,6 +1108,13 @@ export function createPopupApp(options: PopupAppOptions): {
     },
     reload,
   });
+  exportUi = createExportUi({
+    document,
+    locale,
+    translate,
+    perform,
+    createDownload,
+  });
   elements.openBookmarksButton.addEventListener("click", () => {
     void perform({ type: "OPEN_BOOKMARKS" });
   });
@@ -1136,13 +1145,6 @@ export function createPopupApp(options: PopupAppOptions): {
       await loadActiveLibrary(undefined, false);
     });
   });
-  const exportArchive = (format: ExportFormat): void => {
-    void perform({ type: "EXPORT_BOOKMARKS", payload: { format, locale } }, (data) =>
-      createDownload(data as ExportResult),
-    );
-  };
-  elements.exportFullButton.addEventListener("click", () => exportArchive("full"));
-  elements.exportUrlsButton.addEventListener("click", () => exportArchive("urls"));
   elements.loadMoreBookmarks.addEventListener("click", () => {
     if (nextBookmarkCursor) void loadActiveLibrary(nextBookmarkCursor);
   });
@@ -1185,6 +1187,9 @@ export function createPopupApp(options: PopupAppOptions): {
     onBookmarkUpdated: (updatedBookmark) => {
       updateBookmarkTags(updatedBookmark);
     },
+    onFoldersChanged: (folders: readonly FolderRecord[]) => {
+      exportUi?.setFolders(folders);
+    },
   });
 
   renderLibraryView();
@@ -1209,6 +1214,7 @@ export function createPopupApp(options: PopupAppOptions): {
       libraryRefreshWaiters = [];
       if (refreshHandle !== null) cancelSchedule(refreshHandle);
       if (searchHandle !== null) cancelSchedule(searchHandle);
+      exportUi?.destroy();
     },
   };
 }

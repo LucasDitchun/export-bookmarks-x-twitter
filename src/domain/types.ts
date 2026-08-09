@@ -68,7 +68,6 @@ export type BookmarkSnapshot = Pick<
   media?: BookmarkMedia;
 };
 
-export type ExportFormat = "full" | "urls";
 export const SUPPORTED_LOCALES = [
   "en",
   "pt_BR",
@@ -86,11 +85,6 @@ export function isSupportedLocale(value: unknown): value is SupportedLocale {
     typeof value === "string" &&
     (SUPPORTED_LOCALES as readonly string[]).includes(value)
   );
-}
-
-export interface ExportOptions {
-  format: ExportFormat;
-  locale: SupportedLocale;
 }
 
 export interface ArchiveStats {

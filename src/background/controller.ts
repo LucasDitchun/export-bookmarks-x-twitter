@@ -1,4 +1,9 @@
-import { exportBookmarks } from "../domain/export-bookmarks";
+import {
+  buildBookmarkExport,
+  ExportValidationError,
+  type BookmarkExportFields,
+  type ExportLibrarySnapshot,
+} from "../domain/export-bookmarks";
 import { BackupValidationError } from "../domain/backup";
 import { MAX_SEARCH_QUERY_LENGTH } from "../domain/search-bookmarks";
 import {
@@ -64,10 +69,12 @@ interface BackgroundDependencies {
     | "finalizeCapture"
     | "discardCapture"
     | "applyLiveBookmark"
-    | "getAll"
     | "getStats"
     | "clear"
   >;
+  exports: {
+    snapshot(): Promise<ExportLibrarySnapshot>;
+  };
   state: Pick<
     ExtensionStateRepository,
     | "getScrapeRun"
@@ -341,8 +348,17 @@ function isUiRequest(value: unknown): value is UiRequest {
     );
   }
   if (value.type !== "EXPORT_BOOKMARKS" || !isRecord(value.payload)) return false;
-  const { format, locale } = value.payload;
-  return (format === "full" || format === "urls") && isSupportedLocale(locale);
+  const { format, locale, folderId, tagIds, includeArchived } = value.payload;
+  return (
+    (format === "txt" || format === "md") &&
+    isSupportedLocale(locale) &&
+    (folderId === null || isLocalEntityId(folderId)) &&
+    Array.isArray(tagIds) &&
+    tagIds.length <= 1_000 &&
+    tagIds.every(isLocalEntityId) &&
+    new Set(tagIds).size === tagIds.length &&
+    typeof includeArchived === "boolean"
+  );
 }
 
 function isBookmarkSnapshot(value: unknown): value is BookmarkSnapshot {
@@ -437,6 +453,12 @@ function success<T>(data: T): RuntimeResponse<T> {
 }
 
 function failure(error: unknown): RuntimeResponse<never> {
+  if (error instanceof ExportValidationError) {
+    return {
+      ok: false,
+      error: { code: "export_fields_required", message: error.message },
+    };
+  }
   if (error instanceof BackupValidationError) {
     return {
       ok: false,
@@ -465,12 +487,28 @@ function failure(error: unknown): RuntimeResponse<never> {
   };
 }
 
-function exportFilename(now: Date, format: "full" | "urls"): string {
+function exportFilename(now: Date, format: "txt" | "md"): string {
   const timestamp = now
     .toISOString()
     .replaceAll(":", "-")
     .replace(/\.\d{3}Z$/, "Z");
-  return `bookmark-x-${timestamp}-${format}.txt`;
+  return `bookmark-x-${timestamp}.${format}`;
+}
+
+function exportFields(settings: ExtensionSettings): BookmarkExportFields {
+  return {
+    url: settings.export.includeLink,
+    text: settings.export.includeText,
+    author: settings.export.includeAuthor,
+    postDate: settings.export.includeDate,
+    note: settings.export.includeNote,
+    breadcrumb: settings.export.includeFolder,
+    tags: settings.export.includeTags,
+    images: settings.export.includeImages,
+    videos: settings.export.includeVideos,
+    firstSavedAt: settings.export.includeFirstSavedAt,
+    lastSeenAt: settings.export.includeLastSeenAt,
+  };
 }
 
 export class BackgroundController {
@@ -1032,9 +1070,15 @@ export class BackgroundController {
   private async createExport(
     request: Extract<UiRequest, { type: "EXPORT_BOOKMARKS" }>,
   ): Promise<ExportResult> {
-    const bookmarks: BookmarkRecord[] = await this.dependencies.archive.getAll();
+    const [snapshot, settings] = await Promise.all([
+      this.dependencies.exports.snapshot(),
+      this.dependencies.settings.get(),
+    ]);
     return {
-      content: exportBookmarks(bookmarks, request.payload),
+      content: buildBookmarkExport(snapshot, {
+        ...request.payload,
+        fields: exportFields(settings),
+      }),
       filename: exportFilename(this.now(), request.payload.format),
     };
   }

@@ -5,7 +5,7 @@
 # Export Bookmarks X (Twitter) — Bookmark X
 
 Bookmark X is an open-source Chrome extension for saving X bookmarks (formerly
-Twitter bookmarks) and exporting them to a local, private TXT file. It captures
+Twitter bookmarks) and exporting them to local, private TXT or Markdown files. It captures
 bookmarks from your signed-in X bookmarks page, removes duplicates, preserves
 posts that later disappear from X, and does not require an X API key.
 
@@ -29,7 +29,7 @@ Versioned ZIP files are also attached to
 
 ## How to install Bookmark X in Google Chrome
 
-Requirements: Google Chrome 102 or later and an X account with access to
+Requirements: Google Chrome 116 or later and an X account with access to
 `https://x.com/i/bookmarks`.
 
 1. Download `bookmark-x.zip` using the link above.
@@ -61,12 +61,26 @@ old folder, and select **Reload** on the Bookmark X card at
 8. Keep the X tab open while the extension scrolls and waits for new items to
    load. You may close the popup.
 9. Reopen Bookmark X to check the result.
-10. Choose one of the TXT export options:
+10. In **Export library**, optionally expand **Choose export filters**:
 
-| Export option             | Result                                                       |
-| ------------------------- | ------------------------------------------------------------ |
-| **Download full archive** | Post URL, text, author, post date, archive dates, and status |
-| **URLs only**             | One canonical X post URL per line                            |
+- choosing a folder includes that folder and all of its subfolders;
+- choosing several tags includes a post when it has any selected tag;
+- when folder and tag filters are both selected, a post must match the folder
+  subtree **and** at least one tag;
+- turn **Include archived posts** off to export only bookmarks that remain on X.
+
+11. Select **Export .TXT** for readable plain text, or open the adjacent format
+    menu and select **Export .MD** for structured Markdown.
+
+The export is generated from one consistent local snapshot and ordered from the
+newest post to the oldest. Duplicate status IDs are emitted once. Images use
+their stable direct links. Videos use the canonical X post URL only: temporary
+thumbnail, CDN, and MP4 addresses are never exported as video links.
+
+Open **Settings → Export** to choose any combination of URL, post text, author,
+post date, private note, folder breadcrumb, tags, images, videos, first capture,
+and last-seen date. At least one field must remain enabled. The internal
+current/archived status is intentionally not an export field.
 
 Capturing is read-only with respect to X. Bookmark X does not add, remove, or
 change bookmarks in your X account.
@@ -81,7 +95,7 @@ Bookmark X identifies each post by its canonical X status ID:
   state are updated instead of creating another entry;
 - after capture, a small **“N duplicates skipped”** summary shows how many
   existing posts were not added again;
-- every TXT export contains at most one record or URL for each X status ID.
+- every TXT or Markdown export contains at most one record for each X status ID.
 
 Running capture again is therefore safe and does not create duplicate archive
 entries.
@@ -206,7 +220,7 @@ included in JSON backups. Reindex after restoring if semantic search is enabled.
 ## Privacy and permissions
 
 All extension-managed bookmark data stays in IndexedDB inside the current
-Chrome profile. TXT exports and JSON backups are generated locally and
+Chrome profile. TXT/Markdown exports and JSON backups are generated locally and
 downloaded through Chrome. Bookmark X does not send your archive to a server.
 
 The extension requests only the capabilities needed for capture:
@@ -273,7 +287,7 @@ The package command validates the build, creates
 `release/bookmark-x-<version>.zip`, and refreshes the stable
 `download/bookmark-x.zip` file. The Chrome smoke test uses an isolated temporary
 profile to exercise the popup, Manifest V3 service worker, IndexedDB, runtime
-messaging, TXT export, JSON backup round-trip, and archive clearing.
+messaging, TXT/Markdown export, JSON backup round-trip, and archive clearing.
 
 ## Versioning and releases
 

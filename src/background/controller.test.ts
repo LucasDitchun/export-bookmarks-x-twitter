@@ -10,7 +10,8 @@ import type {
   ScrapeRun,
   SupportedLocale,
 } from "../domain/types";
-import type { LiveBookmarkContext } from "../shared/protocol";
+import type { ExportResult, LiveBookmarkContext } from "../shared/protocol";
+import type { ExportLibrarySnapshot } from "../domain/export-bookmarks";
 import {
   DEFAULT_SETTINGS,
   type ExtensionSettings,
@@ -60,9 +61,15 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       finalizeCapture: vi.fn(async () => ({ archived: 0, removed: 0 })),
       discardCapture: vi.fn(async () => 0),
       getStats: vi.fn(async () => stats),
-      getAll: vi.fn(async () => []),
       clear: vi.fn(async () => undefined),
       applyLiveBookmark: vi.fn(async (): Promise<BookmarkRecord | null> => null),
+    },
+    exports: {
+      snapshot: vi.fn(async (): Promise<ExportLibrarySnapshot> => ({
+        bookmarks: [],
+        folders: [],
+        tags: [],
+      })),
     },
     bookmarks: {
       list: vi.fn(async (): Promise<unknown> => ({ items: [], nextCursor: null })),
@@ -1634,15 +1641,21 @@ describe("BackgroundController", () => {
       controller.handle(
         {
           type: "EXPORT_BOOKMARKS",
-          payload: { format: "urls", locale: "ja" },
+          payload: {
+            format: "txt",
+            locale: "ja",
+            folderId: null,
+            tagIds: [],
+            includeArchived: false,
+          },
         },
         POPUP_SENDER,
       ),
     ).resolves.toEqual({
       ok: true,
       data: {
-        content: "\uFEFF",
-        filename: "bookmark-x-2026-07-29T13-14-15Z-urls.txt",
+        content: "\uFEFFBOOKMARK X アーカイブ\n0件\n",
+        filename: "bookmark-x-2026-07-29T13-14-15Z.txt",
       },
     });
     await controller.handle({ type: "CLEAR_ARCHIVE" }, POPUP_SENDER);
@@ -1652,6 +1665,84 @@ describe("BackgroundController", () => {
     expect(dependencies.state.clearScrapeRun).toHaveBeenCalledOnce();
     expect(dependencies.state.clearScrapeCheckpoints).toHaveBeenCalledOnce();
     expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
+  });
+
+  it("builds Markdown from one export snapshot and the saved field settings", async () => {
+    const dependencies = createDependencies();
+    const stored: BookmarkRecord = {
+      ...bookmark,
+      media: bookmark.media ?? { images: [], videos: [] },
+      note: "Only this private note",
+      folderId: "folder",
+      tagIds: ["tag"],
+      firstSavedAt: "2026-07-29T12:00:00.000Z",
+      lastSeenAt: "2026-07-29T13:00:00.000Z",
+      archivedAt: null,
+      metadataUpdatedAt: "2026-07-29T13:00:00.000Z",
+      status: "current",
+    };
+    dependencies.exports.snapshot.mockResolvedValue({
+      bookmarks: [stored],
+      folders: [{ id: "folder", name: "Research", parentId: null }],
+      tags: [{ id: "tag", name: "AI", normalizedName: "ai" }],
+    });
+    dependencies.settings.get.mockResolvedValue({
+      ...structuredClone(DEFAULT_SETTINGS),
+      export: {
+        ...Object.fromEntries(
+          Object.keys(DEFAULT_SETTINGS.export).map((key) => [key, false]),
+        ),
+        includeNote: true,
+      } as ExtensionSettings["export"],
+    });
+    const controller = new BackgroundController(dependencies);
+
+    const response = await controller.handle(
+      {
+        type: "EXPORT_BOOKMARKS",
+        payload: {
+          format: "md",
+          locale: "en",
+          folderId: "folder",
+          tagIds: ["tag"],
+          includeArchived: false,
+        },
+      },
+      POPUP_SENDER,
+    );
+
+    expect(response).toMatchObject({
+      ok: true,
+      data: { filename: "bookmark-x-2026-07-29T13-14-15Z.md" },
+    });
+    const data = response.ok ? (response.data as ExportResult) : null;
+    expect(data?.content).toContain("Only this private note");
+    expect(data?.content).not.toContain(stored.url);
+    expect(dependencies.exports.snapshot).toHaveBeenCalledOnce();
+  });
+
+  it("rejects incomplete or duplicate-tag export payloads at the runtime boundary", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+
+    for (const payload of [
+      { format: "txt", locale: "en" },
+      {
+        format: "md",
+        locale: "en",
+        folderId: null,
+        tagIds: ["same", "same"],
+        includeArchived: true,
+      },
+    ]) {
+      await expect(
+        controller.handle({ type: "EXPORT_BOOKMARKS", payload }, POPUP_SENDER),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: { code: "invalid_request" },
+      });
+    }
+    expect(dependencies.exports.snapshot).not.toHaveBeenCalled();
   });
 
   it("requires extension-owned popup messages and handles unavailable content scripts", async () => {

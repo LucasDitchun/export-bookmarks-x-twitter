@@ -945,14 +945,163 @@ h3 {
 }
 
 .export-actions h3 {
-  margin-bottom: 2px;
+  margin: 0;
+}
+
+.export-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.export-local-badge {
+  flex: none;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: #f4f4e9;
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.export-help,
+.export-filter-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.export-filters {
+  border: 2px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.export-filters summary {
+  min-height: 46px;
+  padding: 11px 13px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.export-filter-grid {
+  display: grid;
+  gap: 8px;
+  padding: 2px 13px 14px;
+  border-top: 1px solid #d8d7ca;
+}
+
+.export-filter-grid > label:not(.export-archived-choice) {
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  font-weight: 800;
+}
+
+.export-filter-grid select {
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 10px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+}
+
+#export-tag-filter {
+  min-height: 88px;
+}
+
+.export-archived-choice {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+.export-archived-choice input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--ink);
+}
+
+.export-split-button {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 52px;
+  gap: 2px;
 }
 
 .button-download {
   width: 100%;
-  justify-content: space-between;
   background: var(--ink);
   color: #fff;
+}
+
+.export-primary {
+  justify-content: flex-start;
+  border-radius: 7px 0 0 7px;
+}
+
+.export-menu-toggle {
+  justify-content: center;
+  border-radius: 0 7px 7px 0;
+  font-size: 1.25rem;
+}
+
+.export-format-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 7px);
+  z-index: 20;
+  display: grid;
+  width: min(100%, 300px);
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.export-format-menu[hidden] {
+  display: none;
+}
+
+.export-format-menu button {
+  display: grid;
+  min-height: 56px;
+  gap: 2px;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid #d8d7ca;
+  color: var(--ink);
+  background: #fff;
+  text-align: left;
+}
+
+.export-format-menu button:last-child {
+  border-bottom: 0;
+}
+
+.export-format-menu button:hover,
+.export-format-menu button:focus-visible {
+  background: var(--accent);
+}
+
+.export-format-menu span {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.export-status {
+  min-height: 1.4em;
 }
 
 .button-download:not(:disabled):hover {

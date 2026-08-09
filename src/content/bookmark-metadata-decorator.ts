@@ -35,6 +35,8 @@ const DEFAULT_DECORATION_SETTINGS = {
     includeNote: true,
     includeTags: true,
     includeFolder: true,
+    includeFirstSavedAt: true,
+    includeLastSeenAt: true,
   },
   search: { filterAsYouType: true },
   data: { keepArchived: true },

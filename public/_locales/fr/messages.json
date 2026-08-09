@@ -117,7 +117,7 @@
     "message": "Bookmark X"
   },
   "extensionDescription": {
-    "message": "Capturez vos signets X depuis la page ouverte et exportez-les dans une archive TXT locale et privée."
+    "message": "Capturez et organisez localement vos signets X, puis exportez des fichiers TXT ou Markdown privés."
   },
   "eyebrow": {
     "message": "Archive X locale"
@@ -246,13 +246,30 @@
     "message": "Arrêter la capture"
   },
   "exportTitle": {
-    "message": "Télécharger le TXT"
+    "message": "Exporter la bibliothèque"
   },
-  "exportFullButton": {
-    "message": "Télécharger l’archive complète"
+  "exportLocalBadge": { "message": "Local uniquement" },
+  "exportHelp": {
+    "message": "Choisissez un dossier, les étiquettes correspondantes et l’inclusion des publications archivées."
   },
-  "exportUrlsButton": {
-    "message": "URL uniquement"
+  "exportFiltersSummary": { "message": "Choisir les filtres d’exportation" },
+  "exportFolderFilterLabel": { "message": "Dossier et sous-dossiers" },
+  "exportAllFolders": { "message": "Tous les dossiers" },
+  "exportTagFilterLabel": { "message": "Étiquettes (une sélectionnée suffit)" },
+  "exportTagFilterHelp": {
+    "message": "Utilisez Ctrl ou Command pour en sélectionner plusieurs. Laissez vide pour toutes les étiquettes."
+  },
+  "exportIncludeArchived": { "message": "Inclure les publications archivées" },
+  "exportTxtButton": { "message": "Exporter en .TXT" },
+  "exportTxtDescription": { "message": "Texte brut lisible" },
+  "exportMarkdownButton": { "message": "Exporter en .MD" },
+  "exportMarkdownDescription": { "message": "Markdown structuré" },
+  "exportFormatMenuLabel": { "message": "Choisir le format d’exportation" },
+  "exportPreparing": { "message": "Préparation de l’exportation…" },
+  "exportDownloaded": { "message": "Exportation téléchargée" },
+  "exportFailed": { "message": "Impossible de créer l’exportation." },
+  "exportFieldRequired": {
+    "message": "Activez au moins un champ d’exportation dans les paramètres."
   },
   "moreOptions": {
     "message": "Plus d’options"
@@ -318,12 +335,17 @@
   "settingExportLink": { "message": "Lien de la publication" },
   "settingExportText": { "message": "Texte de la publication" },
   "settingExportAuthor": { "message": "Auteur" },
-  "settingExportDate": { "message": "Dates" },
+  "settingExportDate": { "message": "Date de publication" },
   "settingExportImages": { "message": "Liens des images" },
   "settingExportVideos": { "message": "Liens des vidéos" },
   "settingExportNote": { "message": "Note privée" },
   "settingExportTags": { "message": "Tags" },
   "settingExportFolder": { "message": "Chemin du dossier" },
+  "settingExportFirstSaved": { "message": "Date de première capture" },
+  "settingExportLastSeen": { "message": "Date de dernière consultation" },
+  "settingsExportFieldRequired": {
+    "message": "Gardez au moins un champ d’exportation activé."
+  },
   "settingsSearch": { "message": "Recherche" },
   "settingLiveFilter": { "message": "Filtrer les résultats pendant la saisie" },
   "settingsData": { "message": "Données" },

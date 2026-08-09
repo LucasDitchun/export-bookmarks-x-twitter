@@ -32,7 +32,7 @@
   },
   "extensionName": { "message": "Bookmark X" },
   "extensionDescription": {
-    "message": "Capture your X bookmarks from the open page and export a private local TXT archive."
+    "message": "Capture and organize X bookmarks locally, then export private TXT or Markdown files."
   },
   "eyebrow": { "message": "Local X archive" },
   "loading": { "message": "Loading" },
@@ -172,9 +172,28 @@
   },
   "captureButton": { "message": "Capture bookmarks" },
   "cancelCaptureButton": { "message": "Stop capture" },
-  "exportTitle": { "message": "Download TXT" },
-  "exportFullButton": { "message": "Download full archive" },
-  "exportUrlsButton": { "message": "URLs only" },
+  "exportTitle": { "message": "Export library" },
+  "exportLocalBadge": { "message": "Local only" },
+  "exportHelp": {
+    "message": "Choose a folder, any matching tags, and whether to include archived posts."
+  },
+  "exportFiltersSummary": { "message": "Choose export filters" },
+  "exportFolderFilterLabel": { "message": "Folder and subfolders" },
+  "exportAllFolders": { "message": "All folders" },
+  "exportTagFilterLabel": { "message": "Tags (match any selected)" },
+  "exportTagFilterHelp": {
+    "message": "Use Ctrl or Command to select multiple. Leave empty for every tag."
+  },
+  "exportIncludeArchived": { "message": "Include archived posts" },
+  "exportTxtButton": { "message": "Export .TXT" },
+  "exportTxtDescription": { "message": "Readable plain text" },
+  "exportMarkdownButton": { "message": "Export .MD" },
+  "exportMarkdownDescription": { "message": "Structured Markdown" },
+  "exportFormatMenuLabel": { "message": "Choose export format" },
+  "exportPreparing": { "message": "Preparing export…" },
+  "exportDownloaded": { "message": "Export downloaded" },
+  "exportFailed": { "message": "Could not create the export." },
+  "exportFieldRequired": { "message": "Enable at least one export field in Settings." },
   "moreOptions": { "message": "More options" },
   "languageLabel": { "message": "Language" },
   "localOnlyNote": {
@@ -226,12 +245,17 @@
   "settingExportLink": { "message": "Post link" },
   "settingExportText": { "message": "Post text" },
   "settingExportAuthor": { "message": "Author" },
-  "settingExportDate": { "message": "Dates" },
+  "settingExportDate": { "message": "Post date" },
   "settingExportImages": { "message": "Image links" },
   "settingExportVideos": { "message": "Video links" },
   "settingExportNote": { "message": "Private note" },
   "settingExportTags": { "message": "Tags" },
   "settingExportFolder": { "message": "Folder path" },
+  "settingExportFirstSaved": { "message": "First capture date" },
+  "settingExportLastSeen": { "message": "Last seen date" },
+  "settingsExportFieldRequired": {
+    "message": "Keep at least one export field enabled."
+  },
   "settingsSearch": { "message": "Search" },
   "settingLiveFilter": { "message": "Filter results while typing" },
   "settingsData": { "message": "Data" },

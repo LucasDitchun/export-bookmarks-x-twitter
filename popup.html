@@ -366,16 +366,96 @@
             </section>
           </section>
 
-          <div class="export-actions" aria-labelledby="export-heading">
-            <h3 id="export-heading" data-i18n="exportTitle">Download TXT</h3>
-            <button id="export-full-button" class="button button-download">
-              <span data-i18n="exportFullButton">Full archive</span>
-              <span aria-hidden="true">.TXT</span>
-            </button>
-            <button id="export-urls-button" class="button button-secondary">
-              <span data-i18n="exportUrlsButton">URLs only</span>
-            </button>
-          </div>
+          <section class="export-actions" aria-labelledby="export-heading">
+            <div class="export-heading-row">
+              <h3 id="export-heading" data-i18n="exportTitle">Export library</h3>
+              <span class="export-local-badge" data-i18n="exportLocalBadge"
+                >Local only</span
+              >
+            </div>
+            <p class="export-help" data-i18n="exportHelp">
+              Choose a folder, any matching tags, and whether to include archived posts.
+            </p>
+            <details id="export-filter-details" class="export-filters">
+              <summary data-i18n="exportFiltersSummary">Choose export filters</summary>
+              <div class="export-filter-grid">
+                <label for="export-folder-filter" data-i18n="exportFolderFilterLabel"
+                  >Folder and subfolders</label
+                >
+                <select id="export-folder-filter">
+                  <option value="" data-i18n="exportAllFolders">All folders</option>
+                </select>
+                <label for="export-tag-filter" data-i18n="exportTagFilterLabel"
+                  >Tags (match any selected)</label
+                >
+                <select
+                  id="export-tag-filter"
+                  multiple
+                  size="3"
+                  aria-describedby="export-tag-help"
+                ></select>
+                <p
+                  id="export-tag-help"
+                  class="export-filter-help"
+                  data-i18n="exportTagFilterHelp"
+                >
+                  Use Ctrl or Command to select multiple. Leave empty for every tag.
+                </p>
+                <label class="export-archived-choice" for="export-include-archived">
+                  <input id="export-include-archived" type="checkbox" checked />
+                  <span data-i18n="exportIncludeArchived">Include archived posts</span>
+                </label>
+              </div>
+            </details>
+            <div
+              class="export-split-button"
+              role="group"
+              aria-labelledby="export-heading"
+            >
+              <button
+                id="export-primary-button"
+                class="button button-download export-primary"
+                type="button"
+                data-i18n="exportTxtButton"
+              >
+                Export .TXT
+              </button>
+              <button
+                id="export-menu-button"
+                class="button button-download export-menu-toggle"
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                aria-controls="export-format-menu"
+                data-i18n-aria-label="exportFormatMenuLabel"
+                aria-label="Choose export format"
+              >
+                <span aria-hidden="true">⌄</span>
+              </button>
+              <div
+                id="export-format-menu"
+                class="export-format-menu"
+                role="menu"
+                hidden
+              >
+                <button type="button" role="menuitem" data-export-format="txt">
+                  <strong data-i18n="exportTxtButton">Export .TXT</strong>
+                  <span data-i18n="exportTxtDescription">Readable plain text</span>
+                </button>
+                <button type="button" role="menuitem" data-export-format="md">
+                  <strong data-i18n="exportMarkdownButton">Export .MD</strong>
+                  <span data-i18n="exportMarkdownDescription">Structured Markdown</span>
+                </button>
+              </div>
+            </div>
+            <p
+              id="export-status"
+              class="quiet-status export-status"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            ></p>
+          </section>
 
           <details class="more-actions">
             <summary data-i18n="moreOptions">More options</summary>

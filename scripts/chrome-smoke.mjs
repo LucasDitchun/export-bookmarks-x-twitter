@@ -350,7 +350,13 @@ const runtimeScenario = String.raw`
   }
   const exported = await chrome.runtime.sendMessage({
     type: "EXPORT_BOOKMARKS",
-    payload: { format: "urls", locale: "en" },
+    payload: {
+      format: "txt",
+      locale: "en",
+      folderId: null,
+      tagIds: [],
+      includeArchived: true,
+    },
   });
   const note = await chrome.runtime.sendMessage({
     type: "SAVE_BOOKMARK_NOTE",
@@ -718,9 +724,10 @@ function assertScenario(
   }
   if (
     !exported.ok ||
-    exported.data.content !==
-      "\uFEFFhttps://x.com/katherine/status/333\nhttps://x.com/grace/status/222\nhttps://x.com/ada/status/111\n" ||
-    !exported.data.filename.endsWith("-urls.txt")
+    !exported.data.content.includes("https://x.com/katherine/status/333") ||
+    !exported.data.content.includes("https://x.com/grace/status/222") ||
+    !exported.data.content.includes("https://x.com/ada/status/111") ||
+    !exported.data.filename.endsWith(".txt")
   ) {
     throw new Error("The runtime TXT export did not match the scraped bookmarks.");
   }

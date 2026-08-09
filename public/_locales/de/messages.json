@@ -113,7 +113,7 @@
     "message": "Bookmark X"
   },
   "extensionDescription": {
-    "message": "Erfasse deine X-Lesezeichen von der geöffneten Seite und exportiere sie als privates lokales TXT-Archiv."
+    "message": "Erfasse und organisiere X-Lesezeichen lokal und exportiere private TXT- oder Markdown-Dateien."
   },
   "eyebrow": {
     "message": "Lokales X-Archiv"
@@ -242,13 +242,30 @@
     "message": "Erfassung stoppen"
   },
   "exportTitle": {
-    "message": "TXT herunterladen"
+    "message": "Bibliothek exportieren"
   },
-  "exportFullButton": {
-    "message": "Vollständiges Archiv herunterladen"
+  "exportLocalBadge": { "message": "Nur lokal" },
+  "exportHelp": {
+    "message": "Wähle einen Ordner, passende Tags und ob archivierte Beiträge enthalten sein sollen."
   },
-  "exportUrlsButton": {
-    "message": "Nur URLs"
+  "exportFiltersSummary": { "message": "Exportfilter auswählen" },
+  "exportFolderFilterLabel": { "message": "Ordner und Unterordner" },
+  "exportAllFolders": { "message": "Alle Ordner" },
+  "exportTagFilterLabel": { "message": "Tags (einer der ausgewählten)" },
+  "exportTagFilterHelp": {
+    "message": "Mit Strg oder Command mehrere auswählen. Leer lassen für alle Tags."
+  },
+  "exportIncludeArchived": { "message": "Archivierte Beiträge einschließen" },
+  "exportTxtButton": { "message": ".TXT exportieren" },
+  "exportTxtDescription": { "message": "Lesbarer Klartext" },
+  "exportMarkdownButton": { "message": ".MD exportieren" },
+  "exportMarkdownDescription": { "message": "Strukturiertes Markdown" },
+  "exportFormatMenuLabel": { "message": "Exportformat auswählen" },
+  "exportPreparing": { "message": "Export wird vorbereitet…" },
+  "exportDownloaded": { "message": "Export heruntergeladen" },
+  "exportFailed": { "message": "Export konnte nicht erstellt werden." },
+  "exportFieldRequired": {
+    "message": "Aktiviere mindestens ein Exportfeld in den Einstellungen."
   },
   "moreOptions": {
     "message": "Weitere Optionen"
@@ -314,12 +331,17 @@
   "settingExportLink": { "message": "Beitragslink" },
   "settingExportText": { "message": "Beitragstext" },
   "settingExportAuthor": { "message": "Autor" },
-  "settingExportDate": { "message": "Daten" },
+  "settingExportDate": { "message": "Beitragsdatum" },
   "settingExportImages": { "message": "Bildlinks" },
   "settingExportVideos": { "message": "Videolinks" },
   "settingExportNote": { "message": "Private Notiz" },
   "settingExportTags": { "message": "Tags" },
   "settingExportFolder": { "message": "Ordnerpfad" },
+  "settingExportFirstSaved": { "message": "Datum der ersten Erfassung" },
+  "settingExportLastSeen": { "message": "Datum der letzten Sichtung" },
+  "settingsExportFieldRequired": {
+    "message": "Mindestens ein Exportfeld muss aktiviert bleiben."
+  },
   "settingsSearch": { "message": "Suche" },
   "settingLiveFilter": { "message": "Ergebnisse beim Tippen filtern" },
   "settingsData": { "message": "Daten" },

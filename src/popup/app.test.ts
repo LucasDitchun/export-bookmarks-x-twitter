@@ -1562,7 +1562,7 @@ describe("popup app", () => {
     });
     await app.ready;
 
-    document.getElementById("export-full-button")?.click();
+    document.getElementById("export-primary-button")?.click();
     await vi.waitFor(() =>
       expect(createDownload).toHaveBeenCalledWith({
         content: "\uFEFFarchive",

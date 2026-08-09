@@ -3,12 +3,12 @@ import type {
   BookmarkRecord,
   BookmarkSnapshot,
   BookmarkTag,
-  ExportFormat,
   FolderRecord,
   ScrapeMode,
   ScrapeRun,
   SupportedLocale,
 } from "../domain/types";
+import type { BookmarkExportFormat } from "../domain/export-bookmarks";
 import type {
   ExtensionSettings,
   LibrarySurface,
@@ -140,7 +140,13 @@ export type UiRequest =
     }
   | {
       type: "EXPORT_BOOKMARKS";
-      payload: { format: ExportFormat; locale: SupportedLocale };
+      payload: {
+        format: BookmarkExportFormat;
+        locale: SupportedLocale;
+        folderId: string | null;
+        tagIds: string[];
+        includeArchived: boolean;
+      };
     }
   | {
       type: "LIST_BOOKMARKS";
