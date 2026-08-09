@@ -42,6 +42,19 @@ export interface BookmarkDetailResult {
   bookmark: NotedBookmark | null;
 }
 
+export interface BookmarkDecorationItem {
+  bookmark: BookmarkRecord;
+  breadcrumb: string[];
+  tags: BookmarkTag[];
+}
+
+export interface BookmarkDecorationLookupResult {
+  items: BookmarkDecorationItem[];
+  locale: SupportedLocale;
+  messages: Record<string, string>;
+  settings: ExtensionSettings;
+}
+
 export interface TagListResult {
   tags: BookmarkTag[];
 }
@@ -140,6 +153,7 @@ export type UiRequest =
       };
     }
   | { type: "GET_BOOKMARK"; payload: { id: string } }
+  | { type: "GET_BOOKMARK_DECORATIONS"; payload: { ids: string[] } }
   | { type: "SAVE_BOOKMARK_NOTE"; payload: { id: string; note: string } }
   | { type: "LIST_TAGS" }
   | { type: "ADD_BOOKMARK_TAG"; payload: { id: string; name: string } }
@@ -163,7 +177,12 @@ export type UiRequest =
 export type PopupRequest = UiRequest;
 
 export type ContentControlRequest =
-  { type: "START_SCRAPE"; runId: string } | { type: "CANCEL_SCRAPE"; runId: string };
+  | { type: "START_SCRAPE"; runId: string }
+  | { type: "CANCEL_SCRAPE"; runId: string }
+  | {
+      type: "REFRESH_BOOKMARK_METADATA";
+      bookmarkIds?: string[];
+    };
 
 export type ContentEvent =
   | {

@@ -82,12 +82,16 @@ describe("startLiveBookmarkObserver", () => {
         return { ok: true, data: null };
       },
     );
+    const onPending = vi.fn();
+    const onChanged = vi.fn();
     const observer = startLiveBookmarkObserver({
       document,
       stableForMs: 40,
       timeoutMs: 500,
       send,
       translate: (key) => key,
+      onPending,
+      onChanged,
     });
 
     const click = new MouseEvent("click", { bubbles: true, cancelable: true });
@@ -99,6 +103,10 @@ describe("startLiveBookmarkObserver", () => {
       action: "save",
       bookmark: { id: "123", text: "A useful post" },
     });
+    expect(onPending).toHaveBeenCalledWith(
+      button.closest('article[data-testid="tweet"]'),
+      "123",
+    );
     expect(document.querySelector<HTMLElement>("bookmark-x-note-modal")?.hidden).toBe(
       false,
     );
@@ -125,6 +133,7 @@ describe("startLiveBookmarkObserver", () => {
       "liveBookmarkSaved",
     );
     expect(modal?.querySelector("form")?.hidden).toBe(false);
+    expect(onChanged).toHaveBeenCalledWith("123");
     observer.stop();
   });
 

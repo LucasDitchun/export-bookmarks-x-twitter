@@ -3,10 +3,14 @@ import { BackupValidationError } from "../domain/backup";
 import { MAX_SEARCH_QUERY_LENGTH } from "../domain/search-bookmarks";
 import {
   isSupportedLocale,
+  type BookmarkTag,
   type BookmarkRecord,
   type BookmarkSnapshot,
+  type FolderRecord,
   type ScrapeRun,
+  type SupportedLocale,
 } from "../domain/types";
+import { folderBreadcrumb } from "../domain/folder-tree";
 import { isBookmarkMedia } from "../domain/bookmark-media";
 import type {
   ContentControlRequest,
@@ -74,6 +78,7 @@ interface BackgroundDependencies {
       limit: number;
     }): Promise<unknown>;
     get(id: string): Promise<unknown>;
+    getMany(ids: string[]): Promise<BookmarkRecord[]>;
     saveNote(id: string, note: string): Promise<unknown>;
   };
   search: {
@@ -101,6 +106,12 @@ interface BackgroundDependencies {
   settings: {
     get(): Promise<ExtensionSettings>;
     save(patch: SettingsPatch): Promise<ExtensionSettings>;
+  };
+  locale: {
+    get(): Promise<{
+      locale: SupportedLocale;
+      messages: Record<string, string>;
+    }>;
   };
   backup: Pick<BackupRepository, "export" | "restore">;
   liveState: {
@@ -221,6 +232,15 @@ function isUiRequest(value: unknown): value is UiRequest {
   }
   if (value.type === "GET_BOOKMARK") {
     return isRecord(value.payload) && isBookmarkId(value.payload.id);
+  }
+  if (value.type === "GET_BOOKMARK_DECORATIONS") {
+    return (
+      isRecord(value.payload) &&
+      Array.isArray(value.payload.ids) &&
+      value.payload.ids.length > 0 &&
+      value.payload.ids.length <= 100 &&
+      value.payload.ids.every(isBookmarkId)
+    );
   }
   if (value.type === "SAVE_BOOKMARK_NOTE") {
     return (
@@ -480,6 +500,33 @@ export class BackgroundController {
           return success({
             bookmark: await this.dependencies.bookmarks.get(request.payload.id),
           });
+        case "GET_BOOKMARK_DECORATIONS": {
+          const ids = [...new Set(request.payload.ids)];
+          const [bookmarks, rawTags, rawFolders, settings, localization] =
+            await Promise.all([
+              this.dependencies.bookmarks.getMany(ids),
+              this.dependencies.tags.list(),
+              this.dependencies.folders.list(),
+              this.dependencies.settings.get(),
+              this.dependencies.locale.get(),
+            ]);
+          const tags = rawTags as BookmarkTag[];
+          const folders = rawFolders as FolderRecord[];
+          const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
+          return success({
+            ...localization,
+            settings,
+            items: bookmarks.map((bookmark) => ({
+              bookmark,
+              breadcrumb: folderBreadcrumb(bookmark.folderId, folders).map(
+                (folder) => folder.name,
+              ),
+              tags: bookmark.tagIds
+                .map((tagId) => tagsById.get(tagId))
+                .filter((tag): tag is BookmarkTag => tag !== undefined),
+            })),
+          });
+        }
         case "SAVE_BOOKMARK_NOTE": {
           const bookmark = await this.dependencies.bookmarks.saveNote(
             request.payload.id,

@@ -113,6 +113,19 @@ it current and restores its existing note, folder, and tags. Automatic opening
 is enabled by default and can be disabled in **Settings → Behavior**; the same
 setting chooses the in-page modal or Chrome Side Panel.
 
+## See your local context directly on X
+
+When a visible X post already exists in your local Bookmark X library, a compact
+card appears immediately after the post actions. Its isolated Shadow DOM shows
+the mapped or pending state, folder breadcrumb, tag badges, and a two-line note
+preview. Posts that still need a note, folder, or tag receive a discreet **Needs
+category** indicator. Unknown posts receive no injected UI.
+
+The card follows live saves, removals, modal edits, settings changes, and X's
+virtualized timeline without duplicating itself. Open **Settings → Behavior** to
+turn the mapped status, breadcrumb, tags, note, or categorization indicator on
+or off individually. Large text and high contrast are enabled by default.
+
 ## Languages and manual language selection
 
 The popup supports:
@@ -198,8 +211,9 @@ The extension requests only the capabilities needed for capture:
   pinned model weights, tokenizer, and configuration after explicit consent.
   All executable JavaScript and WebAssembly is packaged with the extension;
 - the content script is restricted to `https://x.com/*` and
-  `https://www.x.com/*`; outside the bookmarks page it processes a post only
-  after an explicit bookmark-button click.
+  `https://www.x.com/*`; it compares visible numeric post IDs with the local
+  library to decorate matches, and reads full post fields outside the bookmarks
+  page only after an explicit bookmark-button click.
 
 Bookmark X does not read passwords or cookies. It never changes X on the
 user's behalf: it only mirrors a bookmark change after X confirms it. Clearing

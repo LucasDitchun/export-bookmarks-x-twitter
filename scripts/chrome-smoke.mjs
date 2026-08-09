@@ -356,8 +356,95 @@ const runtimeScenario = String.raw`
     type: "SAVE_BOOKMARK_NOTE",
     payload: { id: "111", note: "Preserved across live rebookmark" },
   });
+  const decorations = await chrome.runtime.sendMessage({
+    type: "GET_BOOKMARK_DECORATIONS",
+    payload: { ids: ["111", "222"] },
+  });
 
-  return { before, completed, exported, note };
+  return { before, completed, exported, note, decorations };
+})()
+`;
+
+const metadataSetupScenario = String.raw`
+(async () => {
+  await chrome.storage.local.set({ uiLocale: "de" });
+  const created = await chrome.runtime.sendMessage({
+    type: "CREATE_FOLDER",
+    payload: { name: "Research and long-form artificial intelligence", parentId: null },
+  });
+  const tagged = await chrome.runtime.sendMessage({
+    type: "ADD_BOOKMARK_TAG",
+    payload: { id: "111", name: "Machine learning research" },
+  });
+  const assigned = created?.data?.folder?.id
+    ? await chrome.runtime.sendMessage({
+        type: "ASSIGN_BOOKMARK_FOLDER",
+        payload: { bookmarkId: "111", folderId: created.data.folder.id },
+      })
+    : null;
+  return { created, tagged, assigned };
+})()
+`;
+
+const metadataStateScenario = (expectedState) => String.raw`
+(async () => {
+  const deadline = Date.now() + 6000;
+  while (Date.now() < deadline) {
+    const host = document.querySelector('article[data-testid="tweet"] bookmark-x-metadata');
+    if (host?.dataset.state === ${JSON.stringify(expectedState)}) {
+      return {
+        state: host.dataset.state,
+        hosts: document.querySelectorAll("bookmark-x-metadata").length,
+        text: host.shadowRoot?.textContent ?? "",
+        role: host.getAttribute("role"),
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return { state: "timeout", hosts: 0, text: "", role: null };
+})()
+`;
+
+const metadataPendingScenario = String.raw`
+(async () => {
+  const button = document.querySelector('button[data-testid="removeBookmark"]');
+  if (!button) return { state: "button-missing", hosts: 0, text: "" };
+  button.click();
+  const deadline = Date.now() + 3000;
+  while (Date.now() < deadline) {
+    const host = button.closest("article")?.querySelector("bookmark-x-metadata");
+    if (host?.dataset.state === "pending") {
+      return {
+        state: host.dataset.state,
+        hosts: button.closest("article")?.querySelectorAll("bookmark-x-metadata").length,
+        text: host.shadowRoot?.textContent ?? "",
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return { state: "timeout", hosts: 0, text: "" };
+})()
+`;
+
+const finishMetadataPendingScenario = String.raw`
+(async () => {
+  const button = document.querySelector(
+    'button[data-testid="removeBookmark"], button[data-testid="bookmark"]',
+  );
+  if (!button) return { state: "button-missing" };
+  button.dataset.testid = "bookmark";
+  button.setAttribute("aria-pressed", "false");
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const host = button.closest("article")?.querySelector("bookmark-x-metadata");
+    if (host?.dataset.state === "archived") {
+      button.dataset.testid = "removeBookmark";
+      button.setAttribute("aria-pressed", "true");
+      return { state: host.dataset.state };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return { state: "timeout" };
 })()
 `;
 
@@ -644,6 +731,19 @@ function assertOptionsDefaults(result) {
   }
 }
 
+function assertMetadataCheckpoint(result, expectedState, expectedText) {
+  if (
+    result.state !== expectedState ||
+    result.hosts !== 1 ||
+    !result.text.includes(expectedText) ||
+    (result.role !== undefined && result.role !== "group")
+  ) {
+    throw new Error(
+      `The injected metadata checkpoint failed: ${JSON.stringify({ result, expectedState, expectedText })}`,
+    );
+  }
+}
+
 async function stopChrome(chromeProcess) {
   if (chromeProcess.exitCode !== null) return;
   chromeProcess.kill("SIGTERM");
@@ -786,9 +886,7 @@ async function main() {
       height: 900,
     });
 
-    workerDevTools = await connectDevTools(worker.webSocketDebuggerUrl);
-    await workerDevTools.send("Runtime.enable");
-    const startEvaluation = await workerDevTools.send("Runtime.evaluate", {
+    const startEvaluation = await popupDevTools.send("Runtime.evaluate", {
       expression: startContentCaptureScenario,
       awaitPromise: true,
       returnByValue: true,
@@ -822,6 +920,103 @@ async function main() {
           evaluation.exceptionDetails.text,
       );
     }
+    const uncategorizedEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: metadataStateScenario("uncategorized"),
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (uncategorizedEvaluation.exceptionDetails) {
+      throw new Error(
+        uncategorizedEvaluation.exceptionDetails.exception?.description ??
+          uncategorizedEvaluation.exceptionDetails.text,
+      );
+    }
+    if (
+      !evaluation.result.value.decorations?.ok ||
+      evaluation.result.value.decorations.data.items?.length !== 2
+    ) {
+      throw new Error(
+        `The runtime metadata lookup failed: ${JSON.stringify({ start: startEvaluation.result.value, completed: evaluation.result.value.completed, note: evaluation.result.value.note, decorations: evaluation.result.value.decorations })}`,
+      );
+    }
+    assertMetadataCheckpoint(
+      uncategorizedEvaluation.result.value,
+      "uncategorized",
+      "Needs category",
+    );
+    await captureVisualCheckpoint(pageDevTools, "metadata-uncategorized-en.png", {
+      width: 760,
+      height: 900,
+    });
+
+    const metadataSetupEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: metadataSetupScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (metadataSetupEvaluation.exceptionDetails) {
+      throw new Error(
+        metadataSetupEvaluation.exceptionDetails.exception?.description ??
+          metadataSetupEvaluation.exceptionDetails.text,
+      );
+    }
+    if (
+      !metadataSetupEvaluation.result.value.created?.ok ||
+      !metadataSetupEvaluation.result.value.tagged?.ok ||
+      !metadataSetupEvaluation.result.value.assigned?.ok
+    ) {
+      throw new Error(
+        `Could not prepare mapped metadata: ${JSON.stringify(metadataSetupEvaluation.result.value)}`,
+      );
+    }
+    const mappedEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: metadataStateScenario("mapped"),
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (mappedEvaluation.exceptionDetails) {
+      throw new Error(
+        mappedEvaluation.exceptionDetails.exception?.description ??
+          mappedEvaluation.exceptionDetails.text,
+      );
+    }
+    assertMetadataCheckpoint(
+      mappedEvaluation.result.value,
+      "mapped",
+      "Von Bookmark X in der lokalen Sammlung erfasst",
+    );
+    await captureVisualCheckpoint(pageDevTools, "metadata-mapped-de.png", {
+      width: 760,
+      height: 900,
+    });
+
+    const pendingEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: metadataPendingScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (pendingEvaluation.exceptionDetails) {
+      throw new Error(
+        pendingEvaluation.exceptionDetails.exception?.description ??
+          pendingEvaluation.exceptionDetails.text,
+      );
+    }
+    assertMetadataCheckpoint(pendingEvaluation.result.value, "pending", "Warten");
+    await captureVisualCheckpoint(pageDevTools, "metadata-pending-de.png", {
+      width: 760,
+      height: 900,
+    });
+    const finishPendingEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: finishMetadataPendingScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (
+      finishPendingEvaluation.exceptionDetails ||
+      finishPendingEvaluation.result.value.state !== "archived"
+    ) {
+      throw new Error("The injected pending state did not settle as archived.");
+    }
     const livePageEvaluation = await pageDevTools.send("Runtime.evaluate", {
       expression: liveBookmarkPageScenario,
       awaitPromise: true,
@@ -854,7 +1049,7 @@ async function main() {
       finalEvaluation.result.value,
     );
     console.log(
-      "Chrome smoke passed: settings, semantic-search consent defaults, delayed-loader X-page scraping, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, TXT export, JSON backup round-trip, and clear.",
+      "Chrome smoke passed: settings, semantic-search consent defaults, delayed-loader X-page scraping, injected metadata states/localization, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, TXT export, JSON backup round-trip, and clear.",
     );
     if (VISUAL_CHECKPOINT_DIRECTORY) {
       console.log(`Visual checkpoints: ${VISUAL_CHECKPOINT_DIRECTORY}`);

@@ -162,6 +162,22 @@ export class BookmarkRepository {
     return result ?? null;
   }
 
+  async getMany(ids: readonly string[]): Promise<BookmarkRecord[]> {
+    if (ids.length === 0) return [];
+    const database = await this.connection.open();
+    const transaction = database.transaction(BOOKMARKS_STORE, "readonly");
+    const store = transaction.objectStore(BOOKMARKS_STORE);
+    const records = await Promise.all(
+      [...new Set(ids)].map((id) =>
+        requestAsPromise(store.get(id) as IDBRequest<BookmarkRecord | undefined>),
+      ),
+    );
+    await transactionDone(transaction);
+    return records.filter(
+      (bookmark): bookmark is BookmarkRecord => bookmark !== undefined,
+    );
+  }
+
   async saveNote(id: string, note: string): Promise<BookmarkRecord> {
     if (note.length > MAX_BOOKMARK_NOTE_LENGTH) {
       throw new RangeError("Bookmark notes cannot exceed 20,000 characters.");
