@@ -1,6 +1,12 @@
 const defaultDelay = (milliseconds) =>
   new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 
+export async function navigateToExtensionContext(devTools, expectedUrl, options) {
+  await devTools.send("Page.enable");
+  await devTools.send("Page.navigate", { url: expectedUrl });
+  await waitForExtensionContext(devTools, expectedUrl, options);
+}
+
 export async function waitForExtensionContext(
   devTools,
   expectedUrl,
