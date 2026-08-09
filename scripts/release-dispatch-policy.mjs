@@ -5,12 +5,22 @@ const PREPARED_RELEASE_REF =
   /^automation\/prepare-v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u;
 const FULL_COMMIT_SHA = /^[0-9a-f]{40}$/u;
 
-export function assertReleaseDispatchIdentity({ actualSha, expectedSha, refName }) {
+export function assertReleaseDispatchIdentity({
+  actualSha,
+  eventSha,
+  expectedSha,
+  refName,
+}) {
   if (!PREPARED_RELEASE_REF.test(refName)) {
     throw new Error("Release CI may only be dispatched for a prepared release branch.");
   }
   if (!FULL_COMMIT_SHA.test(expectedSha)) {
     throw new Error("Expected release SHA must be a full lowercase commit SHA.");
+  }
+  if (eventSha !== expectedSha) {
+    throw new Error(
+      `Workflow event SHA does not match the prepared release: expected ${expectedSha}, event uses ${String(eventSha)}.`,
+    );
   }
   if (actualSha !== expectedSha) {
     throw new Error(
@@ -24,7 +34,7 @@ function readArguments(arguments_) {
   const [command, ...options] = normalizedArguments;
   if (command !== "validate") {
     throw new Error(
-      "Usage: node scripts/release-dispatch-policy.mjs validate --ref-name <ref> --expected-sha <sha> --actual-sha <sha>",
+      "Usage: node scripts/release-dispatch-policy.mjs validate --ref-name <ref> --expected-sha <sha> --event-sha <sha> --actual-sha <sha>",
     );
   }
 
@@ -32,13 +42,17 @@ function readArguments(arguments_) {
   for (let index = 0; index < options.length; index += 2) {
     const name = options[index];
     const value = options[index + 1];
-    if (!value || !["--actual-sha", "--expected-sha", "--ref-name"].includes(name)) {
+    if (
+      !value ||
+      !["--actual-sha", "--event-sha", "--expected-sha", "--ref-name"].includes(name)
+    ) {
       throw new Error(`Invalid release dispatch argument: ${String(name)}.`);
     }
     values[name] = value;
   }
   return {
     actualSha: values["--actual-sha"],
+    eventSha: values["--event-sha"],
     expectedSha: values["--expected-sha"],
     refName: values["--ref-name"],
   };

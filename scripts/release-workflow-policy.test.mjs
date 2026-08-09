@@ -42,7 +42,32 @@ describe("release workflow permissions and gates", () => {
 
     expect(workflow).toContain("expected_sha:");
     expect(workflow).toContain("scripts/release-dispatch-policy.mjs validate");
+    expect(workflow).toContain('--event-sha "$DISPATCH_EVENT_SHA"');
     expect(workflow).toContain("ref: ${{ inputs.expected_sha || github.sha }}");
+  });
+
+  it("keeps prepared release PR runs from racing their exact-SHA dispatch", async () => {
+    const workflow = await readWorkflow("ci.yml");
+    const pullRequestTrigger = workflow.slice(
+      workflow.indexOf("  pull_request:\n"),
+      workflow.indexOf("  workflow_dispatch:\n"),
+    );
+
+    const ignoredPaths = pullRequestTrigger
+      .slice(pullRequestTrigger.indexOf("    paths-ignore:\n"))
+      .match(/^      - (.+)$/gmu)
+      ?.map((line) => line.slice("      - ".length));
+    expect(ignoredPaths).toEqual([
+      "CHANGELOG.md",
+      "download/bookmark-x.zip",
+      "package.json",
+      "pnpm-lock.yaml",
+      "public/manifest.json",
+    ]);
+    expect(workflow).toContain(
+      "group: ci-${{ github.workflow }}-${{ inputs.expected_sha || github.sha }}",
+    );
+    expect(workflow).not.toContain("github.head_ref || github.ref_name");
   });
 
   it("runs Chrome smoke once at preparation and never rebuilds main", async () => {

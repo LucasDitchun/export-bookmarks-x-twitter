@@ -1,5 +1,5 @@
 import { createWriteStream } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -41,6 +41,103 @@ async function createArchive(entries, options = {}) {
   }
   await Promise.all([archive.finalize(), completion]);
   return archivePath;
+}
+
+async function insertBeforeCentralDirectory(archivePath, hiddenBytes) {
+  const archive = await readFile(archivePath);
+  const endOffset = archive.length - 22;
+  const centralDirectoryOffset = archive.readUInt32LE(endOffset + 16);
+  const mutated = Buffer.concat([
+    archive.subarray(0, centralDirectoryOffset),
+    hiddenBytes,
+    archive.subarray(centralDirectoryOffset),
+  ]);
+  mutated.writeUInt32LE(
+    centralDirectoryOffset + hiddenBytes.length,
+    endOffset + hiddenBytes.length + 16,
+  );
+  await writeFile(archivePath, mutated);
+}
+
+function orphanStoredFile(path, contents) {
+  const pathBytes = Buffer.from(path);
+  const contentBytes = Buffer.from(contents);
+  const localFile = Buffer.alloc(30 + pathBytes.length + contentBytes.length);
+  localFile.writeUInt32LE(0x04034b50, 0);
+  localFile.writeUInt16LE(20, 4);
+  localFile.writeUInt32LE(contentBytes.length, 18);
+  localFile.writeUInt32LE(contentBytes.length, 22);
+  localFile.writeUInt16LE(pathBytes.length, 26);
+  pathBytes.copy(localFile, 30);
+  contentBytes.copy(localFile, 30 + pathBytes.length);
+  return localFile;
+}
+
+async function appendZipComment(archivePath, comment) {
+  const archive = await readFile(archivePath);
+  const commentBytes = Buffer.from(comment);
+  const endOffset = archive.length - 22;
+  const mutated = Buffer.concat([archive, commentBytes]);
+  mutated.writeUInt16LE(commentBytes.length, endOffset + 20);
+  await writeFile(archivePath, mutated);
+}
+
+async function insertBeforeEndRecord(archivePath, hiddenBytes) {
+  const archive = await readFile(archivePath);
+  const endOffset = archive.length - 22;
+  await writeFile(
+    archivePath,
+    Buffer.concat([
+      archive.subarray(0, endOffset),
+      hiddenBytes,
+      archive.subarray(endOffset),
+    ]),
+  );
+}
+
+async function overlapSecondEntryWithFirstPayload(archivePath) {
+  const archive = await readFile(archivePath);
+  const endOffset = archive.length - 22;
+  const centralDirectoryOffset = archive.readUInt32LE(endOffset + 16);
+  const firstCentralPathLength = archive.readUInt16LE(centralDirectoryOffset + 28);
+  const firstCentralExtraLength = archive.readUInt16LE(centralDirectoryOffset + 30);
+  const firstCentralCommentLength = archive.readUInt16LE(centralDirectoryOffset + 32);
+  const secondCentralOffset =
+    centralDirectoryOffset +
+    46 +
+    firstCentralPathLength +
+    firstCentralExtraLength +
+    firstCentralCommentLength;
+  const firstLocalOffset = archive.readUInt32LE(centralDirectoryOffset + 42);
+  const firstLocalPathLength = archive.readUInt16LE(firstLocalOffset + 26);
+  const firstLocalExtraLength = archive.readUInt16LE(firstLocalOffset + 28);
+  const firstPayloadOffset =
+    firstLocalOffset + 30 + firstLocalPathLength + firstLocalExtraLength;
+
+  archive.writeUInt16LE(0, secondCentralOffset + 8);
+  archive.writeUInt32LE(firstPayloadOffset, secondCentralOffset + 42);
+  await writeFile(archivePath, archive);
+}
+
+async function injectLocalExtraField(archivePath, hiddenBytes) {
+  const archive = await readFile(archivePath);
+  const endOffset = archive.length - 22;
+  const centralDirectoryOffset = archive.readUInt32LE(endOffset + 16);
+  const localOffset = archive.readUInt32LE(centralDirectoryOffset + 42);
+  const localPathLength = archive.readUInt16LE(localOffset + 26);
+  const localExtraLength = archive.readUInt16LE(localOffset + 28);
+  const insertionOffset = localOffset + 30 + localPathLength + localExtraLength;
+  const mutated = Buffer.concat([
+    archive.subarray(0, insertionOffset),
+    hiddenBytes,
+    archive.subarray(insertionOffset),
+  ]);
+  mutated.writeUInt16LE(localExtraLength + hiddenBytes.length, localOffset + 28);
+  mutated.writeUInt32LE(
+    centralDirectoryOffset + hiddenBytes.length,
+    endOffset + hiddenBytes.length + 16,
+  );
+  await writeFile(archivePath, mutated);
 }
 
 describe("release ZIP content integrity", () => {
@@ -100,6 +197,71 @@ describe("release ZIP content integrity", () => {
 
     await expect(assertArchivesHaveEqualContent(expected, rebuilt)).rejects.toThrow(
       /assets\/app\.js: missing.*manifest\.json: content differs.*unexpected\.js: unexpected/s,
+    );
+  });
+
+  it("rejects an orphan local file hidden before the central directory", async () => {
+    const archive = await createArchive([{ path: "manifest.json", content: "{}" }]);
+    await insertBeforeCentralDirectory(
+      archive,
+      orphanStoredFile("hidden.txt", "unreviewed payload"),
+    );
+
+    await expect(archiveContentManifest(archive)).rejects.toThrow(
+      "unreferenced bytes before the central directory",
+    );
+  });
+
+  it("rejects trailing bytes disguised as a ZIP comment", async () => {
+    const archive = await createArchive([{ path: "manifest.json", content: "{}" }]);
+    await appendZipComment(archive, "unreviewed trailing payload");
+
+    await expect(archiveContentManifest(archive)).rejects.toThrow(
+      "ZIP comments are not allowed",
+    );
+  });
+
+  it("rejects hidden bytes between the central directory and end record", async () => {
+    const archive = await createArchive([{ path: "manifest.json", content: "{}" }]);
+    await insertBeforeEndRecord(archive, Buffer.from("unreviewed central slack"));
+
+    await expect(archiveContentManifest(archive)).rejects.toThrow(
+      "unreferenced bytes after the central directory",
+    );
+  });
+
+  it("rejects overlapping local file ranges", async () => {
+    const archive = await createArchive(
+      [
+        { path: "a.txt", content: orphanStoredFile("b.txt", "B") },
+        { path: "b.txt", content: "B" },
+      ],
+      { store: true },
+    );
+    await overlapSecondEntryWithFirstPayload(archive);
+
+    await expect(archiveContentManifest(archive)).rejects.toThrow(
+      "local file ranges overlap",
+    );
+  });
+
+  it("rejects payload bytes hidden in a directory entry", async () => {
+    const archive = await createArchive([
+      { path: "manifest.json", content: "{}" },
+      { path: "hidden/", content: "unreviewed directory payload" },
+    ]);
+
+    await expect(archiveContentManifest(archive)).rejects.toThrow(
+      "directory entry must be empty",
+    );
+  });
+
+  it("rejects payload hidden in a local ZIP extra field", async () => {
+    const archive = await createArchive([{ path: "manifest.json", content: "{}" }]);
+    await injectLocalExtraField(archive, Buffer.from("unreviewed local extra"));
+
+    await expect(archiveContentManifest(archive)).rejects.toThrow(
+      "local ZIP extra fields are not allowed",
     );
   });
 });

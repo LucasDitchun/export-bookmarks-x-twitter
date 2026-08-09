@@ -9,6 +9,7 @@ describe("release CI dispatch identity policy", () => {
     expect(() =>
       assertReleaseDispatchIdentity({
         actualSha: sha,
+        eventSha: sha,
         expectedSha: sha,
         refName: "automation/prepare-v0.1.1",
       }),
@@ -23,7 +24,12 @@ describe("release CI dispatch identity policy", () => {
     "automation/prepare-v01.1.1",
   ])("rejects arbitrary dispatch ref %s", (refName) => {
     expect(() =>
-      assertReleaseDispatchIdentity({ actualSha: sha, expectedSha: sha, refName }),
+      assertReleaseDispatchIdentity({
+        actualSha: sha,
+        eventSha: sha,
+        expectedSha: sha,
+        refName,
+      }),
     ).toThrow("Release CI may only be dispatched for a prepared release branch");
   });
 
@@ -31,6 +37,7 @@ describe("release CI dispatch identity policy", () => {
     expect(() =>
       assertReleaseDispatchIdentity({
         actualSha: sha,
+        eventSha: sha,
         expectedSha: "HEAD",
         refName: "automation/prepare-v0.1.1",
       }),
@@ -38,9 +45,21 @@ describe("release CI dispatch identity policy", () => {
     expect(() =>
       assertReleaseDispatchIdentity({
         actualSha: "b".repeat(40),
+        eventSha: sha,
         expectedSha: sha,
         refName: "automation/prepare-v0.1.1",
       }),
     ).toThrow("Dispatched release SHA does not match");
+  });
+
+  it("rejects a workflow event attached to a different branch head", () => {
+    expect(() =>
+      assertReleaseDispatchIdentity({
+        actualSha: sha,
+        eventSha: "b".repeat(40),
+        expectedSha: sha,
+        refName: "automation/prepare-v0.1.1",
+      }),
+    ).toThrow("Workflow event SHA does not match the prepared release");
   });
 });

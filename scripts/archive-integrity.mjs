@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import { resolve } from "node:path";
 import process from "node:process";
 import { inflateRawSync } from "node:zlib";
@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 const END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06054b50;
 const CENTRAL_DIRECTORY_SIGNATURE = 0x02014b50;
 const LOCAL_FILE_SIGNATURE = 0x04034b50;
+const DATA_DESCRIPTOR_SIGNATURE = 0x08074b50;
 const MAXIMUM_COMMENT_LENGTH = 0xffff;
 const MAXIMUM_ENTRY_SIZE = 256 * 1024 * 1024;
 const MAXIMUM_ARCHIVE_SIZE = 512 * 1024 * 1024;
@@ -61,12 +62,57 @@ function decodePath(pathBytes) {
   return path;
 }
 
+function readDataDescriptorEnd(archive, dataEnd, centralDirectoryOffset, expected) {
+  const hasSignature =
+    dataEnd + 4 <= centralDirectoryOffset &&
+    archive.readUInt32LE(dataEnd) === DATA_DESCRIPTOR_SIGNATURE;
+  const descriptorOffset = dataEnd + (hasSignature ? 4 : 0);
+  const descriptorEnd = descriptorOffset + 12;
+  if (descriptorEnd > centralDirectoryOffset) {
+    fail(`data descriptor points outside the local file region for ${expected.path}.`);
+  }
+  if (
+    archive.readUInt32LE(descriptorOffset) !== expected.crc32 ||
+    archive.readUInt32LE(descriptorOffset + 4) !== expected.compressedSize ||
+    archive.readUInt32LE(descriptorOffset + 8) !== expected.uncompressedSize
+  ) {
+    fail(`data descriptor differs from the central directory for ${expected.path}.`);
+  }
+  return descriptorEnd;
+}
+
+function assertLocalFileRangesCoverArchive(ranges, centralDirectoryOffset) {
+  const sortedRanges = [...ranges].sort(
+    (left, right) => left.start - right.start || comparePaths(left.path, right.path),
+  );
+  let coveredUntil = 0;
+
+  for (const range of sortedRanges) {
+    if (range.start < coveredUntil) {
+      fail(`local file ranges overlap at ${range.path}.`);
+    }
+    if (range.start > coveredUntil) {
+      fail(
+        `unreferenced bytes before the central directory at offset ${coveredUntil}.`,
+      );
+    }
+    coveredUntil = range.end;
+  }
+
+  if (coveredUntil !== centralDirectoryOffset) {
+    fail(`unreferenced bytes before the central directory at offset ${coveredUntil}.`);
+  }
+}
+
 function readArchiveEntries(archive) {
   if (archive.length > MAXIMUM_ARCHIVE_SIZE) {
     fail("ZIP exceeds the maximum supported archive size.");
   }
 
   const endOffset = findEndOfCentralDirectory(archive);
+  if (archive.readUInt16LE(endOffset + 20) !== 0) {
+    fail("ZIP comments are not allowed.");
+  }
   const diskNumber = archive.readUInt16LE(endOffset + 4);
   const centralDirectoryDisk = archive.readUInt16LE(endOffset + 6);
   const entriesOnDisk = archive.readUInt16LE(endOffset + 8);
@@ -90,8 +136,12 @@ function readArchiveEntries(archive) {
   ) {
     fail("central directory points outside the archive.");
   }
+  if (centralDirectoryOffset + centralDirectorySize < endOffset) {
+    fail("unreferenced bytes after the central directory.");
+  }
 
   const entries = [];
+  const localFileRanges = [];
   const seenPaths = new Set();
   let offset = centralDirectoryOffset;
   let totalUncompressedSize = 0;
@@ -106,6 +156,7 @@ function readArchiveEntries(archive) {
 
     const flags = archive.readUInt16LE(offset + 8);
     const compressionMethod = archive.readUInt16LE(offset + 10);
+    const crc32 = archive.readUInt32LE(offset + 16);
     const compressedSize = archive.readUInt32LE(offset + 20);
     const uncompressedSize = archive.readUInt32LE(offset + 24);
     const pathLength = archive.readUInt16LE(offset + 28);
@@ -117,6 +168,9 @@ function readArchiveEntries(archive) {
 
     if (nextOffset > archive.length) {
       fail("central directory entry extends outside the archive.");
+    }
+    if (extraLength !== 0 || commentLength !== 0) {
+      fail("central ZIP extra fields and comments are not allowed.");
     }
     if ((flags & 0x1) !== 0) {
       fail("encrypted ZIP entries are not supported.");
@@ -139,12 +193,11 @@ function readArchiveEntries(archive) {
     if (seenPaths.has(path)) {
       fail(`duplicate entry path: ${path}.`);
     }
+    if (path.endsWith("/") && (compressedSize !== 0 || uncompressedSize !== 0)) {
+      fail(`directory entry must be empty: ${path}.`);
+    }
     seenPaths.add(path);
     offset = nextOffset;
-
-    if (path.endsWith("/")) {
-      continue;
-    }
 
     if (
       localHeaderOffset + 30 > archive.length ||
@@ -155,6 +208,14 @@ function readArchiveEntries(archive) {
     }
     const localPathLength = archive.readUInt16LE(localHeaderOffset + 26);
     const localExtraLength = archive.readUInt16LE(localHeaderOffset + 28);
+    if (localExtraLength !== 0) {
+      fail(`local ZIP extra fields are not allowed: ${path}.`);
+    }
+    const localFlags = archive.readUInt16LE(localHeaderOffset + 6);
+    const localCompressionMethod = archive.readUInt16LE(localHeaderOffset + 8);
+    if (localFlags !== flags || localCompressionMethod !== compressionMethod) {
+      fail(`local header flags or compression differ for ${path}.`);
+    }
     const dataOffset = localHeaderOffset + 30 + localPathLength + localExtraLength;
     const dataEnd = dataOffset + compressedSize;
     if (dataEnd > centralDirectoryOffset) {
@@ -169,6 +230,17 @@ function readArchiveEntries(archive) {
     if (localPath !== path) {
       fail(`local and central paths differ for ${path}.`);
     }
+
+    const localFileEnd =
+      (flags & 0x8) === 0
+        ? dataEnd
+        : readDataDescriptorEnd(archive, dataEnd, centralDirectoryOffset, {
+            compressedSize,
+            crc32,
+            path,
+            uncompressedSize,
+          });
+    localFileRanges.push({ end: localFileEnd, path, start: localHeaderOffset });
 
     const compressed = archive.subarray(dataOffset, dataEnd);
     let contents;
@@ -193,22 +265,34 @@ function readArchiveEntries(archive) {
     if (totalUncompressedSize > MAXIMUM_ARCHIVE_SIZE) {
       fail("uncompressed ZIP contents exceed the maximum supported size.");
     }
-    entries.push({
-      path,
-      sha256: createHash("sha256").update(contents).digest("hex"),
-      size: contents.length,
-    });
+    if (!path.endsWith("/")) {
+      entries.push({
+        path,
+        sha256: createHash("sha256").update(contents).digest("hex"),
+        size: contents.length,
+      });
+    }
   }
 
   if (offset !== centralDirectoryOffset + centralDirectorySize) {
     fail("central directory size does not match its entries.");
   }
+  assertLocalFileRangesCoverArchive(localFileRanges, centralDirectoryOffset);
 
   return entries.sort((left, right) => comparePaths(left.path, right.path));
 }
 
 export async function archiveContentManifest(archivePath) {
-  return readArchiveEntries(await readFile(archivePath));
+  const archiveFile = await open(archivePath, "r");
+  try {
+    const { size } = await archiveFile.stat();
+    if (size > MAXIMUM_ARCHIVE_SIZE) {
+      fail("ZIP exceeds the maximum supported archive size.");
+    }
+    return readArchiveEntries(await archiveFile.readFile());
+  } finally {
+    await archiveFile.close();
+  }
 }
 
 export async function assertArchivesHaveEqualContent(expectedPath, actualPath) {

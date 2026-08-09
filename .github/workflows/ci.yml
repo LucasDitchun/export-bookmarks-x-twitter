@@ -4,6 +4,12 @@ on:
   pull_request:
     branches:
       - develop
+    paths-ignore:
+      - CHANGELOG.md
+      - download/bookmark-x.zip
+      - package.json
+      - pnpm-lock.yaml
+      - public/manifest.json
   workflow_dispatch:
     inputs:
       expected_sha:
@@ -15,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: ci-${{ github.workflow }}-${{ inputs.expected_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -33,11 +39,13 @@ jobs:
       - name: Bind a manual run to the prepared release commit
         if: github.event_name == 'workflow_dispatch'
         env:
+          DISPATCH_EVENT_SHA: ${{ github.sha }}
           EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha }}
         run: |
           node scripts/release-dispatch-policy.mjs validate \
             --ref-name "$GITHUB_REF_NAME" \
             --expected-sha "$EXPECTED_RELEASE_SHA" \
+            --event-sha "$DISPATCH_EVENT_SHA" \
             --actual-sha "$(git rev-parse HEAD)"
 
       - name: Install pnpm
