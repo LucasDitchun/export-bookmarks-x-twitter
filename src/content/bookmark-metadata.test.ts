@@ -89,6 +89,62 @@ describe("saveBookmarkMetadata", () => {
     });
   });
 
+  it("reloads current tag assignments before each modal save", async () => {
+    const original = { ...bookmark, tagIds: [] as string[] };
+    let currentTagIds: string[] = [];
+    const tags: Array<{ id: string; name: string; normalizedName: string }> = [];
+    const requests: UiRequest[] = [];
+    const send = vi.fn(
+      async (request: UiRequest): Promise<RuntimeResponse<unknown>> => {
+        requests.push(request);
+        if (request.type === "GET_BOOKMARK") {
+          return {
+            ok: true,
+            data: { bookmark: { ...original, tagIds: [...currentTagIds] } },
+          };
+        }
+        if (request.type === "LIST_TAGS") {
+          return { ok: true, data: { tags: [...tags] } };
+        }
+        if (request.type === "LIST_FOLDERS") {
+          return { ok: true, data: { folders: [] } };
+        }
+        if (request.type === "ADD_BOOKMARK_TAG") {
+          const tag = {
+            id: "tag-generated",
+            name: request.payload.name,
+            normalizedName: request.payload.name.toLocaleLowerCase("en-US"),
+          };
+          tags.push(tag);
+          currentTagIds = [tag.id];
+        }
+        if (request.type === "REMOVE_BOOKMARK_TAG") {
+          currentTagIds = currentTagIds.filter((id) => id !== request.payload.tagId);
+        }
+        return {
+          ok: true,
+          data: { bookmark: { ...original, tagIds: [...currentTagIds] } },
+        };
+      },
+    );
+
+    await saveBookmarkMetadata({
+      bookmark: original,
+      values: { description: "", tags: "Research", folder: "" },
+      send,
+    });
+    await saveBookmarkMetadata({
+      bookmark: original,
+      values: { description: "", tags: "", folder: "" },
+      send,
+    });
+
+    expect(requests).toContainEqual({
+      type: "REMOVE_BOOKMARK_TAG",
+      payload: { id: "123", tagId: "tag-generated" },
+    });
+  });
+
   it("rejects invalid modal values before sending any partial update", async () => {
     const send = vi.fn(async (): Promise<RuntimeResponse<unknown>> => ({
       ok: true,

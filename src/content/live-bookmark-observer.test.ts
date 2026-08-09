@@ -137,6 +137,46 @@ describe("startLiveBookmarkObserver", () => {
     observer.stop();
   });
 
+  it("keeps tracking the X action when the metadata modal is dismissed", async () => {
+    const button = renderTweet();
+    const events: ContentEvent[] = [];
+    const send = vi.fn(
+      async (event: ContentEvent | UiRequest): Promise<RuntimeResponse<unknown>> => {
+        if (event.type.startsWith("LIVE_")) events.push(event as ContentEvent);
+        if (event.type === "LIVE_BOOKMARK_PENDING") {
+          return {
+            ok: true,
+            data: { prompt: true, surface: "modal", opened: false },
+          };
+        }
+        return { ok: true, data: null };
+      },
+    );
+    const observer = startLiveBookmarkObserver({
+      document,
+      stableForMs: 40,
+      timeoutMs: 500,
+      send,
+      translate: (key) => key,
+    });
+
+    button.click();
+    await settleMutation();
+    button.dataset.testid = "removeBookmark";
+    button.setAttribute("aria-pressed", "true");
+    await settleMutation();
+    document
+      .querySelector("bookmark-x-note-modal")
+      ?.shadowRoot?.querySelector<HTMLButtonElement>("button.close")
+      ?.click();
+    await vi.advanceTimersByTimeAsync(40);
+    await settleMutation();
+
+    observer.stop();
+    expect(events.some(({ type }) => type === "LIVE_BOOKMARK_CONFIRMED")).toBe(true);
+    expect(events.some(({ type }) => type === "LIVE_BOOKMARK_CANCELLED")).toBe(false);
+  });
+
   it("persists modal note, tags, and folder after X confirms the bookmark", async () => {
     const button = renderTweet();
     const metadataRequests: UiRequest[] = [];

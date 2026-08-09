@@ -36,6 +36,7 @@ export interface LiveBookmarkObserverController {
 interface ActiveIntent {
   controller: AbortController;
   intentId: string;
+  metadataController: AbortController | null;
   modal: BookmarkModalController | null;
   prepareMetadata?: (bookmark: BookmarkRecord) => Promise<void>;
 }
@@ -160,14 +161,17 @@ export function startLiveBookmarkObserver(
   ): Promise<void> => {
     const previous = activeByBookmark.get(bookmark.id);
     previous?.controller.abort();
+    previous?.metadataController?.abort();
     const previousModal = modalByBookmark.get(bookmark.id);
     previousModal?.controller.abort();
+    previousModal?.metadataController?.abort();
     previousModal?.modal?.destroy();
     modalByBookmark.delete(bookmark.id);
 
     const active: ActiveIntent = {
       controller: new AbortController(),
       intentId: randomIntentId(),
+      metadataController: null,
       modal: null,
     };
     activeByBookmark.set(bookmark.id, active);
@@ -200,6 +204,8 @@ export function startLiveBookmarkObserver(
       intentResult.surface === "modal"
     ) {
       let modal: BookmarkModalController | null = null;
+      const metadataController = new AbortController();
+      active.metadataController = metadataController;
       let savedBookmark: BookmarkRecord | null = null;
       let pendingValues: Parameters<typeof saveBookmarkMetadata>[0]["values"] | null =
         null;
@@ -218,7 +224,7 @@ export function startLiveBookmarkObserver(
                 bookmark: savedBookmark,
                 values: latest,
                 send: options.send,
-                signal: active.controller.signal,
+                signal: metadataController.signal,
               });
             }
           })
@@ -239,7 +245,7 @@ export function startLiveBookmarkObserver(
             options.onChanged?.(bookmark.id);
             active.modal?.setState("ready", options.translate("liveBookmarkSaved"));
           } catch {
-            if (!active.controller.signal.aborted) {
+            if (!metadataController.signal.aborted) {
               active.modal?.setState("ready", options.translate("liveBookmarkFailed"));
             }
           }
@@ -247,8 +253,12 @@ export function startLiveBookmarkObserver(
         onClose: () => {
           if (modal && modalByBookmark.get(bookmark.id) === active) {
             modalByBookmark.delete(bookmark.id);
-            active.controller.abort();
+            active.metadataController?.abort();
+            active.metadataController = null;
+            active.modal = null;
+            delete active.prepareMetadata;
             modal.destroy();
+            modal = null;
           }
         },
       });
@@ -261,9 +271,9 @@ export function startLiveBookmarkObserver(
         const values = await loadBookmarkMetadataValues({
           bookmark: record,
           send: options.send,
-          signal: active.controller.signal,
+          signal: metadataController.signal,
         });
-        if (!active.controller.signal.aborted) modal?.setValues(values);
+        if (!metadataController.signal.aborted) modal?.setValues(values);
       };
     }
 
@@ -337,9 +347,11 @@ export function startLiveBookmarkObserver(
       options.document.removeEventListener("click", onClick, true);
       for (const active of activeByBookmark.values()) {
         active.controller.abort();
+        active.metadataController?.abort();
       }
       for (const active of new Set(modalByBookmark.values())) {
         active.controller.abort();
+        active.metadataController?.abort();
         active.modal?.destroy();
       }
       activeByBookmark.clear();
