@@ -15,7 +15,8 @@ const VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
 const CONVENTIONAL_PATTERN =
   /^(?<type>[a-zA-Z][a-zA-Z0-9-]*)(?:\((?<scope>[^)]+)\))?(?<breaking>!)?: (?<summary>.+)$/u;
 const BREAKING_FOOTER_PATTERN = /^BREAKING(?: |-)?CHANGE:\s*.+$/imu;
-const RELEASE_COMMIT_PATTERN = /^chore\(release\): prepare v\d+\.\d+\.\d+$/u;
+const RELEASE_COMMIT_PATTERN =
+  /^chore\(release\): prepare v\d+\.\d+\.\d+(?: \(#\d+\))?$/u;
 const MAXIMUM_CHROME_COMPONENT = 65_535;
 
 export class Version {
@@ -82,6 +83,10 @@ export function parseConventionalCommit(input) {
     summary: match.groups.summary,
     breaking: match.groups.breaking === "!" || BREAKING_FOOTER_PATTERN.test(body),
   };
+}
+
+export function isReleaseCommitSubject(subject) {
+  return RELEASE_COMMIT_PATTERN.test(String(subject).trim());
 }
 
 function normalizeCommits(commits) {
@@ -259,7 +264,7 @@ function collectCommits(baseRef, headRef) {
       const [sha, subject, ...body] = record.split("\x1f");
       return { sha, subject, body: body.join("\x1f").trim() };
     })
-    .filter((commit) => !RELEASE_COMMIT_PATTERN.test(commit.subject));
+    .filter((commit) => !isReleaseCommitSubject(commit.subject));
 }
 
 function buildPlan(baseRef, headRef, override) {

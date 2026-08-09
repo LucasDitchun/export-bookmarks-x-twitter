@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   assertPreparedChangelog,
   calculateNextVersion,
+  isReleaseCommitSubject,
   parseConventionalCommit,
   updateChangelog,
 } from "./release-train.mjs";
@@ -11,6 +12,12 @@ import {
 function commits(type, count) {
   return Array.from({ length: count }, (_, index) => `${type}: change ${index + 1}`);
 }
+
+test("ignores release preparation commits after GitHub squash merges", () => {
+  assert.equal(isReleaseCommitSubject("chore(release): prepare v0.1.1"), true);
+  assert.equal(isReleaseCommitSubject("chore(release): prepare v0.1.1 (#24)"), true);
+  assert.equal(isReleaseCommitSubject("chore(release): prepare v0.1.1 later"), false);
+});
 
 test("batches any number of pre-1.0 features and fixes into one patch", () => {
   const messages = [...commits("feat", 12), ...commits("fix", 19)];
