@@ -16,7 +16,9 @@ function commits(type, count) {
 test("ignores release preparation commits after GitHub squash merges", () => {
   assert.equal(isReleaseCommitSubject("chore(release): prepare v0.1.1"), true);
   assert.equal(isReleaseCommitSubject("chore(release): prepare v0.1.1 (#24)"), true);
+  assert.equal(isReleaseCommitSubject("chore(staging): prepare v0.1.1"), true);
   assert.equal(isReleaseCommitSubject("chore(release): prepare v0.1.1 later"), false);
+  assert.equal(isReleaseCommitSubject("chore(staging): prepare v0.1.1 later"), false);
 });
 
 test("batches any number of pre-1.0 features and fixes into one patch", () => {
