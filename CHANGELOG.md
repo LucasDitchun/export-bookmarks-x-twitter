@@ -21,6 +21,7 @@ All notable changes to Bookmark X are documented in this file.
 - inject local metadata into X posts (#16) (`d810e07`)
 - add incremental bookmark updates (#17) (`bb786cd`)
 - add configurable TXT and Markdown exports (#18) (`1235cbd`)
+- redesign extension navigation and surfaces (#35) (`e7a52e8`)
 
 ### Fixes
 
@@ -32,6 +33,7 @@ All notable changes to Bookmark X are documented in this file.
 - preserve live bookmark metadata state (#28) (`c5d803e`)
 - clear semantic data with archive (#30) (`0a75693`)
 - keep bookmark search results consistent (#32) (`5c05092`)
+- align semantic gate with staging profile (#36) (`dc05f2c`)
 
 ### Performance
 
@@ -41,3 +43,4 @@ All notable changes to Bookmark X are documented in this file.
 
 - add batched release train (`9febbb1`)
 - harden release candidate (`7f9585d`)
+- move full validation to staging (#34) (`510b4b8`)
