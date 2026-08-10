@@ -572,8 +572,9 @@ describe("popup app", () => {
     app.destroy();
   });
 
-  it("opens the uncategorized view by default and selects its first bookmark", async () => {
+  it("loads the uncategorized view and opens details only after an explicit selection", async () => {
     const requests: Array<{ type: string; payload?: unknown }> = [];
+    const onBookmarkOpened = vi.fn();
     const sendMessage = ((request) => {
       requests.push(request);
       if (request.type === "GET_STATUS") {
@@ -593,7 +594,13 @@ describe("popup app", () => {
       }
       return Promise.resolve({ ok: true as const, data: undefined });
     }) as SendMessage;
-    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      onBookmarkOpened,
+    });
     await app.ready;
 
     expect(requests).toContainEqual({
@@ -625,6 +632,9 @@ describe("popup app", () => {
     expect(document.getElementById("selected-category-indicator")?.textContent).toBe(
       "bookmarkNeedsCategory",
     );
+    expect(onBookmarkOpened).not.toHaveBeenCalled();
+    document.querySelector<HTMLButtonElement>(".bookmark-option")?.click();
+    await vi.waitFor(() => expect(onBookmarkOpened).toHaveBeenCalledOnce());
     app.setCategorizationFields({
       note: false,
       tags: false,

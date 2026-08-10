@@ -36,9 +36,9 @@ const MODAL_STYLES = `
   :host {
     all: initial;
     color-scheme: light;
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 18px;
-    line-height: 1.45;
+    font-family: "Segoe UI Variable Text", "Helvetica Neue", Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
     position: fixed;
     inset: 0;
     z-index: 2147483647;
@@ -47,58 +47,79 @@ const MODAL_STYLES = `
   *, *::before, *::after { box-sizing: border-box; }
   .backdrop {
     align-items: center;
-    background: rgb(15 17 13 / 72%);
+    background: rgb(15 20 25 / 48%);
     display: flex;
     inset: 0;
     justify-content: center;
-    padding: 24px;
+    padding: 16px;
     position: absolute;
   }
   .dialog {
-    background: #fffef6;
-    border: 2px solid #11120f;
-    border-radius: 18px;
-    box-shadow: 8px 8px 0 #11120f;
-    color: #11120f;
-    max-height: min(760px, calc(100vh - 48px));
-    max-width: 620px;
+    background: #fff;
+    border: 1px solid #cfd9de;
+    border-radius: 20px;
+    box-shadow: 0 20px 64px rgb(15 20 25 / 24%);
+    color: #0f1419;
+    max-height: min(680px, calc(100vh - 32px));
+    max-width: 480px;
     overflow: auto;
-    padding: clamp(22px, 5vw, 38px);
+    padding: 20px;
     width: 100%;
   }
-  .heading { align-items: start; display: flex; gap: 20px; justify-content: space-between; }
-  h2 { font-size: clamp(1.6rem, 6vw, 2.35rem); line-height: 1.05; margin: 0; }
-  .bookmark { border-left: 5px solid #caff4a; font-family: ui-monospace, monospace; margin: 18px 0 24px; padding-left: 14px; }
-  .status { border: 2px solid #45483f; border-radius: 9px; margin: 0 0 18px; padding: 12px 14px; }
+  .heading { align-items: start; display: flex; gap: 12px; justify-content: space-between; }
+  h2 { font-size: 1.25rem; letter-spacing: -0.02em; line-height: 1.2; margin: 0; }
+  .bookmark {
+    background: #f7f9f9;
+    border-radius: 12px;
+    color: #536471;
+    display: -webkit-box;
+    font-size: 0.875rem;
+    margin: 14px 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    padding: 10px 12px;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .status { border: 1px solid #cfd9de; border-radius: 12px; margin: 0 0 14px; padding: 10px 12px; }
   .status[data-state="success"] { border-color: #16733d; }
   .status[data-state="error"] { border-color: #a52222; }
-  label { display: block; font-weight: 700; margin-top: 18px; }
+  form { display: grid; gap: 12px; }
+  form[hidden] { display: none; }
+  label { color: #536471; display: block; font-size: 0.8125rem; font-weight: 700; }
+  .metadata-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .field { min-width: 0; }
   input, textarea {
     background: white;
-    border: 2px solid #45483f;
-    border-radius: 9px;
-    color: #11120f;
+    border: 1px solid #cfd9de;
+    border-radius: 12px;
+    color: #0f1419;
     display: block;
     font: inherit;
-    margin-top: 7px;
+    margin-top: 5px;
     min-height: 44px;
     padding: 10px 12px;
     width: 100%;
   }
-  textarea { min-height: 132px; resize: vertical; }
+  textarea { min-height: 112px; resize: vertical; }
   button {
-    background: #11120f;
-    border: 2px solid #11120f;
-    border-radius: 9px;
+    background: #0f1419;
+    border: 1px solid #0f1419;
+    border-radius: 999px;
     color: white;
     cursor: pointer;
-    font: 700 1rem/1 Georgia, serif;
+    font: 700 0.875rem/1 "Segoe UI Variable Text", "Helvetica Neue", Helvetica, sans-serif;
     min-height: 44px;
     padding: 10px 18px;
   }
-  .close { background: transparent; color: #11120f; flex: 0 0 auto; }
-  .save { margin-top: 24px; width: 100%; }
-  :focus-visible { outline: 4px solid #1769e0; outline-offset: 3px; }
+  .close { background: transparent; color: #0f1419; flex: 0 0 auto; }
+  .save { margin-top: 2px; width: 100%; }
+  :focus-visible { outline: 3px solid #1d9bf0; outline-offset: 2px; }
+  @media (max-width: 520px) {
+    .backdrop { align-items: end; padding: 8px; }
+    .dialog { border-radius: 20px 20px 12px 12px; max-height: calc(100vh - 16px); padding: 18px; }
+    .metadata-grid { grid-template-columns: 1fr; }
+  }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; }
   }
@@ -106,7 +127,7 @@ const MODAL_STYLES = `
 
 function appendLabelledInput(
   document: Document,
-  form: HTMLFormElement,
+  container: HTMLElement,
   id: string,
   labelText: string,
   value: string,
@@ -118,7 +139,10 @@ function appendLabelledInput(
   input.id = id;
   input.value = value;
   input.autocomplete = "off";
-  form.append(label, input);
+  const field = document.createElement("div");
+  field.className = "field";
+  field.append(label, input);
+  container.append(field);
   return input;
 }
 
@@ -166,20 +190,6 @@ export function createBookmarkModal(
   status.hidden = status.textContent.length === 0;
 
   const form = document.createElement("form");
-  const tags = appendLabelledInput(
-    document,
-    form,
-    "bookmark-x-modal-tags",
-    options.labels.tags,
-    options.values?.tags ?? "",
-  );
-  const folder = appendLabelledInput(
-    document,
-    form,
-    "bookmark-x-modal-folder",
-    options.labels.folder,
-    options.values?.folder ?? "",
-  );
   const descriptionLabel = document.createElement("label");
   descriptionLabel.htmlFor = "bookmark-x-modal-description";
   descriptionLabel.textContent = options.labels.description;
@@ -187,11 +197,29 @@ export function createBookmarkModal(
   description.id = "bookmark-x-modal-description";
   description.maxLength = 20_000;
   description.value = options.values?.description ?? "";
+  form.append(descriptionLabel, description);
+
+  const metadataGrid = document.createElement("div");
+  metadataGrid.className = "metadata-grid";
+  const tags = appendLabelledInput(
+    document,
+    metadataGrid,
+    "bookmark-x-modal-tags",
+    options.labels.tags,
+    options.values?.tags ?? "",
+  );
+  const folder = appendLabelledInput(
+    document,
+    metadataGrid,
+    "bookmark-x-modal-folder",
+    options.labels.folder,
+    options.values?.folder ?? "",
+  );
   const saveButton = document.createElement("button");
   saveButton.className = "save";
   saveButton.type = "submit";
   saveButton.textContent = options.labels.save;
-  form.append(descriptionLabel, description, saveButton);
+  form.append(metadataGrid, saveButton);
   form.hidden = options.labels.pending !== undefined;
   dialog.append(heading, bookmark, status, form);
   backdrop.append(dialog);
@@ -218,7 +246,7 @@ export function createBookmarkModal(
       return;
     }
     if (event.key !== "Tab") return;
-    const focusable = [closeButton, tags, folder, description, saveButton];
+    const focusable = [closeButton, description, tags, folder, saveButton];
     const active = shadow.activeElement;
     if (event.shiftKey && active === focusable[0]) {
       event.preventDefault();

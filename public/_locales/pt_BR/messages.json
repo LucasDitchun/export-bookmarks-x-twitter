@@ -357,5 +357,14 @@
   "semanticToggleError": { "message": "Não foi possível alterar a busca semântica." },
   "liveBookmarkFailed": {
     "message": "O X não confirmou esta alteração. Seu arquivo local não foi alterado."
+  },
+  "primaryNavigation": { "message": "Navegação principal" },
+  "navHome": { "message": "Início" },
+  "navLibrary": { "message": "Biblioteca" },
+  "navSettings": { "message": "Ajustes" },
+  "bookmarkDetailTitle": { "message": "Detalhes do bookmark" },
+  "backToLibrary": { "message": "Voltar para a biblioteca" },
+  "settingsViewHelp": {
+    "message": "Exporte, faça backup, altere o idioma e as preferências."
   }
 }

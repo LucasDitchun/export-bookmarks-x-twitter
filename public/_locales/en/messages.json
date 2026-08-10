@@ -350,5 +350,12 @@
   "semanticToggleError": { "message": "Could not change semantic search." },
   "liveBookmarkFailed": {
     "message": "X did not confirm this change. Your local archive was not changed."
-  }
+  },
+  "primaryNavigation": { "message": "Primary navigation" },
+  "navHome": { "message": "Home" },
+  "navLibrary": { "message": "Library" },
+  "navSettings": { "message": "Settings" },
+  "bookmarkDetailTitle": { "message": "Bookmark details" },
+  "backToLibrary": { "message": "Back to library" },
+  "settingsViewHelp": { "message": "Export, backup, language, and preferences." }
 }

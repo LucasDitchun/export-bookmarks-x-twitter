@@ -435,5 +435,12 @@
   },
   "liveBookmarkFailed": {
     "message": "X が変更を確認しなかったため、ローカルアーカイブは変更されませんでした。"
-  }
+  },
+  "primaryNavigation": { "message": "メインナビゲーション" },
+  "navHome": { "message": "ホーム" },
+  "navLibrary": { "message": "ライブラリ" },
+  "navSettings": { "message": "設定" },
+  "bookmarkDetailTitle": { "message": "ブックマークの詳細" },
+  "backToLibrary": { "message": "ライブラリに戻る" },
+  "settingsViewHelp": { "message": "エクスポート、バックアップ、言語、環境設定。" }
 }

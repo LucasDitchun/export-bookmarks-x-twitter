@@ -439,5 +439,12 @@
   },
   "liveBookmarkFailed": {
     "message": "X hat diese Änderung nicht bestätigt. Dein lokales Archiv blieb unverändert."
-  }
+  },
+  "primaryNavigation": { "message": "Hauptnavigation" },
+  "navHome": { "message": "Start" },
+  "navLibrary": { "message": "Bibliothek" },
+  "navSettings": { "message": "Einstellungen" },
+  "bookmarkDetailTitle": { "message": "Lesezeichen-Details" },
+  "backToLibrary": { "message": "Zurück zur Bibliothek" },
+  "settingsViewHelp": { "message": "Export, Sicherung, Sprache und Einstellungen." }
 }

@@ -395,5 +395,12 @@
   "semanticReindexError": { "message": "无法重建语义索引。" },
   "semanticRemoveError": { "message": "无法移除全部语义搜索数据。" },
   "semanticToggleError": { "message": "无法更改语义搜索设置。" },
-  "liveBookmarkFailed": { "message": "X 未确认此更改。本地归档未被修改。" }
+  "liveBookmarkFailed": { "message": "X 未确认此更改。本地归档未被修改。" },
+  "primaryNavigation": { "message": "主导航" },
+  "navHome": { "message": "首页" },
+  "navLibrary": { "message": "收藏库" },
+  "navSettings": { "message": "设置" },
+  "bookmarkDetailTitle": { "message": "书签详情" },
+  "backToLibrary": { "message": "返回收藏库" },
+  "settingsViewHelp": { "message": "导出、备份、语言和偏好设置。" }
 }
