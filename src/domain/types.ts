@@ -9,24 +9,67 @@ export interface BookmarkFolder {
   name: string;
 }
 
+export interface FolderRecord {
+  id: string;
+  name: string;
+  parentId: string | null;
+  deletedAt?: string;
+}
+
+export interface BookmarkFolderMembership {
+  bookmarkId: string;
+  folderId: string;
+}
+
+export interface BookmarkTag {
+  id: string;
+  name: string;
+  normalizedName: string;
+  deletedAt?: string;
+}
+
+export type BookmarkStatus = "current" | "archived";
+
+export interface BookmarkVideoMedia {
+  thumbnailUrl: string | null;
+  /** Canonical X status URL. Direct MP4/CDN URLs are intentionally not stored. */
+  postUrl: string;
+}
+
+export interface BookmarkMedia {
+  images: string[];
+  videos: BookmarkVideoMedia[];
+}
+
 export interface BookmarkRecord {
   id: string;
   text: string;
   url: string;
   author: BookmarkAuthor;
   postCreatedAt: string;
-  folders: BookmarkFolder[];
-  firstArchivedAt: string;
+  media: BookmarkMedia;
+  note: string;
+  folderId: string | null;
+  tagIds: string[];
+  firstSavedAt: string;
   lastSeenAt: string;
-  isCurrent: boolean;
+  archivedAt: string | null;
+  metadataUpdatedAt: string;
+  status: BookmarkStatus;
+}
+
+export interface HydratedBookmarkRecord extends BookmarkRecord {
+  folders: BookmarkFolder[];
 }
 
 export type BookmarkSnapshot = Pick<
   BookmarkRecord,
   "id" | "text" | "url" | "author" | "postCreatedAt"
->;
+> & {
+  /** Optional only for compatibility with an already-running older content script. */
+  media?: BookmarkMedia;
+};
 
-export type ExportFormat = "full" | "urls";
 export const SUPPORTED_LOCALES = [
   "en",
   "pt_BR",
@@ -46,11 +89,6 @@ export function isSupportedLocale(value: unknown): value is SupportedLocale {
   );
 }
 
-export interface ExportOptions {
-  format: ExportFormat;
-  locale: SupportedLocale;
-}
-
 export interface ArchiveStats {
   total: number;
   current: number;
@@ -59,6 +97,13 @@ export interface ArchiveStats {
 }
 
 export type ScrapeStatus = "idle" | "running" | "completed" | "cancelled" | "error";
+export type ScrapeMode = "quick" | "full";
+export type ScrapeCompletionReason = "checkpoint_stop" | "stable_end" | "full_fallback";
+
+export interface ScrapeCheckpointState {
+  ids: string[];
+  updatedAt: string;
+}
 
 export interface ScrapeRun {
   id: string;
@@ -70,4 +115,10 @@ export interface ScrapeRun {
   startedAt: string;
   updatedAt: string;
   errorCode: string | null;
+  mode: ScrapeMode;
+  quickStopThreshold?: number;
+  checkpointIds: string[];
+  checkpointCandidates: string[];
+  checkpointMatchIds: string[];
+  completionReason: ScrapeCompletionReason | null;
 }

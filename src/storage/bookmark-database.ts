@@ -1,0 +1,313 @@
+import type {
+  BookmarkFolder,
+  BookmarkFolderMembership,
+  BookmarkRecord,
+  FolderRecord,
+} from "../domain/types";
+
+export const BOOKMARK_DATABASE_VERSION = 4;
+export const BOOKMARK_FOLDERS_STORE = "bookmarkFolders";
+export const BOOKMARKS_STORE = "bookmarks";
+export const FOLDERS_STORE = "folders";
+export const META_STORE = "meta";
+export const SEEN_STORE = "seen";
+export const TAGS_STORE = "tags";
+
+interface LegacyBookmarkRecord {
+  id: string;
+  text: string;
+  url: string;
+  author: BookmarkRecord["author"];
+  postCreatedAt: string;
+  folders: BookmarkFolder[];
+  firstArchivedAt: string;
+  lastSeenAt: string;
+  isCurrent: boolean;
+}
+
+export interface BookmarkDatabaseOptions {
+  factory?: IDBFactory;
+  onBlocked?: (event: IDBVersionChangeEvent) => void;
+}
+
+function createBookmarkIndexes(store: IDBObjectStore): void {
+  if (!store.indexNames.contains("byStatusSaved")) {
+    store.createIndex("byStatusSaved", ["status", "firstSavedAt", "id"], {
+      unique: false,
+    });
+  }
+  if (!store.indexNames.contains("byFolder")) {
+    store.createIndex("byFolder", "folderId", { unique: false });
+  }
+  if (!store.indexNames.contains("byTag")) {
+    store.createIndex("byTag", "tagIds", { multiEntry: true, unique: false });
+  }
+}
+
+function createNamedStore(database: IDBDatabase, name: string): IDBObjectStore {
+  const store = database.createObjectStore(name, { keyPath: "id" });
+  store.createIndex("byName", "name", { unique: false });
+  return store;
+}
+
+function createFolderIndexes(store: IDBObjectStore): void {
+  if (!store.indexNames.contains("byName")) {
+    store.createIndex("byName", "name", { unique: false });
+  }
+  if (!store.indexNames.contains("byParent")) {
+    store.createIndex("byParent", "parentId", { unique: false });
+  }
+}
+
+function createFoldersStore(database: IDBDatabase): IDBObjectStore {
+  const store = database.createObjectStore(FOLDERS_STORE, { keyPath: "id" });
+  createFolderIndexes(store);
+  return store;
+}
+
+function createBookmarkFoldersStore(database: IDBDatabase): IDBObjectStore {
+  const store = database.createObjectStore(BOOKMARK_FOLDERS_STORE, {
+    keyPath: ["bookmarkId", "folderId"],
+  });
+  store.createIndex("byBookmark", "bookmarkId", { unique: false });
+  store.createIndex("byFolder", "folderId", { unique: false });
+  return store;
+}
+
+function migrateVersionOne(transaction: IDBTransaction): void {
+  const bookmarks = transaction.objectStore(BOOKMARKS_STORE);
+  const folders = transaction.objectStore(FOLDERS_STORE);
+  const bookmarkFolders = transaction.objectStore(BOOKMARK_FOLDERS_STORE);
+  const cursorRequest = bookmarks.openCursor();
+
+  cursorRequest.addEventListener("success", () => {
+    const cursor = cursorRequest.result;
+    if (cursor === null) return;
+
+    const legacy = cursor.value as LegacyBookmarkRecord;
+    const firstSavedAt = legacy.firstArchivedAt;
+    const folder = legacy.folders[0] ?? null;
+    for (const legacyFolder of legacy.folders) {
+      folders.put({ ...legacyFolder, parentId: null } satisfies FolderRecord);
+    }
+    if (folder !== null) {
+      bookmarkFolders.put({
+        bookmarkId: legacy.id,
+        folderId: folder.id,
+      } satisfies BookmarkFolderMembership);
+    }
+
+    const migrated: BookmarkRecord = {
+      id: legacy.id,
+      text: legacy.text,
+      url: legacy.url,
+      author: legacy.author,
+      postCreatedAt: legacy.postCreatedAt,
+      media: { images: [], videos: [] },
+      note: "",
+      folderId: folder?.id ?? null,
+      tagIds: [],
+      firstSavedAt,
+      lastSeenAt: legacy.lastSeenAt,
+      archivedAt: legacy.isCurrent ? null : legacy.lastSeenAt,
+      metadataUpdatedAt: firstSavedAt,
+      status: legacy.isCurrent ? "current" : "archived",
+    };
+    cursor.update(migrated);
+    cursor.continue();
+  });
+}
+
+function migrateVersionTwo(transaction: IDBTransaction): void {
+  const bookmarks = transaction.objectStore(BOOKMARKS_STORE);
+  const folders = transaction.objectStore(FOLDERS_STORE);
+  const memberships = transaction.objectStore(BOOKMARK_FOLDERS_STORE);
+  const folderRequest = folders.getAll();
+  const bookmarkRequest = bookmarks.getAll();
+  const membershipRequest = memberships.getAll();
+  let completed = 0;
+
+  const normalize = (): void => {
+    completed += 1;
+    if (completed !== 3) return;
+
+    const legacyFolders = folderRequest.result as Array<
+      BookmarkFolder & { parentId?: string | null }
+    >;
+    const normalizedFolders = legacyFolders.map((folder): FolderRecord => ({
+      id: folder.id,
+      name: folder.name,
+      // Version 2 had no hierarchy. Treat any unexpected parent as untrusted
+      // legacy data so the new tree cannot begin with an orphan or cycle.
+      parentId: null,
+    }));
+    const folderIds = new Set(normalizedFolders.map(({ id }) => id));
+    const membershipsByBookmark = new Map<string, string[]>();
+    for (const membership of membershipRequest.result as BookmarkFolderMembership[]) {
+      if (!folderIds.has(membership.folderId)) continue;
+      const assigned = membershipsByBookmark.get(membership.bookmarkId) ?? [];
+      assigned.push(membership.folderId);
+      membershipsByBookmark.set(membership.bookmarkId, assigned);
+    }
+
+    for (const folder of normalizedFolders) folders.put(folder);
+    memberships.clear();
+    for (const bookmark of bookmarkRequest.result as BookmarkRecord[]) {
+      const legacyFallback = membershipsByBookmark
+        .get(bookmark.id)
+        ?.sort((left, right) => left.localeCompare(right))[0];
+      const folderId =
+        bookmark.folderId !== null && folderIds.has(bookmark.folderId)
+          ? bookmark.folderId
+          : (legacyFallback ?? null);
+      bookmarks.put({
+        ...bookmark,
+        folderId,
+        media: { images: [], videos: [] },
+      } satisfies BookmarkRecord);
+      if (folderId !== null) {
+        memberships.put({
+          bookmarkId: bookmark.id,
+          folderId,
+        } satisfies BookmarkFolderMembership);
+      }
+    }
+  };
+
+  folderRequest.addEventListener("success", normalize, { once: true });
+  bookmarkRequest.addEventListener("success", normalize, { once: true });
+  membershipRequest.addEventListener("success", normalize, { once: true });
+}
+
+function migrateVersionThree(transaction: IDBTransaction): void {
+  const bookmarks = transaction.objectStore(BOOKMARKS_STORE);
+  const cursorRequest = bookmarks.openCursor();
+  cursorRequest.addEventListener("success", () => {
+    const cursor = cursorRequest.result;
+    if (cursor === null) return;
+    const legacy = cursor.value as Omit<BookmarkRecord, "media"> &
+      Partial<Pick<BookmarkRecord, "media">>;
+    cursor.update({
+      ...legacy,
+      media: legacy.media ?? { images: [], videos: [] },
+    } satisfies BookmarkRecord);
+    cursor.continue();
+  });
+}
+
+function upgradeSchema(request: IDBOpenDBRequest, event: IDBVersionChangeEvent): void {
+  const database = request.result;
+  const transaction = request.transaction;
+  if (transaction === null) throw new Error("Missing IndexedDB upgrade transaction.");
+
+  const bookmarks = database.objectStoreNames.contains(BOOKMARKS_STORE)
+    ? transaction.objectStore(BOOKMARKS_STORE)
+    : database.createObjectStore(BOOKMARKS_STORE, { keyPath: "id" });
+  createBookmarkIndexes(bookmarks);
+
+  if (!database.objectStoreNames.contains(SEEN_STORE)) {
+    const seen = database.createObjectStore(SEEN_STORE, { keyPath: "key" });
+    seen.createIndex("runId", "runId", { unique: false });
+  }
+  if (!database.objectStoreNames.contains(META_STORE)) {
+    database.createObjectStore(META_STORE, { keyPath: "key" });
+  }
+  const folders = database.objectStoreNames.contains(FOLDERS_STORE)
+    ? transaction.objectStore(FOLDERS_STORE)
+    : createFoldersStore(database);
+  createFolderIndexes(folders);
+  if (!database.objectStoreNames.contains(BOOKMARK_FOLDERS_STORE)) {
+    createBookmarkFoldersStore(database);
+  }
+  if (!database.objectStoreNames.contains(TAGS_STORE)) {
+    createNamedStore(database, TAGS_STORE);
+  }
+
+  if (event.oldVersion === 1) migrateVersionOne(transaction);
+  if (event.oldVersion === 2) migrateVersionTwo(transaction);
+  if (event.oldVersion === 3) migrateVersionThree(transaction);
+}
+
+export function requestAsPromise<T>(request: IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    request.addEventListener("success", () => resolve(request.result), {
+      once: true,
+    });
+    request.addEventListener(
+      "error",
+      () => reject(request.error ?? new Error("IndexedDB request failed.")),
+      { once: true },
+    );
+  });
+}
+
+export function transactionDone(transaction: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    transaction.addEventListener("complete", () => resolve(), { once: true });
+    transaction.addEventListener(
+      "abort",
+      () => reject(transaction.error ?? new Error("IndexedDB transaction aborted.")),
+      { once: true },
+    );
+    transaction.addEventListener(
+      "error",
+      () => reject(transaction.error ?? new Error("IndexedDB transaction failed.")),
+      { once: true },
+    );
+  });
+}
+
+export class BookmarkDatabase {
+  private databasePromise: Promise<IDBDatabase> | null = null;
+  private readonly factory: IDBFactory;
+
+  constructor(
+    private readonly databaseName = "bookmark-x",
+    private readonly options: BookmarkDatabaseOptions = {},
+  ) {
+    this.factory = options.factory ?? indexedDB;
+  }
+
+  open(): Promise<IDBDatabase> {
+    if (this.databasePromise !== null) return this.databasePromise;
+
+    const opening = new Promise<IDBDatabase>((resolve, reject) => {
+      const request = this.factory.open(this.databaseName, BOOKMARK_DATABASE_VERSION);
+      request.addEventListener("upgradeneeded", (event) => {
+        upgradeSchema(request, event);
+      });
+      request.addEventListener("blocked", (event) => {
+        this.options.onBlocked?.(event);
+      });
+      request.addEventListener(
+        "success",
+        () => {
+          const database = request.result;
+          database.addEventListener("versionchange", () => {
+            database.close();
+            if (this.databasePromise === opening) this.databasePromise = null;
+          });
+          resolve(database);
+        },
+        { once: true },
+      );
+      request.addEventListener(
+        "error",
+        () => reject(request.error ?? new Error("IndexedDB open failed.")),
+        { once: true },
+      );
+    });
+
+    this.databasePromise = opening;
+    void opening.catch(() => {
+      if (this.databasePromise === opening) this.databasePromise = null;
+    });
+    return opening;
+  }
+
+  async close(): Promise<void> {
+    const opening = this.databasePromise;
+    this.databasePromise = null;
+    if (opening !== null) (await opening).close();
+  }
+}

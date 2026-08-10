@@ -1,17 +1,26 @@
 # Bookmark X Privacy Policy
 
-Last updated: July 29, 2026
+Last updated: August 9, 2026
 
 Bookmark X is a local-first Chrome extension that captures bookmarks rendered
-on the X bookmarks page and exports them as text. It has no backend, analytics,
+on the X bookmarks page and exports them as TXT or Markdown. It has no backend, analytics,
 advertising, telemetry, or X API integration.
 
 ## Data handled
 
 When you explicitly start capture on `x.com/i/bookmarks`, the extension may
 read post IDs, text, author names and usernames, creation dates, and canonical
-post URLs rendered for your signed-in session. It also stores capture
+post URLs rendered for your signed-in session. When present, it may also store
+direct image URLs from X's image host and video poster thumbnails. Video records
+use the canonical post URL; temporary `blob:`, `data:`, or direct MP4/CDN video
+URLs are not retained. It also stores capture
 timestamps, counts, status metadata, and the selected interface language.
+When you click X's bookmark button on another X page, the extension reads only
+that post's rendered public fields and the button state needed to mirror the
+confirmed action in the local archive. On X pages, it also compares the numeric
+IDs of visible posts with your local library so it can show your own note, tags,
+and folder beside matching posts. Unknown posts receive no injected card, and
+this lookup never leaves the device.
 
 Bookmarks can contain private or sensitive information. Treat exported files
 as private files.
@@ -21,11 +30,20 @@ email address, browsing history, or content from arbitrary pages.
 
 ## Purpose and processing
 
-Data is used only to build and display your local archive and create the TXT
-export you request. Bookmark records are stored in IndexedDB; small capture
+Data is used only to build and display your local archive and create the TXT or
+Markdown export you request. Bookmark records are stored in IndexedDB; small capture
 checkpoints are stored in `chrome.storage.local`. Exported files are created
 only on request and are then managed by Chrome and the operating system.
-The selected interface language is stored in `chrome.storage.local`.
+The selected interface language and a public GitHub star-count cache are stored
+in `chrome.storage.local`.
+
+If the user explicitly enables semantic search, Bookmark X builds a local
+vector index from post text, author, private note, tags, and folder path. Model
+inference runs in a dedicated browser worker. Neither the source text nor the
+resulting embeddings are sent to the developer, Hugging Face, or another
+service. The model lifecycle preference and consent timestamp are stored in
+`chrome.storage.local`; embeddings are stored in a separate local IndexedDB
+database.
 
 ## Network access and sharing
 
@@ -33,24 +51,50 @@ Bookmark X does not send captured data to its developer or any extension-owned
 server. It does not sell, rent, share, or use bookmark data for advertising,
 profiling, or credit decisions.
 
+The Settings page can make an unauthenticated request to the fixed public
+GitHub repository endpoint to display its star count. This request uses no
+cookies or credentials, contains no bookmark data, and is made at most once per
+24 hours while a valid local cache is available. If the request fails, only the
+number is hidden; the extension continues to work normally.
+
+Semantic search is disabled by default. Only after the user selects **Download
+and enable** can the extension request the pinned model weights, tokenizer, and
+configuration from `huggingface.co` and its `cdn.hf.co` data hosts. These
+requests contain no bookmark content or user credentials. The downloaded
+files are data consumed by executable JavaScript and WebAssembly already
+packaged in the extension; Bookmark X never downloads or executes remote code.
+
 X itself controls the page and network requests in the signed-in tab. Bookmark
 X reads the resulting page DOM but does not make X API calls or extract
-authentication credentials.
+authentication credentials. It does not fetch or download bookmark media; it
+only records validated URLs already rendered by X.
 
 ## Retention and deletion
 
 Previously captured posts remain in the local archive until you choose
 **Clear archive**, clear extension data, or uninstall the extension. Removing a
-bookmark on X does not automatically erase its archived copy. Downloaded TXT
-files must be deleted separately.
+bookmark on X does not automatically erase its archived copy. Downloaded TXT,
+Markdown, and JSON files must be deleted separately.
+
+The semantic-search settings provide separate actions to cancel an active
+download, rebuild the local index, disable semantic ranking, or remove the
+model cache and index. Removal also clears the locally recorded consent.
+Semantic model files, embeddings, and consent are deliberately excluded from
+JSON backups.
 
 ## Permissions
 
 - `activeTab`: lets the popup verify the current user-invoked tab.
 - `storage`: stores capture state and the interface language preference locally.
 - `unlimitedStorage`: supports a durable local archive.
-- The content script match is restricted to `https://x.com/i/bookmarks*` and
-  `https://www.x.com/i/bookmarks*`.
+- `https://api.github.com/*`: reads the project's public star count for the
+  open-source card in Settings.
+- `https://huggingface.co/*` and `https://*.cdn.hf.co/*`: download only pinned
+  semantic-model data after explicit user consent.
+- The content script match is restricted to `https://x.com/*` and
+  `https://www.x.com/*`. Outside `/i/bookmarks`, it compares visible numeric post
+  IDs locally; it reads the remaining post content only after an explicit
+  bookmark-button click.
 
 Bookmark X does not request cookies, browsing history, downloads, or access to
 arbitrary websites.

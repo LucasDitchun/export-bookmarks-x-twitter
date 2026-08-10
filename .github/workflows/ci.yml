@@ -1,27 +1,45 @@
-name: CI
+name: On-demand validation
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Full commit SHA to validate when local checks were not run
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: bookmark-x-on-demand-${{ inputs.expected_sha }}
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Quality, build, and package
+  validate:
+    name: Validate an unverified commit
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
-      - name: Check out repository
+      - name: Require an exact commit SHA
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          if [[ ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::expected_sha must be a full lowercase commit SHA."
+            exit 1
+          fi
+
+      - name: Check out the requested commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.expected_sha }}
+
+      - name: Bind validation to the requested commit
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -29,33 +47,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Check formatting
-        run: pnpm format:check
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Check release script syntax
-        run: |
-          node --check scripts/version.mjs
-          node --check scripts/package.mjs
-          node --check scripts/chrome-smoke.mjs
-
-      - name: Test with coverage
-        run: pnpm test:coverage
-
-      - name: Build extension
-        run: pnpm build
-
-      - name: Validate and package extension
-        run: pnpm package
+      - name: Run the same local verification profile
+        run: pnpm verify:local

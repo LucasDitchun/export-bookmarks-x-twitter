@@ -1,9 +1,127 @@
 {
+  "backupRestorePartial": {
+    "message": "Libreria ripristinata. Alcune impostazioni non sono state applicate."
+  },
+  "backupTitle": { "message": "Backup e ripristino" },
+  "backupDescription": {
+    "message": "Scarica o ripristina la libreria locale, le cartelle, i tag, le note e le impostazioni in formato JSON."
+  },
+  "exportBackupButton": { "message": "Scarica backup JSON" },
+  "backupFileLabel": { "message": "File di backup JSON" },
+  "restoreModeLabel": { "message": "Modalità di ripristino" },
+  "restoreModeMerge": { "message": "Unisci a questa libreria" },
+  "restoreModeReplace": { "message": "Sostituisci questa libreria" },
+  "restoreBackupButton": { "message": "Ripristina backup" },
+  "backupTooLarge": { "message": "Questo backup è troppo grande." },
+  "backupFileReady": { "message": "Backup pronto per il ripristino." },
+  "backupReading": { "message": "Verifica del backup…" },
+  "confirmReplaceBackup": {
+    "message": "Sostituire tutti i bookmark, le cartelle, i tag, le note e le impostazioni locali con questo backup? L’operazione non può essere annullata."
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$ bookmark ripristinati.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X non ha potuto leggere il file." },
+  "errorInvalidBackup": { "message": "Scegli un backup JSON di Bookmark X valido." },
+  "errorRestoreCaptureRunning": {
+    "message": "Attendi il termine dell’acquisizione attiva prima di ripristinare."
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "La libreria è stata ripristinata, ma alcune impostazioni non sono state applicate. Bookmark X verrà ricaricato per mostrare i dati ripristinati."
+  },
+  "libraryTitle": { "message": "Libreria dei segnalibri" },
+  "libraryHelp": {
+    "message": "Seleziona un segnalibro per aggiungere una nota privata."
+  },
+  "searchLabel": { "message": "Cerca i post salvati" },
+  "searchPlaceholder": { "message": "Scrivi ciò che ricordi" },
+  "searchHelp": {
+    "message": "Cerca testo, persone, note, tag e cartelle. Tutto resta in locale."
+  },
+  "searchButton": { "message": "Cerca" },
+  "searchReady": { "message": "Premi Invio o Cerca." },
+  "searching": { "message": "Ricerca…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ risultati",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "Nessun segnalibro corrispondente in questa vista." },
+  "searchLoadError": { "message": "Impossibile cercare nei segnalibri." },
+  "libraryViewsLabel": { "message": "Viste della libreria dei segnalibri" },
+  "libraryViewInbox": { "message": "In arrivo" },
+  "libraryViewCurrent": { "message": "Ora su X" },
+  "libraryViewArchived": { "message": "Archiviati" },
+  "libraryEmptyInbox": { "message": "Nessun segnalibro senza categoria." },
+  "libraryEmptyCurrent": { "message": "Nessun segnalibro è attualmente salvato su X." },
+  "libraryEmptyArchived": { "message": "Nessun segnalibro archiviato." },
+  "libraryEmpty": { "message": "Acquisisci segnalibri per iniziare la tua libreria." },
+  "libraryLoading": { "message": "Caricamento…" },
+  "libraryLoadError": { "message": "Impossibile caricare i segnalibri." },
+  "loadMoreBookmarks": { "message": "Carica altro" },
+  "tagsLabel": { "message": "Tag" },
+  "tagInputPlaceholder": { "message": "Digita un tag e premi Invio" },
+  "tagHelp": {
+    "message": "Premi Invio per aggiungere. I tag vengono salvati in locale."
+  },
+  "tagSaving": { "message": "Salvataggio…" },
+  "tagAdded": { "message": "Tag aggiunto" },
+  "tagRemoved": { "message": "Tag rimosso" },
+  "tagSaveError": { "message": "Non salvato" },
+  "removeTagLabel": {
+    "message": "Rimuovi tag $TAG$",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
+  "noteLabel": { "message": "Nota privata" },
+  "noteHelp": { "message": "Testo semplice, salvato localmente mentre scrivi." },
+  "noteLoading": { "message": "Caricamento…" },
+  "noteLoadError": { "message": "Impossibile aprire la nota." },
+  "noteSaving": { "message": "Salvataggio…" },
+  "noteSaved": { "message": "Salvata" },
+  "noteSaveError": { "message": "Non salvata" },
+  "folderTitle": { "message": "Cartella" },
+  "folderBreadcrumbLabel": { "message": "Percorso della cartella" },
+  "folderAssignmentLabel": { "message": "Salva nella cartella" },
+  "uncategorizedFolder": { "message": "Senza categoria" },
+  "manageFolders": { "message": "Gestisci cartelle" },
+  "renameTag": { "message": "Rinomina" },
+  "deleteTag": { "message": "Elimina" },
+  "renameTagPrompt": { "message": "Scegli un nuovo nome per il tag" },
+  "deleteTagConfirmation": {
+    "message": "Eliminare $NAME$ da $COUNT$ segnalibri? Il tag scomparirà dalla libreria, ma il suo record resterà salvato localmente.",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
+  "newFolderName": { "message": "Nome" },
+  "parentFolderLabel": { "message": "Cartella principale" },
+  "rootFolder": { "message": "Nessuna cartella principale (primo livello)" },
+  "createFolderButton": { "message": "Crea cartella" },
+  "renameFolder": { "message": "Rinomina" },
+  "renameFolderInputLabel": {
+    "message": "Rinomina $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "Salva nome" },
+  "deleteFolder": { "message": "Elimina" },
+  "deleteFolderConfirmation": {
+    "message": "Eliminare $NAME$ e tutte le sottocartelle? I segnalibri diventeranno senza categoria e i record resteranno salvati localmente.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "Elimina cartella" },
+  "folderSaving": { "message": "Salvataggio…" },
+  "folderSaved": { "message": "Salvato" },
+  "folderDeleting": { "message": "Eliminazione…" },
+  "folderDeleted": { "message": "Cartella eliminata" },
+  "folderCreated": { "message": "Cartella creata" },
+  "folderActionError": { "message": "Impossibile aggiornare le cartelle." },
+  "folderLoadError": { "message": "Impossibile caricare le cartelle." },
   "extensionName": {
     "message": "Bookmark X"
   },
   "extensionDescription": {
-    "message": "Acquisisci i tuoi segnalibri X dalla pagina aperta ed esportali in un archivio TXT locale e privato."
+    "message": "Acquisisci e organizza localmente i segnalibri X ed esporta file TXT o Markdown privati."
   },
   "eyebrow": {
     "message": "Archivio X locale"
@@ -42,7 +160,7 @@
     "message": "Totale salvato"
   },
   "currentLabel": {
-    "message": "Ora su X"
+    "message": "Segnalibri su X"
   },
   "archivedLabel": {
     "message": "Archiviati"
@@ -51,25 +169,58 @@
     "message": "Nessun segnalibro acquisito."
   },
   "lastCaptureAt": {
-    "message": "Acquisito il $DATE$",
+    "message": "Ultima revisione completa: $DATE$",
     "placeholders": {
       "date": {
         "content": "$1"
       }
     }
   },
+  "lastReviewLabel": { "message": "Ultima revisione completa" },
+  "dateTimePattern": {
+    "message": "$DATE$ alle $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": {
-    "message": "Mai acquisito"
+    "message": "Nessuna revisione completa"
   },
   "unknownDate": {
     "message": "Data sconosciuta"
   },
   "captureTitle": {
-    "message": "Acquisisci segnalibri"
+    "message": "Aggiorna segnalibri"
   },
   "captureDescription": {
     "message": "Bookmark X scorre la pagina dei segnalibri aperta e salva localmente ogni post visibile."
   },
+  "captureModeLabel": { "message": "Modalità di revisione" },
+  "captureModeQuick": { "message": "Recenti" },
+  "captureModeFull": { "message": "Tutti" },
+  "captureModeQuickHelp": {
+    "message": "Cerca i nuovi e si ferma dopo $COUNT$ segnalibri già salvati consecutivi.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "captureModeFullHelp": {
+    "message": "Controlla l’intero elenco e riconcilia i segnalibri rimossi su un altro dispositivo."
+  },
+  "captureModeFirstFullHelp": {
+    "message": "La prima acquisizione deve controllare in sicurezza l’intero elenco."
+  },
+  "fullReviewReminder": {
+    "message": "Sono trascorsi più di 30 giorni dall’ultima revisione completa. Valuta di eseguirne una ora."
+  },
+  "captureRunningQuick": { "message": "Aggiornamento rapido in corso" },
+  "captureRunningFull": { "message": "Revisione completa in corso" },
+  "captureCompleteQuick": { "message": "Aggiornamento rapido completato" },
+  "captureCompleteFull": { "message": "Revisione completa completata" },
+  "captureCompleteFallback": {
+    "message": "Checkpoint cambiati; revisione completa completata"
+  },
+  "captureButtonQuick": { "message": "Aggiorna" },
+  "captureButtonFull": { "message": "Controlla tutto" },
   "captureIdle": {
     "message": "Pronto"
   },
@@ -108,13 +259,30 @@
     "message": "Interrompi acquisizione"
   },
   "exportTitle": {
-    "message": "Scarica TXT"
+    "message": "Esporta libreria"
   },
-  "exportFullButton": {
-    "message": "Scarica l’archivio completo"
+  "exportLocalBadge": { "message": "Solo locale" },
+  "exportHelp": {
+    "message": "Scegli una cartella, i tag corrispondenti e se includere i post archiviati."
   },
-  "exportUrlsButton": {
-    "message": "Solo URL"
+  "exportFiltersSummary": { "message": "Scegli i filtri di esportazione" },
+  "exportFolderFilterLabel": { "message": "Cartella e sottocartelle" },
+  "exportAllFolders": { "message": "Tutte le cartelle" },
+  "exportTagFilterLabel": { "message": "Tag (uno qualsiasi selezionato)" },
+  "exportTagFilterHelp": {
+    "message": "Usa Ctrl o Command per selezionarne più di uno. Lascia vuoto per tutti i tag."
+  },
+  "exportIncludeArchived": { "message": "Includi post archiviati" },
+  "exportTxtButton": { "message": "Esporta .TXT" },
+  "exportTxtDescription": { "message": "Testo semplice leggibile" },
+  "exportMarkdownButton": { "message": "Esporta .MD" },
+  "exportMarkdownDescription": { "message": "Markdown strutturato" },
+  "exportFormatMenuLabel": { "message": "Scegli formato di esportazione" },
+  "exportPreparing": { "message": "Preparazione esportazione…" },
+  "exportDownloaded": { "message": "Esportazione scaricata" },
+  "exportFailed": { "message": "Impossibile creare l’esportazione." },
+  "exportFieldRequired": {
+    "message": "Attiva almeno un campo di esportazione nelle impostazioni."
   },
   "moreOptions": {
     "message": "Altre opzioni"
@@ -151,5 +319,183 @@
   },
   "errorGeneric": {
     "message": "Bookmark X non ha potuto completare l’azione. Riprova."
-  }
+  },
+  "openSettingsButton": { "message": "Apri impostazioni" },
+  "openSettingsHelp": {
+    "message": "Modifica aspetto, limiti di acquisizione e comportamento."
+  },
+  "settingsTitle": { "message": "Impostazioni di Bookmark X" },
+  "skipToSettings": { "message": "Vai alle impostazioni" },
+  "settingsEyebrow": { "message": "Locale per scelta" },
+  "settingsIntro": {
+    "message": "Scegli l’aspetto, l’apertura e la preparazione del tuo archivio privato."
+  },
+  "settingsAppearance": { "message": "Aspetto" },
+  "settingLargeText": { "message": "Usa testo più grande" },
+  "settingHighContrast": { "message": "Usa contrasto elevato" },
+  "settingReduceMotion": { "message": "Riduci movimento" },
+  "settingDateFormat": { "message": "Formato data" },
+  "settingTimeFormat": { "message": "Formato ora" },
+  "settingFormatAuto": { "message": "Automatico per la mia area" },
+  "settingDateFormatDmy": { "message": "GG/MM/AAAA" },
+  "settingDateFormatMdy": { "message": "MM/GG/AAAA" },
+  "settingDateFormatYmd": { "message": "AAAA/MM/GG" },
+  "settingTimeFormat24": { "message": "24 ore" },
+  "settingTimeFormat12": { "message": "12 ore (AM/PM)" },
+  "settingsBehavior": { "message": "Comportamento" },
+  "settingSurface": { "message": "Apri la raccolta come" },
+  "settingSurfaceModal": { "message": "Finestra compatta" },
+  "settingSurfaceSidePanel": { "message": "Pannello laterale di Chrome" },
+  "settingPrompt": { "message": "Chiedi una nota dopo il salvataggio" },
+  "settingMetadataSummary": { "message": "Mostra stato di catalogazione" },
+  "settingBreadcrumb": { "message": "Mostra percorso cartella" },
+  "settingTags": { "message": "Mostra tag" },
+  "settingNote": { "message": "Mostra nota privata" },
+  "settingCategory": { "message": "Mostra indicatore senza categoria" },
+  "settingsExport": { "message": "Esportazione" },
+  "settingsExportHelp": {
+    "message": "Scegli i dettagli che le future esportazioni TXT e Markdown potranno includere."
+  },
+  "settingExportLink": { "message": "Link del post" },
+  "settingExportText": { "message": "Testo del post" },
+  "settingExportAuthor": { "message": "Autore" },
+  "settingExportDate": { "message": "Data del post" },
+  "settingExportImages": { "message": "Link immagini" },
+  "settingExportVideos": { "message": "Link video" },
+  "settingExportNote": { "message": "Nota privata" },
+  "settingExportTags": { "message": "Tag" },
+  "settingExportFolder": { "message": "Percorso cartella" },
+  "settingExportFirstSaved": { "message": "Data della prima acquisizione" },
+  "settingExportLastSeen": { "message": "Data dell’ultima visualizzazione" },
+  "settingsExportFieldRequired": {
+    "message": "Mantieni attivo almeno un campo di esportazione."
+  },
+  "settingsSearch": { "message": "Ricerca" },
+  "settingLiveFilter": { "message": "Filtra i risultati durante la digitazione" },
+  "settingsData": { "message": "Dati" },
+  "settingKeepArchived": { "message": "Mantieni archiviati i post rimossi da X" },
+  "settingQuickStopThreshold": {
+    "message": "Ferma l’aggiornamento rapido dopo questo numero di segnalibri noti"
+  },
+  "settingQuickStopHelp": {
+    "message": "15 è consigliato. Un numero maggiore controlla più elementi prima di fermarsi."
+  },
+  "settingsDataHelp": {
+    "message": "Il contenuto resta in IndexedDB su questo dispositivo."
+  },
+  "settingsSaving": { "message": "Salvataggio…" },
+  "settingsSaved": { "message": "Salvato" },
+  "settingsSaveError": { "message": "Impossibile salvare le impostazioni." },
+  "settingsLoadError": { "message": "Impossibile caricare le impostazioni." },
+  "githubProjectEyebrow": { "message": "Indipendente e aperto" },
+  "githubProjectTitle": { "message": "Open source su GitHub" },
+  "githubProjectDescription": {
+    "message": "Esamina il codice, segui i progressi o sostieni il progetto se ti è utile."
+  },
+  "githubStarAction": { "message": "Aggiungi una stella su GitHub" },
+  "githubStarCount": {
+    "message": "$COUNT$ stelle su GitHub",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "bookmarkPromptTitle": { "message": "Perché stai salvando questo contenuto?" },
+  "bookmarkPromptClose": { "message": "Chiudi" },
+  "bookmarkPromptSave": { "message": "Salva nota" },
+  "bookmarkPromptTags": { "message": "Tag" },
+  "bookmarkPromptTagsHelp": { "message": "Separa più tag con le virgole." },
+  "bookmarkPromptFolder": { "message": "Cartella" },
+  "bookmarkPromptChooseFolder": { "message": "Scegli una cartella esistente" },
+  "bookmarkPromptChooseTag": { "message": "Scegli un tag esistente" },
+  "bookmarkPromptNote": { "message": "Nota privata" },
+  "bookmarkCategorized": { "message": "Categorizzato" },
+  "bookmarkNeedsCategory": { "message": "Da categorizzare" },
+  "bookmarkMetadataLabel": { "message": "Dettagli del post salvato in Bookmark X" },
+  "bookmarkMetadataMapped": { "message": "Organizzato con Bookmark X" },
+  "bookmarkMetadataArchived": { "message": "Archiviato localmente" },
+  "liveBookmarkPending": { "message": "In attesa della conferma di X…" },
+  "liveBookmarkSaved": {
+    "message": "Salvato localmente. Aggiungi una nota, una cartella o dei tag."
+  },
+  "liveBookmarkArchived": {
+    "message": "Rimosso dai segnalibri correnti e conservato in Archivio."
+  },
+  "semanticTitle": { "message": "Ricerca semantica facoltativa" },
+  "semanticPrivacy": {
+    "message": "Trova i post in base al significato con un modello multilingue locale. Post, note, tag e cartelle non lasciano mai questo dispositivo."
+  },
+  "semanticConsentTitle": { "message": "Prima del download" },
+  "semanticConsentBody": {
+    "message": "Bookmark X scarica circa 136 MB di dati del modello da Hugging Face solo dopo che scegli Scarica e attiva. In seguito il modello funziona offline."
+  },
+  "semanticQuotaHelp": {
+    "message": "L’estensione richiede spazio di archiviazione locale illimitato, ma resta valido lo spazio disponibile sul disco. L’indice usa circa 1,5 KB per post salvato."
+  },
+  "semanticEnabled": { "message": "Usa risultati semantici nella ricerca" },
+  "semanticInstall": { "message": "Scarica e attiva" },
+  "semanticCancel": { "message": "Annulla" },
+  "semanticReindex": { "message": "Reindicizza i post salvati" },
+  "semanticRemove": { "message": "Rimuovi modello e indice" },
+  "semanticStorageEstimate": {
+    "message": "Spazio usato dall’estensione: $USAGE$ su $QUOTA$.",
+    "placeholders": { "usage": { "content": "$1" }, "quota": { "content": "$2" } }
+  },
+  "semanticReady": {
+    "message": "Modello $BACKEND$ pronto · $COUNT$ post indicizzati",
+    "placeholders": { "backend": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "semanticDownloading": { "message": "Download del modello…" },
+  "semanticIndexing": { "message": "Indicizzazione locale dei post salvati…" },
+  "semanticError": {
+    "message": "La ricerca semantica richiede attenzione. La ricerca testuale continua a funzionare."
+  },
+  "semanticNotInstalled": {
+    "message": "Modello semantico non installato. La ricerca testuale è attiva."
+  },
+  "semanticIndexProgress": {
+    "message": "$DONE$ post indicizzati su $TOTAL$",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "semanticDownloadProgress": {
+    "message": "Download del modello: $PERCENT$%",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": {
+    "message": "Impossibile installare il modello. La ricerca testuale continua a funzionare."
+  },
+  "semanticReindexError": { "message": "Impossibile ricostruire l’indice semantico." },
+  "semanticRemoveError": {
+    "message": "Impossibile rimuovere tutti i dati della ricerca semantica."
+  },
+  "semanticToggleError": { "message": "Impossibile modificare la ricerca semantica." },
+  "liveBookmarkFailed": {
+    "message": "X non ha confermato questa modifica. L’archivio locale non è stato modificato."
+  },
+  "primaryNavigation": { "message": "Navigazione principale" },
+  "navHome": { "message": "Home" },
+  "navLibrary": { "message": "Raccolta" },
+  "navSettings": { "message": "Impostazioni" },
+  "bookmarkDetailTitle": { "message": "Dettagli del segnalibro" },
+  "bookmarkMetadataOrganize": { "message": "Modifica" },
+  "bookmarkSavedAt": {
+    "message": "Salvato il $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "Cartelle e tag" },
+  "organizationHelp": {
+    "message": "Controlla l’organizzazione dei segnalibri e gestisci le cartelle."
+  },
+  "organizationCounts": {
+    "message": "$FOLDERS$ cartelle · $TAGS$ tag",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$, $COUNT$ segnalibri",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ segnalibri",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": { "message": "Apri un segnalibro per aggiungere o rimuovere tag." },
+  "backToLibrary": { "message": "Torna alla raccolta" },
+  "settingsViewHelp": { "message": "Esportazione, backup, lingua e preferenze." }
 }

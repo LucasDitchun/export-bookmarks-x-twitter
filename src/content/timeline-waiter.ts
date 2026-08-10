@@ -1,6 +1,22 @@
 import { isPageLoading } from "./page-state";
+import type { ScrapeWaitResult } from "./scrape-runner";
 
 const STATUS_LINK_SELECTOR = 'article[data-testid="tweet"] a[href*="/status/"]';
+const LOADING_HINT_SELECTOR =
+  '[role="progressbar"], [data-testid="progressBar"], [aria-busy="true"]';
+
+function recordsContainLoader(records: readonly MutationRecord[]): boolean {
+  return records.some((record) =>
+    Array.from(record.addedNodes).some((node) => {
+      if (node.nodeType !== 1) return false;
+      const element = node as Element;
+      return (
+        element.matches(LOADING_HINT_SELECTOR) ||
+        element.querySelector(LOADING_HINT_SELECTOR) !== null
+      );
+    }),
+  );
+}
 
 export interface TimelineWaitOptions {
   root: HTMLElement;
@@ -26,34 +42,50 @@ export function waitForTimelineUpdate({
   settleMs = 75,
   scrollSettleMs = 180,
   maximumWaitMs = 1_100,
-}: TimelineWaitOptions): Promise<void> {
-  if (signal?.aborted) return Promise.resolve();
+}: TimelineWaitOptions): Promise<ScrapeWaitResult> {
+  if (signal?.aborted) {
+    return Promise.resolve({ reason: "aborted", loadingObserved: false });
+  }
 
   return new Promise((resolve) => {
     const initialFingerprint = timelineFingerprint(root);
+    let loadingObserved = isPageLoading(root.ownerDocument);
     let settled = false;
     let settleTimer: number | undefined;
 
-    const finish = () => {
+    const finish = (reason: ScrapeWaitResult["reason"]) => {
       if (settled) return;
       settled = true;
+      const pendingRecords = observer.takeRecords();
+      const pendingLoader = recordsContainLoader(pendingRecords);
+      loadingObserved ||= pendingLoader || isPageLoading(root.ownerDocument);
       observer.disconnect();
       if (settleTimer !== undefined) view.clearTimeout(settleTimer);
       view.clearTimeout(maximumTimer);
       view.removeEventListener("scroll", handleScroll);
-      signal?.removeEventListener("abort", finish);
-      resolve();
+      signal?.removeEventListener("abort", handleAbort);
+      resolve({
+        reason: reason === "timeout" && pendingLoader ? "activity" : reason,
+        loadingObserved,
+      });
     };
-    const scheduleFinish = (delay: number) => {
+    const scheduleFinish = (reason: ScrapeWaitResult["reason"], delay: number) => {
       if (settleTimer !== undefined) view.clearTimeout(settleTimer);
-      settleTimer = view.setTimeout(finish, delay);
+      settleTimer = view.setTimeout(() => finish(reason), delay);
     };
-    const checkTimeline = () => {
+    const checkTimeline = (records: MutationRecord[]) => {
+      const loaderMutation = recordsContainLoader(records);
+      loadingObserved ||= loaderMutation || isPageLoading(root.ownerDocument);
+      if (loaderMutation) {
+        scheduleFinish("activity", settleMs);
+        return;
+      }
       if (timelineFingerprint(root) !== initialFingerprint) {
-        scheduleFinish(settleMs);
+        scheduleFinish("activity", settleMs);
       }
     };
-    const handleScroll = () => scheduleFinish(scrollSettleMs);
+    const handleScroll = () => scheduleFinish("activity", scrollSettleMs);
+    const handleAbort = () => finish("aborted");
 
     const observer = new view.MutationObserver(checkTimeline);
     observer.observe(root, {
@@ -70,7 +102,7 @@ export function waitForTimelineUpdate({
       subtree: true,
     });
     view.addEventListener("scroll", handleScroll, { passive: true });
-    const maximumTimer = view.setTimeout(finish, maximumWaitMs);
-    signal?.addEventListener("abort", finish, { once: true });
+    const maximumTimer = view.setTimeout(() => finish("timeout"), maximumWaitMs);
+    signal?.addEventListener("abort", handleAbort, { once: true });
   });
 }

@@ -91,7 +91,10 @@ describe("waitForTimelineUpdate", () => {
       view: window,
       settleMs: 25,
       maximumWaitMs: 200,
-    }).then(completed);
+    }).then((result) => {
+      completed(result);
+      return result;
+    });
 
     document.getElementById("unrelated")?.append(document.createElement("span"));
     await Promise.resolve();
@@ -99,7 +102,34 @@ describe("waitForTimelineUpdate", () => {
     expect(completed).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
-    await waiting;
+    await expect(waiting).resolves.toEqual({
+      reason: "timeout",
+      loadingObserved: false,
+    });
     expect(completed).toHaveBeenCalledOnce();
+  });
+
+  it("remembers a loader that appears during the wait even after it is removed", async () => {
+    vi.useFakeTimers();
+    document.body.innerHTML = '<main id="timeline"></main>';
+    const root = document.getElementById("timeline") as HTMLElement;
+    const waiting = waitForTimelineUpdate({
+      root,
+      view: window,
+      settleMs: 25,
+      maximumWaitMs: 200,
+    });
+
+    const loader = document.createElement("div");
+    loader.setAttribute("role", "progressbar");
+    root.append(loader);
+    loader.remove();
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(200);
+
+    await expect(waiting).resolves.toEqual({
+      reason: "activity",
+      loadingObserved: true,
+    });
   });
 });

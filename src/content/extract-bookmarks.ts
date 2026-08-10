@@ -1,4 +1,5 @@
 import type { BookmarkSnapshot } from "../domain/types";
+import { extractBookmarkMedia } from "./bookmark-media";
 
 const STATUS_PATH = /^\/([A-Za-z0-9_]+)\/status\/(\d+)(?:\/|$)/;
 
@@ -79,10 +80,13 @@ function authorName(article: Element, username: string): string {
 
 export function extractBookmarks(root: ParentNode = document): BookmarkSnapshot[] {
   const bookmarks = new Map<string, BookmarkSnapshot>();
+  const descendants = Array.from(root.querySelectorAll('article[data-testid="tweet"]'));
+  const articles =
+    root instanceof Element && root.matches('article[data-testid="tweet"]')
+      ? [root, ...descendants]
+      : descendants;
 
-  for (const article of Array.from(
-    root.querySelectorAll('article[data-testid="tweet"]'),
-  )) {
+  for (const article of articles) {
     const details = statusDetails(article);
     if (!details || bookmarks.has(details.id)) {
       continue;
@@ -99,6 +103,7 @@ export function extractBookmarks(root: ParentNode = document): BookmarkSnapshot[
         name: authorName(article, details.username),
       },
       postCreatedAt: time?.dateTime ?? "",
+      media: extractBookmarkMedia(article, details.url),
     });
   }
 

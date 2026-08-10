@@ -1,9 +1,9 @@
 {
   "name": "bookmark-x",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
-  "description": "Open-source Manifest V3 Chrome extension to archive and export X (Twitter) bookmarks to private local TXT files.",
+  "description": "Open-source Manifest V3 Chrome extension to organize and export X (Twitter) bookmarks as private local TXT or Markdown files.",
   "keywords": [
     "chrome-extension",
     "x-bookmarks",
@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/LucasDitchun/export-bookmarks-x-twitter#readme",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.content-script.config.ts && node scripts/validate-content-script-bundle.mjs",
     "dev": "vite build --watch --mode development",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -30,13 +30,31 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "audit:high": "pnpm audit --audit-level high",
+    "semantic-model:gate": "node scripts/semantic-model-gate.mjs",
+    "semantic-model:gate:dry-run": "node scripts/semantic-model-gate.mjs --dry-run",
+    "semantic-model:gate:test": "node --test scripts/semantic-model-gate.test.mjs",
+    "semantic-browser:gate": "pnpm build && node scripts/semantic-browser-gate.mjs --run",
+    "semantic-browser:gate:dry-run": "node scripts/semantic-browser-gate.mjs",
+    "semantic-browser:gate:test": "node --test scripts/semantic-browser-gate.node-test.mjs",
     "smoke:chrome": "node scripts/chrome-smoke.mjs",
-    "package": "node scripts/package.mjs"
+    "package": "node scripts/package.mjs",
+    "verify:archive": "node scripts/archive-integrity.mjs compare",
+    "verify:local": "node scripts/verification-plan.mjs local",
+    "verify:staging": "node scripts/verification-plan.mjs staging"
   },
   "engines": {
     "node": ">=22"
   },
   "packageManager": "pnpm@10.33.2",
+  "pnpm": {
+    "overrides": {
+      "adm-zip": "0.6.0",
+      "brace-expansion": "5.0.9",
+      "nanoid": "3.3.17",
+      "sharp": "0.35.3"
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/chrome": "^0.1.33",
@@ -51,5 +69,9 @@
     "typescript-eslint": "^8.48.0",
     "vite": "^7.2.6",
     "vitest": "^4.0.15"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "4.2.0",
+    "onnxruntime-web": "1.26.0-dev.20260416-b7804b056c"
   }
 }

@@ -1,7 +1,38 @@
 {
+  "backupRestorePartial": {
+    "message": "Library restored. Some settings were not applied."
+  },
+  "backupTitle": { "message": "Backup & restore" },
+  "backupDescription": {
+    "message": "Download or restore your local library, folders, tags, notes, and settings as JSON."
+  },
+  "exportBackupButton": { "message": "Download JSON backup" },
+  "backupFileLabel": { "message": "JSON backup file" },
+  "restoreModeLabel": { "message": "Restore mode" },
+  "restoreModeMerge": { "message": "Merge with this library" },
+  "restoreModeReplace": { "message": "Replace this library" },
+  "restoreBackupButton": { "message": "Restore backup" },
+  "backupTooLarge": { "message": "This backup is too large." },
+  "backupFileReady": { "message": "Backup ready to restore." },
+  "backupReading": { "message": "Checking backup…" },
+  "confirmReplaceBackup": {
+    "message": "Replace all local bookmarks, folders, tags, notes, and settings with this backup? This cannot be undone."
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$ bookmarks restored.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X could not read that file." },
+  "errorInvalidBackup": { "message": "Choose a valid Bookmark X JSON backup." },
+  "errorRestoreCaptureRunning": {
+    "message": "Wait for the active capture to finish before restoring."
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "Your library was restored, but its settings could not be applied. Bookmark X will reload to show the restored data."
+  },
   "extensionName": { "message": "Bookmark X" },
   "extensionDescription": {
-    "message": "Capture your X bookmarks from the open page and export a private local TXT archive."
+    "message": "Capture and organize X bookmarks locally, then export private TXT or Markdown files."
   },
   "eyebrow": { "message": "Local X archive" },
   "loading": { "message": "Loading" },
@@ -16,19 +47,135 @@
   },
   "archiveTitle": { "message": "Your bookmarks" },
   "totalLabel": { "message": "Total saved" },
-  "currentLabel": { "message": "On X now" },
+  "currentLabel": { "message": "Bookmarks on X" },
   "archivedLabel": { "message": "Archived" },
   "emptyArchive": { "message": "No bookmarks captured yet." },
+  "libraryTitle": { "message": "Bookmark library" },
+  "libraryHelp": { "message": "Select a bookmark to add a private note." },
+  "searchLabel": { "message": "Search saved posts" },
+  "searchPlaceholder": { "message": "Type what you remember" },
+  "searchHelp": {
+    "message": "Search text, people, notes, tags, and folders. Stored locally."
+  },
+  "searchButton": { "message": "Search" },
+  "searchReady": { "message": "Press Enter or Search." },
+  "searching": { "message": "Searching…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ matches",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "No matching bookmarks in this view." },
+  "searchLoadError": { "message": "Could not search bookmarks." },
+  "libraryViewsLabel": { "message": "Bookmark library views" },
+  "libraryViewInbox": { "message": "Inbox" },
+  "libraryViewCurrent": { "message": "On X now" },
+  "libraryViewArchived": { "message": "Archived" },
+  "libraryEmptyInbox": { "message": "No uncategorized bookmarks." },
+  "libraryEmptyCurrent": { "message": "No bookmarks are currently saved on X." },
+  "libraryEmptyArchived": { "message": "No archived bookmarks." },
+  "libraryEmpty": { "message": "Capture bookmarks to start your library." },
+  "libraryLoading": { "message": "Loading…" },
+  "libraryLoadError": { "message": "Could not load bookmarks." },
+  "loadMoreBookmarks": { "message": "Load more" },
+  "tagsLabel": { "message": "Tags" },
+  "tagInputPlaceholder": { "message": "Type a tag and press Enter" },
+  "tagHelp": { "message": "Press Enter to add. Tags are stored locally." },
+  "tagSaving": { "message": "Saving…" },
+  "tagAdded": { "message": "Tag added" },
+  "tagRemoved": { "message": "Tag removed" },
+  "tagSaveError": { "message": "Not saved" },
+  "removeTagLabel": {
+    "message": "Remove tag $TAG$",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
+  "noteLabel": { "message": "Private note" },
+  "noteHelp": { "message": "Plain text, saved locally as you type." },
+  "noteLoading": { "message": "Loading…" },
+  "noteLoadError": { "message": "Could not open note." },
+  "noteSaving": { "message": "Saving…" },
+  "noteSaved": { "message": "Saved" },
+  "noteSaveError": { "message": "Not saved" },
+  "folderTitle": { "message": "Folder" },
+  "folderBreadcrumbLabel": { "message": "Folder path" },
+  "folderAssignmentLabel": { "message": "Save in folder" },
+  "uncategorizedFolder": { "message": "Uncategorized" },
+  "manageFolders": { "message": "Manage folders" },
+  "renameTag": { "message": "Rename" },
+  "deleteTag": { "message": "Delete" },
+  "renameTagPrompt": { "message": "Choose a new tag name" },
+  "deleteTagConfirmation": {
+    "message": "Delete $NAME$ from $COUNT$ bookmarks? The tag will disappear from your library, but its record will remain stored locally.",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
+  "newFolderName": { "message": "Name" },
+  "parentFolderLabel": { "message": "Parent folder" },
+  "rootFolder": { "message": "No parent (top level)" },
+  "createFolderButton": { "message": "Create folder" },
+  "renameFolder": { "message": "Rename" },
+  "renameFolderInputLabel": {
+    "message": "Rename $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "Save name" },
+  "deleteFolder": { "message": "Delete" },
+  "deleteFolderConfirmation": {
+    "message": "Delete $NAME$ and all its subfolders? Bookmarks will become uncategorized, and the folder records will remain stored locally.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "Delete folder" },
+  "folderSaving": { "message": "Saving…" },
+  "folderSaved": { "message": "Saved" },
+  "folderDeleting": { "message": "Deleting…" },
+  "folderDeleted": { "message": "Folder deleted" },
+  "folderCreated": { "message": "Folder created" },
+  "folderActionError": { "message": "Could not update folders." },
+  "folderLoadError": { "message": "Could not load folders." },
   "lastCaptureAt": {
-    "message": "Captured $DATE$",
+    "message": "Last full review $DATE$",
     "placeholders": { "date": { "content": "$1" } }
   },
-  "neverCaptured": { "message": "Never captured" },
+  "lastReviewLabel": { "message": "Last full review" },
+  "dateTimePattern": {
+    "message": "$DATE$ at $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
+  "neverCaptured": { "message": "No full review yet" },
   "unknownDate": { "message": "Unknown date" },
-  "captureTitle": { "message": "Capture bookmarks" },
+  "captureTitle": { "message": "Update bookmarks" },
   "captureDescription": {
     "message": "Bookmark X scrolls your open bookmarks page and saves each visible post locally."
   },
+  "captureModeLabel": { "message": "Review mode" },
+  "captureModeQuick": { "message": "Recent" },
+  "captureModeFull": { "message": "All bookmarks" },
+  "captureModeQuickHelp": {
+    "message": "Checks new items and stops after $COUNT$ saved bookmarks in a row.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "captureModeFullHelp": {
+    "message": "Checks the entire list and reconciles bookmarks removed on another device."
+  },
+  "captureModeFirstFullHelp": {
+    "message": "Your first capture must safely review the entire list."
+  },
+  "fullReviewReminder": {
+    "message": "It has been over 30 days since the last full review. Consider running one now."
+  },
+  "captureRunningQuick": { "message": "Quick update in progress" },
+  "captureRunningFull": { "message": "Full review in progress" },
+  "captureCompleteQuick": { "message": "Quick update complete" },
+  "captureCompleteFull": { "message": "Full review complete" },
+  "captureCompleteFallback": {
+    "message": "Checkpoints changed; full review complete"
+  },
+  "captureButtonQuick": { "message": "Update" },
+  "captureButtonFull": { "message": "Review all" },
   "captureIdle": { "message": "Ready" },
   "captureRunning": { "message": "Capturing" },
   "captureComplete": { "message": "Complete" },
@@ -44,9 +191,28 @@
   },
   "captureButton": { "message": "Capture bookmarks" },
   "cancelCaptureButton": { "message": "Stop capture" },
-  "exportTitle": { "message": "Download TXT" },
-  "exportFullButton": { "message": "Download full archive" },
-  "exportUrlsButton": { "message": "URLs only" },
+  "exportTitle": { "message": "Export library" },
+  "exportLocalBadge": { "message": "Local only" },
+  "exportHelp": {
+    "message": "Choose a folder, any matching tags, and whether to include archived posts."
+  },
+  "exportFiltersSummary": { "message": "Choose export filters" },
+  "exportFolderFilterLabel": { "message": "Folder and subfolders" },
+  "exportAllFolders": { "message": "All folders" },
+  "exportTagFilterLabel": { "message": "Tags (match any selected)" },
+  "exportTagFilterHelp": {
+    "message": "Use Ctrl or Command to select multiple. Leave empty for every tag."
+  },
+  "exportIncludeArchived": { "message": "Include archived posts" },
+  "exportTxtButton": { "message": "Export .TXT" },
+  "exportTxtDescription": { "message": "Readable plain text" },
+  "exportMarkdownButton": { "message": "Export .MD" },
+  "exportMarkdownDescription": { "message": "Structured Markdown" },
+  "exportFormatMenuLabel": { "message": "Choose export format" },
+  "exportPreparing": { "message": "Preparing export…" },
+  "exportDownloaded": { "message": "Export downloaded" },
+  "exportFailed": { "message": "Could not create the export." },
+  "exportFieldRequired": { "message": "Enable at least one export field in Settings." },
   "moreOptions": { "message": "More options" },
   "languageLabel": { "message": "Language" },
   "localOnlyNote": {
@@ -69,5 +235,188 @@
   "errorCaptureRunning": { "message": "A capture is already running." },
   "errorGeneric": {
     "message": "Bookmark X could not complete that action. Try again."
-  }
+  },
+  "openSettingsButton": { "message": "Open settings" },
+  "openSettingsHelp": {
+    "message": "Change appearance, capture limits, and behavior."
+  },
+  "settingsTitle": { "message": "Bookmark X settings" },
+  "skipToSettings": { "message": "Skip to settings" },
+  "settingsEyebrow": { "message": "Local by design" },
+  "settingsIntro": {
+    "message": "Choose how Bookmark X looks, opens, and prepares your private archive."
+  },
+  "settingsAppearance": { "message": "Appearance" },
+  "settingLargeText": { "message": "Use larger text" },
+  "settingHighContrast": { "message": "Use high contrast" },
+  "settingReduceMotion": { "message": "Reduce motion" },
+  "settingDateFormat": { "message": "Date format" },
+  "settingTimeFormat": { "message": "Time format" },
+  "settingFormatAuto": { "message": "Automatic for my region" },
+  "settingDateFormatDmy": { "message": "DD/MM/YYYY" },
+  "settingDateFormatMdy": { "message": "MM/DD/YYYY" },
+  "settingDateFormatYmd": { "message": "YYYY/MM/DD" },
+  "settingTimeFormat24": { "message": "24 hours" },
+  "settingTimeFormat12": { "message": "12 hours (AM/PM)" },
+  "settingsBehavior": { "message": "Behavior" },
+  "settingSurface": { "message": "Open the library as" },
+  "settingSurfaceModal": { "message": "Compact window" },
+  "settingSurfaceSidePanel": { "message": "Chrome side panel" },
+  "settingPrompt": { "message": "Ask for a note after bookmarking" },
+  "settingMetadataSummary": { "message": "Show mapped status" },
+  "settingBreadcrumb": { "message": "Show folder breadcrumb" },
+  "settingTags": { "message": "Show tags" },
+  "settingNote": { "message": "Show private note" },
+  "settingCategory": { "message": "Show uncategorized indicator" },
+  "settingsExport": { "message": "Export" },
+  "settingsExportHelp": {
+    "message": "Choose which details future TXT and Markdown exports may include."
+  },
+  "settingExportLink": { "message": "Post link" },
+  "settingExportText": { "message": "Post text" },
+  "settingExportAuthor": { "message": "Author" },
+  "settingExportDate": { "message": "Post date" },
+  "settingExportImages": { "message": "Image links" },
+  "settingExportVideos": { "message": "Video links" },
+  "settingExportNote": { "message": "Private note" },
+  "settingExportTags": { "message": "Tags" },
+  "settingExportFolder": { "message": "Folder path" },
+  "settingExportFirstSaved": { "message": "First capture date" },
+  "settingExportLastSeen": { "message": "Last seen date" },
+  "settingsExportFieldRequired": {
+    "message": "Keep at least one export field enabled."
+  },
+  "settingsSearch": { "message": "Search" },
+  "settingLiveFilter": { "message": "Filter results while typing" },
+  "settingsData": { "message": "Data" },
+  "settingKeepArchived": { "message": "Keep posts removed from X as archived" },
+  "settingQuickStopThreshold": {
+    "message": "Stop a quick update after this many known bookmarks"
+  },
+  "settingQuickStopHelp": {
+    "message": "15 is recommended. A higher number checks further before stopping."
+  },
+  "settingsDataHelp": {
+    "message": "Bookmark content stays in IndexedDB on this device."
+  },
+  "settingsSaving": { "message": "Saving…" },
+  "settingsSaved": { "message": "Saved" },
+  "settingsSaveError": { "message": "Could not save settings." },
+  "settingsLoadError": { "message": "Could not load settings." },
+  "githubProjectEyebrow": { "message": "Independent and open" },
+  "githubProjectTitle": { "message": "Open source on GitHub" },
+  "githubProjectDescription": {
+    "message": "Inspect the code, follow progress, or support the project if it is useful to you."
+  },
+  "githubStarAction": { "message": "Star on GitHub" },
+  "githubStarCount": {
+    "message": "$COUNT$ GitHub stars",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "bookmarkPromptTitle": { "message": "Why are you saving this?" },
+  "bookmarkPromptClose": { "message": "Close" },
+  "bookmarkPromptSave": { "message": "Save note" },
+  "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptTagsHelp": { "message": "Separate multiple tags with commas." },
+  "bookmarkPromptFolder": { "message": "Folder" },
+  "bookmarkPromptChooseFolder": { "message": "Choose an existing folder" },
+  "bookmarkPromptChooseTag": { "message": "Choose an existing tag" },
+  "bookmarkPromptNote": { "message": "Private note" },
+  "bookmarkCategorized": { "message": "Categorized" },
+  "bookmarkNeedsCategory": { "message": "Needs category" },
+  "bookmarkMetadataLabel": { "message": "Bookmark X saved-post details" },
+  "bookmarkMetadataMapped": { "message": "Mapped by Bookmark X" },
+  "bookmarkMetadataArchived": { "message": "Archived locally" },
+  "liveBookmarkPending": { "message": "Waiting for X to confirm…" },
+  "liveBookmarkSaved": { "message": "Saved locally. Add a note, folder, or tags." },
+  "liveBookmarkArchived": {
+    "message": "Removed from current bookmarks and kept in Archived."
+  },
+  "semanticTitle": { "message": "Optional semantic search" },
+  "semanticPrivacy": {
+    "message": "Find posts by meaning with a local multilingual model. Your posts, notes, tags, and folders never leave this device."
+  },
+  "semanticConsentTitle": { "message": "Before you download" },
+  "semanticConsentBody": {
+    "message": "Bookmark X downloads about 136 MB of model data from Hugging Face only after you choose Download and enable. The model then works offline."
+  },
+  "semanticQuotaHelp": {
+    "message": "The extension requests unlimited local storage, but available disk space still applies. The search index uses about 1.5 KB per saved post."
+  },
+  "semanticEnabled": { "message": "Use semantic results in search" },
+  "semanticInstall": { "message": "Download and enable" },
+  "semanticCancel": { "message": "Cancel" },
+  "semanticReindex": { "message": "Reindex saved posts" },
+  "semanticRemove": { "message": "Remove model and index" },
+  "semanticStorageEstimate": {
+    "message": "Extension storage used: $USAGE$ of $QUOTA$.",
+    "placeholders": {
+      "usage": { "content": "$1" },
+      "quota": { "content": "$2" }
+    }
+  },
+  "semanticReady": {
+    "message": "$BACKEND$ model ready · $COUNT$ posts indexed",
+    "placeholders": {
+      "backend": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
+  "semanticDownloading": { "message": "Downloading the model…" },
+  "semanticIndexing": { "message": "Indexing saved posts locally…" },
+  "semanticError": {
+    "message": "Semantic search needs attention. Text search still works."
+  },
+  "semanticNotInstalled": {
+    "message": "Semantic model not installed. Text search is active."
+  },
+  "semanticIndexProgress": {
+    "message": "Indexed $DONE$ of $TOTAL$ posts",
+    "placeholders": {
+      "done": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
+  },
+  "semanticDownloadProgress": {
+    "message": "Model download: $PERCENT$%",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": {
+    "message": "Could not install the model. Text search still works."
+  },
+  "semanticReindexError": { "message": "Could not rebuild the semantic index." },
+  "semanticRemoveError": { "message": "Could not remove all semantic search data." },
+  "semanticToggleError": { "message": "Could not change semantic search." },
+  "liveBookmarkFailed": {
+    "message": "X did not confirm this change. Your local archive was not changed."
+  },
+  "primaryNavigation": { "message": "Primary navigation" },
+  "navHome": { "message": "Home" },
+  "navLibrary": { "message": "Library" },
+  "navSettings": { "message": "Settings" },
+  "bookmarkDetailTitle": { "message": "Bookmark details" },
+  "bookmarkMetadataOrganize": { "message": "Edit" },
+  "bookmarkSavedAt": {
+    "message": "Saved $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "Folders and tags" },
+  "organizationHelp": {
+    "message": "See how your bookmarks are organized and manage folders."
+  },
+  "organizationCounts": {
+    "message": "$FOLDERS$ folders · $TAGS$ tags",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$, $COUNT$ bookmarks",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ bookmarks",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": { "message": "Open a bookmark to add or remove tags." },
+  "backToLibrary": { "message": "Back to library" },
+  "settingsViewHelp": { "message": "Export, backup, language, and preferences." }
 }

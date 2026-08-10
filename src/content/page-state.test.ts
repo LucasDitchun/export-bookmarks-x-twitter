@@ -17,6 +17,18 @@ describe("isPageLoading", () => {
     document.getElementById("loader")?.setAttribute("aria-hidden", "true");
     expect(isPageLoading(document)).toBe(false);
   });
+
+  it("treats X aria-busy timelines as pending but ignores hidden loaders", () => {
+    document.body.innerHTML = `
+      <main aria-busy="true">
+        <div hidden><div role="progressbar"></div></div>
+      </main>
+    `;
+    expect(isPageLoading(document)).toBe(true);
+
+    document.querySelector("main")?.setAttribute("aria-busy", "false");
+    expect(isPageLoading(document)).toBe(false);
+  });
 });
 
 describe("hasReachedPageEnd", () => {

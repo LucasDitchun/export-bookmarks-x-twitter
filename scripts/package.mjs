@@ -9,10 +9,22 @@ import {
   rm,
   stat,
 } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import process from "node:process";
 import { ZipArchive } from "archiver";
+
+import {
+  EXPECTED_CONTENT_SCRIPT_MATCHES,
+  EXPECTED_MANIFEST_HOST_PERMISSIONS,
+  EXPECTED_MANIFEST_PERMISSIONS,
+  EXPECTED_OPTIONS_PAGE,
+  EXPECTED_SIDE_PANEL_PATH,
+  REQUIRED_LEGAL_RELEASE_FILES,
+  validateExactStringArray,
+  validateManifestEntrypoints,
+  validateReleaseLegalFiles,
+} from "./package-policy.mjs";
 
 const rootDirectory = resolve(import.meta.dirname, "..");
 const distDirectory = resolve(rootDirectory, "dist");
@@ -43,21 +55,6 @@ async function listFiles(directory, prefix = "") {
   return files;
 }
 
-function validateExactStringArray(actual, expected, fieldName) {
-  if (!Array.isArray(actual) || actual.some((value) => typeof value !== "string")) {
-    fail(`Manifest ${fieldName} must be an array of strings.`);
-  }
-
-  const sortedActual = [...actual].sort();
-  const sortedExpected = [...expected].sort();
-  if (
-    sortedActual.length !== sortedExpected.length ||
-    sortedActual.some((value, index) => value !== sortedExpected[index])
-  ) {
-    fail(`Manifest ${fieldName} must be exactly: ${sortedExpected.join(", ")}.`);
-  }
-}
-
 async function validateBuild(packageVersion) {
   try {
     if (!(await stat(distDirectory)).isDirectory()) {
@@ -71,12 +68,20 @@ async function validateBuild(packageVersion) {
   }
 
   await copyFile(resolve(rootDirectory, "LICENSE"), resolve(distDirectory, "LICENSE"));
+  for (const relativePath of REQUIRED_LEGAL_RELEASE_FILES) {
+    const destination = resolve(distDirectory, relativePath);
+    await mkdir(dirname(destination), { recursive: true });
+    await copyFile(resolve(rootDirectory, relativePath), destination);
+  }
 
   const requiredFiles = [
     "LICENSE",
+    ...REQUIRED_LEGAL_RELEASE_FILES,
     "manifest.json",
+    EXPECTED_OPTIONS_PAGE,
     "popup.html",
     "service-worker.js",
+    EXPECTED_SIDE_PANEL_PATH,
     "content-script.js",
   ];
   for (const fileName of requiredFiles) {
@@ -110,15 +115,18 @@ async function validateBuild(packageVersion) {
   if (manifest.default_locale !== "en") {
     fail("Manifest default_locale must be en.");
   }
+  validateManifestEntrypoints(manifest);
 
   validateExactStringArray(
     manifest.permissions,
-    ["activeTab", "storage", "unlimitedStorage"],
+    EXPECTED_MANIFEST_PERMISSIONS,
     "permissions",
   );
-  if (Object.hasOwn(manifest, "host_permissions")) {
-    fail("Manifest must not declare broad host_permissions.");
-  }
+  validateExactStringArray(
+    manifest.host_permissions,
+    EXPECTED_MANIFEST_HOST_PERMISSIONS,
+    "host_permissions",
+  );
 
   const forbiddenManifestKeys = [
     "externally_connectable",
@@ -141,7 +149,7 @@ async function validateBuild(packageVersion) {
   const [contentScript] = manifest.content_scripts;
   validateExactStringArray(
     contentScript?.matches,
-    ["https://www.x.com/i/bookmarks*", "https://x.com/i/bookmarks*"],
+    EXPECTED_CONTENT_SCRIPT_MATCHES,
     "content_scripts[0].matches",
   );
   validateExactStringArray(
@@ -160,9 +168,27 @@ async function validateBuild(packageVersion) {
   ) {
     fail("Manifest content security policy permits remote executable code.");
   }
+  if (
+    typeof extensionPagesPolicy !== "string" ||
+    !extensionPagesPolicy.includes("'wasm-unsafe-eval'") ||
+    !/worker-src\s+'self'/u.test(extensionPagesPolicy) ||
+    extensionPagesPolicy.includes("blob:")
+  ) {
+    fail("Manifest CSP must allow only packaged workers and local WebAssembly.");
+  }
 
   const files = await listFiles(distDirectory);
   const filePaths = new Set(files.map((file) => file.relativePath));
+  validateReleaseLegalFiles(filePaths);
+  for (const pattern of [
+    /^assets\/ort-wasm-simd-threaded\.asyncify-[A-Za-z0-9_-]+\.mjs$/u,
+    /^assets\/ort-wasm-simd-threaded\.asyncify-[A-Za-z0-9_-]+\.wasm$/u,
+    /^assets\/semantic-worker-[A-Za-z0-9_-]+\.js$/u,
+  ]) {
+    if (![...filePaths].some((filePath) => pattern.test(filePath))) {
+      fail(`Packaged semantic search asset is missing: ${String(pattern)}`);
+    }
+  }
   const forbiddenExtensions = new Set([".map", ".pem", ".key"]);
   const forbiddenNames = new Set([".env", ".env.local"]);
   const referencedManifestFiles = [
@@ -199,7 +225,7 @@ async function validateBuild(packageVersion) {
       }
     }
 
-    if (extension === ".js") {
+    if (extension === ".js" || extension === ".mjs") {
       const javascript = await readFile(file.absolutePath, "utf8");
       if (
         /(?:\bimport\s*\(|\bfrom\s*|\bimportScripts\s*\()\s*["']https?:\/\//iu.test(

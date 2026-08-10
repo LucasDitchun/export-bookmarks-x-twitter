@@ -1,9 +1,129 @@
 {
+  "backupRestorePartial": {
+    "message": "Bibliothek wiederhergestellt. Einige Einstellungen wurden nicht übernommen."
+  },
+  "backupTitle": { "message": "Sicherung und Wiederherstellung" },
+  "backupDescription": {
+    "message": "Lokale Bibliothek, Ordner, Tags, Notizen und Einstellungen als JSON sichern oder wiederherstellen."
+  },
+  "exportBackupButton": { "message": "JSON-Sicherung herunterladen" },
+  "backupFileLabel": { "message": "JSON-Sicherungsdatei" },
+  "restoreModeLabel": { "message": "Wiederherstellungsmodus" },
+  "restoreModeMerge": { "message": "Mit dieser Bibliothek zusammenführen" },
+  "restoreModeReplace": { "message": "Diese Bibliothek ersetzen" },
+  "restoreBackupButton": { "message": "Sicherung wiederherstellen" },
+  "backupTooLarge": { "message": "Diese Sicherung ist zu groß." },
+  "backupFileReady": { "message": "Sicherung kann wiederhergestellt werden." },
+  "backupReading": { "message": "Sicherung wird geprüft…" },
+  "confirmReplaceBackup": {
+    "message": "Alle lokalen Lesezeichen, Ordner, Tags, Notizen und Einstellungen durch diese Sicherung ersetzen? Dies kann nicht rückgängig gemacht werden."
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$ Lesezeichen wiederhergestellt.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X konnte diese Datei nicht lesen." },
+  "errorInvalidBackup": { "message": "Wähle eine gültige Bookmark-X-JSON-Sicherung." },
+  "errorRestoreCaptureRunning": {
+    "message": "Warte vor der Wiederherstellung, bis die aktive Erfassung beendet ist."
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "Die Bibliothek wurde wiederhergestellt, einige Einstellungen konnten jedoch nicht übernommen werden. Bookmark X wird neu geladen, um die Daten anzuzeigen."
+  },
+  "libraryTitle": { "message": "Lesezeichenbibliothek" },
+  "libraryHelp": {
+    "message": "Wähle ein Lesezeichen aus, um eine private Notiz hinzuzufügen."
+  },
+  "searchLabel": { "message": "Gespeicherte Beiträge durchsuchen" },
+  "searchPlaceholder": { "message": "Gib ein, woran du dich erinnerst" },
+  "searchHelp": {
+    "message": "Durchsuche Text, Personen, Notizen, Tags und Ordner. Alles bleibt lokal."
+  },
+  "searchButton": { "message": "Suchen" },
+  "searchReady": { "message": "Drücke die Eingabetaste oder Suchen." },
+  "searching": { "message": "Suche läuft…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ Treffer",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "Keine passenden Lesezeichen in dieser Ansicht." },
+  "searchLoadError": { "message": "Lesezeichen konnten nicht durchsucht werden." },
+  "libraryViewsLabel": { "message": "Ansichten der Lesezeichenbibliothek" },
+  "libraryViewInbox": { "message": "Eingang" },
+  "libraryViewCurrent": { "message": "Jetzt auf X" },
+  "libraryViewArchived": { "message": "Archiviert" },
+  "libraryEmptyInbox": { "message": "Keine nicht kategorisierten Lesezeichen." },
+  "libraryEmptyCurrent": {
+    "message": "Derzeit sind keine Lesezeichen auf X gespeichert."
+  },
+  "libraryEmptyArchived": { "message": "Keine archivierten Lesezeichen." },
+  "libraryEmpty": { "message": "Erfasse Lesezeichen, um deine Bibliothek zu starten." },
+  "libraryLoading": { "message": "Wird geladen…" },
+  "libraryLoadError": { "message": "Lesezeichen konnten nicht geladen werden." },
+  "loadMoreBookmarks": { "message": "Mehr laden" },
+  "tagsLabel": { "message": "Tags" },
+  "tagInputPlaceholder": { "message": "Tag eingeben und Enter drücken" },
+  "tagHelp": {
+    "message": "Zum Hinzufügen Enter drücken. Tags werden lokal gespeichert."
+  },
+  "tagSaving": { "message": "Wird gespeichert…" },
+  "tagAdded": { "message": "Tag hinzugefügt" },
+  "tagRemoved": { "message": "Tag entfernt" },
+  "tagSaveError": { "message": "Nicht gespeichert" },
+  "removeTagLabel": {
+    "message": "Tag $TAG$ entfernen",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
+  "noteLabel": { "message": "Private Notiz" },
+  "noteHelp": { "message": "Klartext, wird beim Tippen lokal gespeichert." },
+  "noteLoading": { "message": "Wird geladen…" },
+  "noteLoadError": { "message": "Notiz konnte nicht geöffnet werden." },
+  "noteSaving": { "message": "Wird gespeichert…" },
+  "noteSaved": { "message": "Gespeichert" },
+  "noteSaveError": { "message": "Nicht gespeichert" },
+  "folderTitle": { "message": "Ordner" },
+  "folderBreadcrumbLabel": { "message": "Ordnerpfad" },
+  "folderAssignmentLabel": { "message": "In Ordner speichern" },
+  "uncategorizedFolder": { "message": "Nicht kategorisiert" },
+  "manageFolders": { "message": "Ordner verwalten" },
+  "renameTag": { "message": "Umbenennen" },
+  "deleteTag": { "message": "Löschen" },
+  "renameTagPrompt": { "message": "Wähle einen neuen Tag-Namen" },
+  "deleteTagConfirmation": {
+    "message": "$NAME$ aus $COUNT$ Lesezeichen löschen? Der Tag verschwindet aus der Bibliothek, sein Datensatz bleibt jedoch lokal gespeichert.",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
+  "newFolderName": { "message": "Name" },
+  "parentFolderLabel": { "message": "Übergeordneter Ordner" },
+  "rootFolder": { "message": "Kein übergeordneter Ordner (oberste Ebene)" },
+  "createFolderButton": { "message": "Ordner erstellen" },
+  "renameFolder": { "message": "Umbenennen" },
+  "renameFolderInputLabel": {
+    "message": "$NAME$ umbenennen",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "Name speichern" },
+  "deleteFolder": { "message": "Löschen" },
+  "deleteFolderConfirmation": {
+    "message": "$NAME$ und alle Unterordner löschen? Lesezeichen werden nicht kategorisiert und die Ordnerdatensätze bleiben lokal gespeichert.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "Ordner löschen" },
+  "folderSaving": { "message": "Wird gespeichert…" },
+  "folderSaved": { "message": "Gespeichert" },
+  "folderDeleting": { "message": "Wird gelöscht…" },
+  "folderDeleted": { "message": "Ordner gelöscht" },
+  "folderCreated": { "message": "Ordner erstellt" },
+  "folderActionError": { "message": "Ordner konnten nicht aktualisiert werden." },
+  "folderLoadError": { "message": "Ordner konnten nicht geladen werden." },
   "extensionName": {
     "message": "Bookmark X"
   },
   "extensionDescription": {
-    "message": "Erfasse deine X-Lesezeichen von der geöffneten Seite und exportiere sie als privates lokales TXT-Archiv."
+    "message": "Erfasse und organisiere X-Lesezeichen lokal und exportiere private TXT- oder Markdown-Dateien."
   },
   "eyebrow": {
     "message": "Lokales X-Archiv"
@@ -42,7 +162,7 @@
     "message": "Gespeichert"
   },
   "currentLabel": {
-    "message": "Jetzt auf X"
+    "message": "Lesezeichen auf X"
   },
   "archivedLabel": {
     "message": "Archiviert"
@@ -51,25 +171,58 @@
     "message": "Noch keine Lesezeichen erfasst."
   },
   "lastCaptureAt": {
-    "message": "Erfasst am $DATE$",
+    "message": "Letzte vollständige Prüfung: $DATE$",
     "placeholders": {
       "date": {
         "content": "$1"
       }
     }
   },
+  "lastReviewLabel": { "message": "Letzte vollständige Prüfung" },
+  "dateTimePattern": {
+    "message": "$DATE$ um $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": {
-    "message": "Noch nie erfasst"
+    "message": "Noch keine vollständige Prüfung"
   },
   "unknownDate": {
     "message": "Unbekanntes Datum"
   },
   "captureTitle": {
-    "message": "Lesezeichen erfassen"
+    "message": "Lesezeichen aktualisieren"
   },
   "captureDescription": {
     "message": "Bookmark X scrollt durch deine geöffnete Lesezeichenseite und speichert jeden sichtbaren Beitrag lokal."
   },
+  "captureModeLabel": { "message": "Prüfmodus" },
+  "captureModeQuick": { "message": "Neueste" },
+  "captureModeFull": { "message": "Alle" },
+  "captureModeQuickHelp": {
+    "message": "Sucht Neues und stoppt nach $COUNT$ bereits gespeicherten Lesezeichen in Folge.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "captureModeFullHelp": {
+    "message": "Prüft die gesamte Liste und gleicht auf anderen Geräten entfernte Lesezeichen ab."
+  },
+  "captureModeFirstFullHelp": {
+    "message": "Die erste Erfassung muss die gesamte Liste sicher prüfen."
+  },
+  "fullReviewReminder": {
+    "message": "Die letzte vollständige Prüfung ist über 30 Tage her. Erwäge, sie jetzt auszuführen."
+  },
+  "captureRunningQuick": { "message": "Schnellaktualisierung läuft" },
+  "captureRunningFull": { "message": "Vollständige Prüfung läuft" },
+  "captureCompleteQuick": { "message": "Schnellaktualisierung abgeschlossen" },
+  "captureCompleteFull": { "message": "Vollständige Prüfung abgeschlossen" },
+  "captureCompleteFallback": {
+    "message": "Prüfpunkte geändert; vollständige Prüfung abgeschlossen"
+  },
+  "captureButtonQuick": { "message": "Aktualisieren" },
+  "captureButtonFull": { "message": "Alle prüfen" },
   "captureIdle": {
     "message": "Bereit"
   },
@@ -108,13 +261,30 @@
     "message": "Erfassung stoppen"
   },
   "exportTitle": {
-    "message": "TXT herunterladen"
+    "message": "Bibliothek exportieren"
   },
-  "exportFullButton": {
-    "message": "Vollständiges Archiv herunterladen"
+  "exportLocalBadge": { "message": "Nur lokal" },
+  "exportHelp": {
+    "message": "Wähle einen Ordner, passende Tags und ob archivierte Beiträge enthalten sein sollen."
   },
-  "exportUrlsButton": {
-    "message": "Nur URLs"
+  "exportFiltersSummary": { "message": "Exportfilter auswählen" },
+  "exportFolderFilterLabel": { "message": "Ordner und Unterordner" },
+  "exportAllFolders": { "message": "Alle Ordner" },
+  "exportTagFilterLabel": { "message": "Tags (einer der ausgewählten)" },
+  "exportTagFilterHelp": {
+    "message": "Mit Strg oder Command mehrere auswählen. Leer lassen für alle Tags."
+  },
+  "exportIncludeArchived": { "message": "Archivierte Beiträge einschließen" },
+  "exportTxtButton": { "message": ".TXT exportieren" },
+  "exportTxtDescription": { "message": "Lesbarer Klartext" },
+  "exportMarkdownButton": { "message": ".MD exportieren" },
+  "exportMarkdownDescription": { "message": "Strukturiertes Markdown" },
+  "exportFormatMenuLabel": { "message": "Exportformat auswählen" },
+  "exportPreparing": { "message": "Export wird vorbereitet…" },
+  "exportDownloaded": { "message": "Export heruntergeladen" },
+  "exportFailed": { "message": "Export konnte nicht erstellt werden." },
+  "exportFieldRequired": {
+    "message": "Aktiviere mindestens ein Exportfeld in den Einstellungen."
   },
   "moreOptions": {
     "message": "Weitere Optionen"
@@ -151,5 +321,193 @@
   },
   "errorGeneric": {
     "message": "Bookmark X konnte diese Aktion nicht abschließen. Versuche es erneut."
-  }
+  },
+  "openSettingsButton": { "message": "Einstellungen öffnen" },
+  "openSettingsHelp": {
+    "message": "Ändere Darstellung, Erfassungslimits und Verhalten."
+  },
+  "settingsTitle": { "message": "Bookmark-X-Einstellungen" },
+  "skipToSettings": { "message": "Zu den Einstellungen" },
+  "settingsEyebrow": { "message": "Bewusst lokal" },
+  "settingsIntro": {
+    "message": "Lege fest, wie Bookmark X aussieht, geöffnet wird und dein privates Archiv vorbereitet."
+  },
+  "settingsAppearance": { "message": "Darstellung" },
+  "settingLargeText": { "message": "Größeren Text verwenden" },
+  "settingHighContrast": { "message": "Hohen Kontrast verwenden" },
+  "settingReduceMotion": { "message": "Bewegungen reduzieren" },
+  "settingDateFormat": { "message": "Datumsformat" },
+  "settingTimeFormat": { "message": "Zeitformat" },
+  "settingFormatAuto": { "message": "Automatisch für meine Region" },
+  "settingDateFormatDmy": { "message": "TT/MM/JJJJ" },
+  "settingDateFormatMdy": { "message": "MM/TT/JJJJ" },
+  "settingDateFormatYmd": { "message": "JJJJ/MM/TT" },
+  "settingTimeFormat24": { "message": "24 Stunden" },
+  "settingTimeFormat12": { "message": "12 Stunden (AM/PM)" },
+  "settingsBehavior": { "message": "Verhalten" },
+  "settingSurface": { "message": "Bibliothek öffnen als" },
+  "settingSurfaceModal": { "message": "Kompaktes Fenster" },
+  "settingSurfaceSidePanel": { "message": "Chrome-Seitenleiste" },
+  "settingPrompt": { "message": "Nach dem Speichern nach einer Notiz fragen" },
+  "settingMetadataSummary": { "message": "Zuordnungsstatus anzeigen" },
+  "settingBreadcrumb": { "message": "Ordnerpfad anzeigen" },
+  "settingTags": { "message": "Tags anzeigen" },
+  "settingNote": { "message": "Private Notiz anzeigen" },
+  "settingCategory": { "message": "Hinweis ohne Kategorie anzeigen" },
+  "settingsExport": { "message": "Export" },
+  "settingsExportHelp": {
+    "message": "Lege fest, welche Details künftige TXT- und Markdown-Exporte enthalten dürfen."
+  },
+  "settingExportLink": { "message": "Beitragslink" },
+  "settingExportText": { "message": "Beitragstext" },
+  "settingExportAuthor": { "message": "Autor" },
+  "settingExportDate": { "message": "Beitragsdatum" },
+  "settingExportImages": { "message": "Bildlinks" },
+  "settingExportVideos": { "message": "Videolinks" },
+  "settingExportNote": { "message": "Private Notiz" },
+  "settingExportTags": { "message": "Tags" },
+  "settingExportFolder": { "message": "Ordnerpfad" },
+  "settingExportFirstSaved": { "message": "Datum der ersten Erfassung" },
+  "settingExportLastSeen": { "message": "Datum der letzten Sichtung" },
+  "settingsExportFieldRequired": {
+    "message": "Mindestens ein Exportfeld muss aktiviert bleiben."
+  },
+  "settingsSearch": { "message": "Suche" },
+  "settingLiveFilter": { "message": "Ergebnisse beim Tippen filtern" },
+  "settingsData": { "message": "Daten" },
+  "settingKeepArchived": { "message": "Von X entfernte Beiträge archiviert behalten" },
+  "settingQuickStopThreshold": {
+    "message": "Schnellaktualisierung nach so vielen bekannten Lesezeichen stoppen"
+  },
+  "settingQuickStopHelp": {
+    "message": "15 wird empfohlen. Eine höhere Zahl prüft vor dem Stoppen weiter."
+  },
+  "settingsDataHelp": {
+    "message": "Bookmark-Inhalte bleiben in IndexedDB auf diesem Gerät."
+  },
+  "settingsSaving": { "message": "Speichern…" },
+  "settingsSaved": { "message": "Gespeichert" },
+  "settingsSaveError": { "message": "Einstellungen konnten nicht gespeichert werden." },
+  "settingsLoadError": { "message": "Einstellungen konnten nicht geladen werden." },
+  "githubProjectEyebrow": { "message": "Unabhängig und offen" },
+  "githubProjectTitle": { "message": "Open Source auf GitHub" },
+  "githubProjectDescription": {
+    "message": "Sieh dir den Code an, verfolge den Fortschritt oder unterstütze das Projekt, wenn es dir hilft."
+  },
+  "githubStarAction": { "message": "Stern auf GitHub geben" },
+  "githubStarCount": {
+    "message": "$COUNT$ GitHub-Sterne",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "bookmarkPromptTitle": { "message": "Warum speicherst du das?" },
+  "bookmarkPromptClose": { "message": "Schließen" },
+  "bookmarkPromptSave": { "message": "Notiz speichern" },
+  "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptTagsHelp": { "message": "Trenne mehrere Tags durch Kommas." },
+  "bookmarkPromptFolder": { "message": "Ordner" },
+  "bookmarkPromptChooseFolder": { "message": "Vorhandenen Ordner auswählen" },
+  "bookmarkPromptChooseTag": { "message": "Vorhandenen Tag auswählen" },
+  "bookmarkPromptNote": { "message": "Private Notiz" },
+  "bookmarkCategorized": { "message": "Kategorisiert" },
+  "bookmarkNeedsCategory": { "message": "Kategorie fehlt" },
+  "bookmarkMetadataLabel": {
+    "message": "Details zum mit Bookmark X gespeicherten Beitrag"
+  },
+  "bookmarkMetadataMapped": {
+    "message": "Von Bookmark X in der lokalen Sammlung erfasst"
+  },
+  "bookmarkMetadataArchived": { "message": "Lokal archiviert" },
+  "liveBookmarkPending": { "message": "Warten auf die Bestätigung von X…" },
+  "liveBookmarkSaved": {
+    "message": "Lokal gespeichert. Füge eine Notiz, einen Ordner oder Tags hinzu."
+  },
+  "liveBookmarkArchived": {
+    "message": "Aus aktuellen Lesezeichen entfernt und im Archiv behalten."
+  },
+  "semanticTitle": { "message": "Optionale semantische Suche" },
+  "semanticPrivacy": {
+    "message": "Finde Beiträge nach ihrer Bedeutung mit einem lokalen mehrsprachigen Modell. Beiträge, Notizen, Tags und Ordner verlassen dieses Gerät nie."
+  },
+  "semanticConsentTitle": { "message": "Vor dem Download" },
+  "semanticConsentBody": {
+    "message": "Bookmark X lädt etwa 136 MB Modelldaten von Hugging Face erst herunter, wenn du Herunterladen und aktivieren auswählst. Danach funktioniert das Modell offline."
+  },
+  "semanticQuotaHelp": {
+    "message": "Die Erweiterung fordert unbegrenzten lokalen Speicher an, der verfügbare Speicherplatz gilt jedoch weiterhin. Der Suchindex benötigt etwa 1,5 KB pro gespeichertem Beitrag."
+  },
+  "semanticEnabled": { "message": "Semantische Ergebnisse in der Suche verwenden" },
+  "semanticInstall": { "message": "Herunterladen und aktivieren" },
+  "semanticCancel": { "message": "Abbrechen" },
+  "semanticReindex": { "message": "Gespeicherte Beiträge neu indizieren" },
+  "semanticRemove": { "message": "Modell und Index entfernen" },
+  "semanticStorageEstimate": {
+    "message": "Von der Erweiterung verwendet: $USAGE$ von $QUOTA$.",
+    "placeholders": { "usage": { "content": "$1" }, "quota": { "content": "$2" } }
+  },
+  "semanticReady": {
+    "message": "$BACKEND$-Modell bereit · $COUNT$ Beiträge indiziert",
+    "placeholders": { "backend": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "semanticDownloading": { "message": "Modell wird heruntergeladen…" },
+  "semanticIndexing": { "message": "Gespeicherte Beiträge werden lokal indiziert…" },
+  "semanticError": {
+    "message": "Die semantische Suche benötigt Aufmerksamkeit. Die Textsuche funktioniert weiterhin."
+  },
+  "semanticNotInstalled": {
+    "message": "Semantisches Modell nicht installiert. Die Textsuche ist aktiv."
+  },
+  "semanticIndexProgress": {
+    "message": "$DONE$ von $TOTAL$ Beiträgen indiziert",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "semanticDownloadProgress": {
+    "message": "Modelldownload: $PERCENT$ %",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": {
+    "message": "Das Modell konnte nicht installiert werden. Die Textsuche funktioniert weiterhin."
+  },
+  "semanticReindexError": {
+    "message": "Der semantische Index konnte nicht neu aufgebaut werden."
+  },
+  "semanticRemoveError": {
+    "message": "Nicht alle Daten der semantischen Suche konnten entfernt werden."
+  },
+  "semanticToggleError": {
+    "message": "Die semantische Suche konnte nicht geändert werden."
+  },
+  "liveBookmarkFailed": {
+    "message": "X hat diese Änderung nicht bestätigt. Dein lokales Archiv blieb unverändert."
+  },
+  "primaryNavigation": { "message": "Hauptnavigation" },
+  "navHome": { "message": "Start" },
+  "navLibrary": { "message": "Bibliothek" },
+  "navSettings": { "message": "Einstellungen" },
+  "bookmarkDetailTitle": { "message": "Lesezeichen-Details" },
+  "bookmarkMetadataOrganize": { "message": "Bearbeiten" },
+  "bookmarkSavedAt": {
+    "message": "Gespeichert am $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "Ordner und Tags" },
+  "organizationHelp": {
+    "message": "Sieh dir die Organisation deiner Lesezeichen an und verwalte Ordner."
+  },
+  "organizationCounts": {
+    "message": "$FOLDERS$ Ordner · $TAGS$ Tags",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$, $COUNT$ Lesezeichen",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ Lesezeichen",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": {
+    "message": "Öffne ein Lesezeichen, um Tags hinzuzufügen oder zu entfernen."
+  },
+  "backToLibrary": { "message": "Zurück zur Bibliothek" },
+  "settingsViewHelp": { "message": "Export, Sicherung, Sprache und Einstellungen." }
 }

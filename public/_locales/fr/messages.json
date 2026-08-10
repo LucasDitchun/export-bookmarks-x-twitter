@@ -1,9 +1,133 @@
 {
+  "backupRestorePartial": {
+    "message": "Bibliothèque restaurée. Certains réglages n’ont pas été appliqués."
+  },
+  "backupTitle": { "message": "Sauvegarde et restauration" },
+  "backupDescription": {
+    "message": "Téléchargez ou restaurez votre bibliothèque locale, vos dossiers, tags, notes et réglages au format JSON."
+  },
+  "exportBackupButton": { "message": "Télécharger la sauvegarde JSON" },
+  "backupFileLabel": { "message": "Fichier de sauvegarde JSON" },
+  "restoreModeLabel": { "message": "Mode de restauration" },
+  "restoreModeMerge": { "message": "Fusionner avec cette bibliothèque" },
+  "restoreModeReplace": { "message": "Remplacer cette bibliothèque" },
+  "restoreBackupButton": { "message": "Restaurer la sauvegarde" },
+  "backupTooLarge": { "message": "Cette sauvegarde est trop volumineuse." },
+  "backupFileReady": { "message": "Sauvegarde prête à être restaurée." },
+  "backupReading": { "message": "Vérification de la sauvegarde…" },
+  "confirmReplaceBackup": {
+    "message": "Remplacer tous les signets, dossiers, tags, notes et réglages locaux par cette sauvegarde ? Cette action est irréversible."
+  },
+  "backupRestoreComplete": {
+    "message": "$COUNT$ signets restaurés.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X n’a pas pu lire ce fichier." },
+  "errorInvalidBackup": {
+    "message": "Choisissez une sauvegarde JSON Bookmark X valide."
+  },
+  "errorRestoreCaptureRunning": {
+    "message": "Attendez la fin de la capture en cours avant de restaurer."
+  },
+  "errorRestoreSettingsFailed": {
+    "message": "La bibliothèque a été restaurée, mais certains réglages n’ont pas pu être appliqués. Bookmark X va se recharger pour afficher les données restaurées."
+  },
+  "libraryTitle": { "message": "Bibliothèque de favoris" },
+  "libraryHelp": { "message": "Sélectionnez un favori pour ajouter une note privée." },
+  "searchLabel": { "message": "Rechercher les posts enregistrés" },
+  "searchPlaceholder": { "message": "Saisissez ce dont vous vous souvenez" },
+  "searchHelp": {
+    "message": "Recherchez dans le texte, les personnes, les notes, les tags et les dossiers. Tout reste local."
+  },
+  "searchButton": { "message": "Rechercher" },
+  "searchReady": { "message": "Appuyez sur Entrée ou Rechercher." },
+  "searching": { "message": "Recherche…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ résultats",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "Aucun favori correspondant dans cette vue." },
+  "searchLoadError": { "message": "Impossible de rechercher les favoris." },
+  "libraryViewsLabel": { "message": "Vues de la bibliothèque de favoris" },
+  "libraryViewInbox": { "message": "À classer" },
+  "libraryViewCurrent": { "message": "Sur X actuellement" },
+  "libraryViewArchived": { "message": "Archivés" },
+  "libraryEmptyInbox": { "message": "Aucun favori non classé." },
+  "libraryEmptyCurrent": {
+    "message": "Aucun favori n’est actuellement enregistré sur X."
+  },
+  "libraryEmptyArchived": { "message": "Aucun favori archivé." },
+  "libraryEmpty": {
+    "message": "Capturez des favoris pour commencer votre bibliothèque."
+  },
+  "libraryLoading": { "message": "Chargement…" },
+  "libraryLoadError": { "message": "Impossible de charger les favoris." },
+  "loadMoreBookmarks": { "message": "Charger plus" },
+  "tagsLabel": { "message": "Étiquettes" },
+  "tagInputPlaceholder": {
+    "message": "Saisissez une étiquette et appuyez sur Entrée"
+  },
+  "tagHelp": {
+    "message": "Appuyez sur Entrée pour l’ajouter. Les étiquettes sont stockées localement."
+  },
+  "tagSaving": { "message": "Enregistrement…" },
+  "tagAdded": { "message": "Étiquette ajoutée" },
+  "tagRemoved": { "message": "Étiquette supprimée" },
+  "tagSaveError": { "message": "Non enregistré" },
+  "removeTagLabel": {
+    "message": "Supprimer l’étiquette $TAG$",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
+  "noteLabel": { "message": "Note privée" },
+  "noteHelp": { "message": "Texte brut, enregistré localement pendant la saisie." },
+  "noteLoading": { "message": "Chargement…" },
+  "noteLoadError": { "message": "Impossible d’ouvrir la note." },
+  "noteSaving": { "message": "Enregistrement…" },
+  "noteSaved": { "message": "Enregistrée" },
+  "noteSaveError": { "message": "Non enregistrée" },
+  "folderTitle": { "message": "Dossier" },
+  "folderBreadcrumbLabel": { "message": "Chemin du dossier" },
+  "folderAssignmentLabel": { "message": "Enregistrer dans le dossier" },
+  "uncategorizedFolder": { "message": "Non classé" },
+  "manageFolders": { "message": "Gérer les dossiers" },
+  "renameTag": { "message": "Renommer" },
+  "deleteTag": { "message": "Supprimer" },
+  "renameTagPrompt": { "message": "Choisissez un nouveau nom de tag" },
+  "deleteTagConfirmation": {
+    "message": "Supprimer $NAME$ de $COUNT$ favoris ? Le tag disparaîtra de la bibliothèque, mais son enregistrement restera stocké localement.",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
+  "newFolderName": { "message": "Nom" },
+  "parentFolderLabel": { "message": "Dossier parent" },
+  "rootFolder": { "message": "Aucun parent (niveau supérieur)" },
+  "createFolderButton": { "message": "Créer un dossier" },
+  "renameFolder": { "message": "Renommer" },
+  "renameFolderInputLabel": {
+    "message": "Renommer $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "Enregistrer le nom" },
+  "deleteFolder": { "message": "Supprimer" },
+  "deleteFolderConfirmation": {
+    "message": "Supprimer $NAME$ et tous ses sous-dossiers ? Les favoris deviendront non classés et les enregistrements resteront stockés localement.",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "Supprimer le dossier" },
+  "folderSaving": { "message": "Enregistrement…" },
+  "folderSaved": { "message": "Enregistré" },
+  "folderDeleting": { "message": "Suppression…" },
+  "folderDeleted": { "message": "Dossier supprimé" },
+  "folderCreated": { "message": "Dossier créé" },
+  "folderActionError": { "message": "Impossible de mettre à jour les dossiers." },
+  "folderLoadError": { "message": "Impossible de charger les dossiers." },
   "extensionName": {
     "message": "Bookmark X"
   },
   "extensionDescription": {
-    "message": "Capturez vos signets X depuis la page ouverte et exportez-les dans une archive TXT locale et privée."
+    "message": "Capturez et organisez localement vos signets X, puis exportez des fichiers TXT ou Markdown privés."
   },
   "eyebrow": {
     "message": "Archive X locale"
@@ -42,7 +166,7 @@
     "message": "Total enregistré"
   },
   "currentLabel": {
-    "message": "Sur X"
+    "message": "Signets sur X"
   },
   "archivedLabel": {
     "message": "Archivés"
@@ -51,25 +175,58 @@
     "message": "Aucun signet capturé pour le moment."
   },
   "lastCaptureAt": {
-    "message": "Capturé le $DATE$",
+    "message": "Dernière vérification complète : $DATE$",
     "placeholders": {
       "date": {
         "content": "$1"
       }
     }
   },
+  "lastReviewLabel": { "message": "Dernière vérification complète" },
+  "dateTimePattern": {
+    "message": "$DATE$ à $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": {
-    "message": "Jamais capturé"
+    "message": "Aucune vérification complète"
   },
   "unknownDate": {
     "message": "Date inconnue"
   },
   "captureTitle": {
-    "message": "Capturer les signets"
+    "message": "Mettre à jour les signets"
   },
   "captureDescription": {
     "message": "Bookmark X fait défiler votre page de signets ouverte et enregistre localement chaque publication visible."
   },
+  "captureModeLabel": { "message": "Mode de vérification" },
+  "captureModeQuick": { "message": "Récents" },
+  "captureModeFull": { "message": "Tous" },
+  "captureModeQuickHelp": {
+    "message": "Recherche les nouveautés puis s’arrête après $COUNT$ signets déjà enregistrés d’affilée.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "captureModeFullHelp": {
+    "message": "Vérifie toute la liste et réconcilie les signets supprimés sur un autre appareil."
+  },
+  "captureModeFirstFullHelp": {
+    "message": "La première capture doit vérifier toute la liste en toute sécurité."
+  },
+  "fullReviewReminder": {
+    "message": "La dernière vérification complète date de plus de 30 jours. Envisagez d’en lancer une maintenant."
+  },
+  "captureRunningQuick": { "message": "Mise à jour rapide en cours" },
+  "captureRunningFull": { "message": "Vérification complète en cours" },
+  "captureCompleteQuick": { "message": "Mise à jour rapide terminée" },
+  "captureCompleteFull": { "message": "Vérification complète terminée" },
+  "captureCompleteFallback": {
+    "message": "Points de contrôle modifiés ; vérification complète terminée"
+  },
+  "captureButtonQuick": { "message": "Mettre à jour" },
+  "captureButtonFull": { "message": "Tout vérifier" },
   "captureIdle": {
     "message": "Prêt"
   },
@@ -108,13 +265,30 @@
     "message": "Arrêter la capture"
   },
   "exportTitle": {
-    "message": "Télécharger le TXT"
+    "message": "Exporter la bibliothèque"
   },
-  "exportFullButton": {
-    "message": "Télécharger l’archive complète"
+  "exportLocalBadge": { "message": "Local uniquement" },
+  "exportHelp": {
+    "message": "Choisissez un dossier, les étiquettes correspondantes et l’inclusion des publications archivées."
   },
-  "exportUrlsButton": {
-    "message": "URL uniquement"
+  "exportFiltersSummary": { "message": "Choisir les filtres d’exportation" },
+  "exportFolderFilterLabel": { "message": "Dossier et sous-dossiers" },
+  "exportAllFolders": { "message": "Tous les dossiers" },
+  "exportTagFilterLabel": { "message": "Étiquettes (une sélectionnée suffit)" },
+  "exportTagFilterHelp": {
+    "message": "Utilisez Ctrl ou Command pour en sélectionner plusieurs. Laissez vide pour toutes les étiquettes."
+  },
+  "exportIncludeArchived": { "message": "Inclure les publications archivées" },
+  "exportTxtButton": { "message": "Exporter en .TXT" },
+  "exportTxtDescription": { "message": "Texte brut lisible" },
+  "exportMarkdownButton": { "message": "Exporter en .MD" },
+  "exportMarkdownDescription": { "message": "Markdown structuré" },
+  "exportFormatMenuLabel": { "message": "Choisir le format d’exportation" },
+  "exportPreparing": { "message": "Préparation de l’exportation…" },
+  "exportDownloaded": { "message": "Exportation téléchargée" },
+  "exportFailed": { "message": "Impossible de créer l’exportation." },
+  "exportFieldRequired": {
+    "message": "Activez au moins un champ d’exportation dans les paramètres."
   },
   "moreOptions": {
     "message": "Plus d’options"
@@ -151,5 +325,195 @@
   },
   "errorGeneric": {
     "message": "Bookmark X n’a pas pu terminer cette action. Réessayez."
-  }
+  },
+  "openSettingsButton": { "message": "Ouvrir les paramètres" },
+  "openSettingsHelp": {
+    "message": "Modifiez l’apparence, les limites de capture et le comportement."
+  },
+  "settingsTitle": { "message": "Paramètres de Bookmark X" },
+  "skipToSettings": { "message": "Accéder aux paramètres" },
+  "settingsEyebrow": { "message": "Local par conception" },
+  "settingsIntro": {
+    "message": "Choisissez l’apparence, l’ouverture et la préparation de votre archive privée."
+  },
+  "settingsAppearance": { "message": "Apparence" },
+  "settingLargeText": { "message": "Utiliser un texte plus grand" },
+  "settingHighContrast": { "message": "Utiliser un contraste élevé" },
+  "settingReduceMotion": { "message": "Réduire les animations" },
+  "settingDateFormat": { "message": "Format de date" },
+  "settingTimeFormat": { "message": "Format de l’heure" },
+  "settingFormatAuto": { "message": "Automatique pour ma région" },
+  "settingDateFormatDmy": { "message": "JJ/MM/AAAA" },
+  "settingDateFormatMdy": { "message": "MM/JJ/AAAA" },
+  "settingDateFormatYmd": { "message": "AAAA/MM/JJ" },
+  "settingTimeFormat24": { "message": "24 heures" },
+  "settingTimeFormat12": { "message": "12 heures (AM/PM)" },
+  "settingsBehavior": { "message": "Comportement" },
+  "settingSurface": { "message": "Ouvrir la bibliothèque comme" },
+  "settingSurfaceModal": { "message": "Fenêtre compacte" },
+  "settingSurfaceSidePanel": { "message": "Panneau latéral de Chrome" },
+  "settingPrompt": { "message": "Demander une note après l’enregistrement" },
+  "settingMetadataSummary": { "message": "Afficher l’état de classement" },
+  "settingBreadcrumb": { "message": "Afficher le chemin du dossier" },
+  "settingTags": { "message": "Afficher les tags" },
+  "settingNote": { "message": "Afficher la note privée" },
+  "settingCategory": { "message": "Afficher l’indicateur sans catégorie" },
+  "settingsExport": { "message": "Exportation" },
+  "settingsExportHelp": {
+    "message": "Choisissez les détails que les futurs exports TXT et Markdown pourront inclure."
+  },
+  "settingExportLink": { "message": "Lien de la publication" },
+  "settingExportText": { "message": "Texte de la publication" },
+  "settingExportAuthor": { "message": "Auteur" },
+  "settingExportDate": { "message": "Date de publication" },
+  "settingExportImages": { "message": "Liens des images" },
+  "settingExportVideos": { "message": "Liens des vidéos" },
+  "settingExportNote": { "message": "Note privée" },
+  "settingExportTags": { "message": "Tags" },
+  "settingExportFolder": { "message": "Chemin du dossier" },
+  "settingExportFirstSaved": { "message": "Date de première capture" },
+  "settingExportLastSeen": { "message": "Date de dernière consultation" },
+  "settingsExportFieldRequired": {
+    "message": "Gardez au moins un champ d’exportation activé."
+  },
+  "settingsSearch": { "message": "Recherche" },
+  "settingLiveFilter": { "message": "Filtrer les résultats pendant la saisie" },
+  "settingsData": { "message": "Données" },
+  "settingKeepArchived": {
+    "message": "Conserver comme archivées les publications retirées de X"
+  },
+  "settingQuickStopThreshold": {
+    "message": "Arrêter la mise à jour rapide après ce nombre de signets connus"
+  },
+  "settingQuickStopHelp": {
+    "message": "15 est recommandé. Une valeur plus élevée vérifie davantage avant l’arrêt."
+  },
+  "settingsDataHelp": {
+    "message": "Le contenu reste dans IndexedDB sur cet appareil."
+  },
+  "settingsSaving": { "message": "Enregistrement…" },
+  "settingsSaved": { "message": "Enregistré" },
+  "settingsSaveError": { "message": "Impossible d’enregistrer les paramètres." },
+  "settingsLoadError": { "message": "Impossible de charger les paramètres." },
+  "githubProjectEyebrow": { "message": "Indépendant et ouvert" },
+  "githubProjectTitle": { "message": "Open source sur GitHub" },
+  "githubProjectDescription": {
+    "message": "Consultez le code, suivez l’avancement ou soutenez le projet s’il vous est utile."
+  },
+  "githubStarAction": { "message": "Ajouter une étoile sur GitHub" },
+  "githubStarCount": {
+    "message": "$COUNT$ étoiles sur GitHub",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "bookmarkPromptTitle": { "message": "Pourquoi enregistrez-vous ceci ?" },
+  "bookmarkPromptClose": { "message": "Fermer" },
+  "bookmarkPromptSave": { "message": "Enregistrer la note" },
+  "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptTagsHelp": { "message": "Séparez plusieurs tags par des virgules." },
+  "bookmarkPromptFolder": { "message": "Dossier" },
+  "bookmarkPromptChooseFolder": { "message": "Choisir un dossier existant" },
+  "bookmarkPromptChooseTag": { "message": "Choisir un tag existant" },
+  "bookmarkPromptNote": { "message": "Note privée" },
+  "bookmarkCategorized": { "message": "Classé" },
+  "bookmarkNeedsCategory": { "message": "À classer" },
+  "bookmarkMetadataLabel": {
+    "message": "Détails de la publication enregistrée dans Bookmark X"
+  },
+  "bookmarkMetadataMapped": { "message": "Classée avec Bookmark X" },
+  "bookmarkMetadataArchived": { "message": "Archivée localement" },
+  "liveBookmarkPending": { "message": "En attente de la confirmation de X…" },
+  "liveBookmarkSaved": {
+    "message": "Enregistré localement. Ajoutez une note, un dossier ou des tags."
+  },
+  "liveBookmarkArchived": {
+    "message": "Retiré des favoris actuels et conservé dans les archives."
+  },
+  "semanticTitle": { "message": "Recherche sémantique facultative" },
+  "semanticPrivacy": {
+    "message": "Retrouvez des publications par leur sens grâce à un modèle multilingue local. Vos publications, notes, tags et dossiers ne quittent jamais cet appareil."
+  },
+  "semanticConsentTitle": { "message": "Avant le téléchargement" },
+  "semanticConsentBody": {
+    "message": "Bookmark X télécharge environ 136 Mo de données de modèle depuis Hugging Face uniquement après votre choix Télécharger et activer. Le modèle fonctionne ensuite hors ligne."
+  },
+  "semanticQuotaHelp": {
+    "message": "L’extension demande un stockage local illimité, mais l’espace disque disponible reste la limite. L’index utilise environ 1,5 Ko par publication enregistrée."
+  },
+  "semanticEnabled": {
+    "message": "Utiliser les résultats sémantiques dans la recherche"
+  },
+  "semanticInstall": { "message": "Télécharger et activer" },
+  "semanticCancel": { "message": "Annuler" },
+  "semanticReindex": { "message": "Réindexer les publications enregistrées" },
+  "semanticRemove": { "message": "Supprimer le modèle et l’index" },
+  "semanticStorageEstimate": {
+    "message": "Stockage utilisé par l’extension : $USAGE$ sur $QUOTA$.",
+    "placeholders": { "usage": { "content": "$1" }, "quota": { "content": "$2" } }
+  },
+  "semanticReady": {
+    "message": "Modèle $BACKEND$ prêt · $COUNT$ publications indexées",
+    "placeholders": { "backend": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "semanticDownloading": { "message": "Téléchargement du modèle…" },
+  "semanticIndexing": { "message": "Indexation locale des publications enregistrées…" },
+  "semanticError": {
+    "message": "La recherche sémantique requiert votre attention. La recherche textuelle fonctionne toujours."
+  },
+  "semanticNotInstalled": {
+    "message": "Modèle sémantique non installé. La recherche textuelle est active."
+  },
+  "semanticIndexProgress": {
+    "message": "$DONE$ publications indexées sur $TOTAL$",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "semanticDownloadProgress": {
+    "message": "Téléchargement du modèle : $PERCENT$ %",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": {
+    "message": "Impossible d’installer le modèle. La recherche textuelle fonctionne toujours."
+  },
+  "semanticReindexError": {
+    "message": "Impossible de reconstruire l’index sémantique."
+  },
+  "semanticRemoveError": {
+    "message": "Impossible de supprimer toutes les données de recherche sémantique."
+  },
+  "semanticToggleError": {
+    "message": "Impossible de modifier la recherche sémantique."
+  },
+  "liveBookmarkFailed": {
+    "message": "X n’a pas confirmé ce changement. Votre archive locale n’a pas été modifiée."
+  },
+  "primaryNavigation": { "message": "Navigation principale" },
+  "navHome": { "message": "Accueil" },
+  "navLibrary": { "message": "Bibliothèque" },
+  "navSettings": { "message": "Réglages" },
+  "bookmarkDetailTitle": { "message": "Détails du favori" },
+  "bookmarkMetadataOrganize": { "message": "Modifier" },
+  "bookmarkSavedAt": {
+    "message": "Enregistré le $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "Dossiers et étiquettes" },
+  "organizationHelp": {
+    "message": "Consultez l’organisation de vos signets et gérez les dossiers."
+  },
+  "organizationCounts": {
+    "message": "$FOLDERS$ dossiers · $TAGS$ étiquettes",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$, $COUNT$ signets",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ signets",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": {
+    "message": "Ouvrez un signet pour ajouter ou retirer des étiquettes."
+  },
+  "backToLibrary": { "message": "Retour à la bibliothèque" },
+  "settingsViewHelp": { "message": "Exportation, sauvegarde, langue et préférences." }
 }

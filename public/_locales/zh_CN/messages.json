@@ -1,9 +1,117 @@
 {
+  "backupRestorePartial": { "message": "收藏库已恢复。部分设置未能应用。" },
+  "backupTitle": { "message": "备份与恢复" },
+  "backupDescription": {
+    "message": "以 JSON 格式下载或恢复本地收藏库、文件夹、标签、笔记和设置。"
+  },
+  "exportBackupButton": { "message": "下载 JSON 备份" },
+  "backupFileLabel": { "message": "JSON 备份文件" },
+  "restoreModeLabel": { "message": "恢复模式" },
+  "restoreModeMerge": { "message": "与此收藏库合并" },
+  "restoreModeReplace": { "message": "替换此收藏库" },
+  "restoreBackupButton": { "message": "恢复备份" },
+  "backupTooLarge": { "message": "此备份文件过大。" },
+  "backupFileReady": { "message": "备份已准备好恢复。" },
+  "backupReading": { "message": "正在检查备份…" },
+  "confirmReplaceBackup": {
+    "message": "要用此备份替换所有本地书签、文件夹、标签、笔记和设置吗？此操作无法撤销。"
+  },
+  "backupRestoreComplete": {
+    "message": "已恢复 $COUNT$ 个书签。",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "backupReadError": { "message": "Bookmark X 无法读取该文件。" },
+  "errorInvalidBackup": { "message": "请选择有效的 Bookmark X JSON 备份。" },
+  "errorRestoreCaptureRunning": { "message": "请等待当前抓取完成后再恢复。" },
+  "errorRestoreSettingsFailed": {
+    "message": "收藏库已恢复，但无法应用其中的设置。Bookmark X 将重新加载以显示已恢复的数据。"
+  },
+  "libraryTitle": { "message": "书签库" },
+  "libraryHelp": { "message": "选择一个书签以添加私人备注。" },
+  "searchLabel": { "message": "搜索已保存的帖子" },
+  "searchPlaceholder": { "message": "输入您记得的内容" },
+  "searchHelp": { "message": "搜索正文、用户、备注、标签和文件夹。数据仅保存在本地。" },
+  "searchButton": { "message": "搜索" },
+  "searchReady": { "message": "按 Enter 或点击搜索。" },
+  "searching": { "message": "正在搜索…" },
+  "searchResultsCount": {
+    "message": "$COUNT$ 个结果",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "searchEmpty": { "message": "此视图中没有匹配的书签。" },
+  "searchLoadError": { "message": "无法搜索书签。" },
+  "libraryViewsLabel": { "message": "书签库视图" },
+  "libraryViewInbox": { "message": "收件箱" },
+  "libraryViewCurrent": { "message": "X 中现有" },
+  "libraryViewArchived": { "message": "已归档" },
+  "libraryEmptyInbox": { "message": "没有未分类的书签。" },
+  "libraryEmptyCurrent": { "message": "X 中目前没有已保存的书签。" },
+  "libraryEmptyArchived": { "message": "没有已归档的书签。" },
+  "libraryEmpty": { "message": "抓取书签即可开始使用书签库。" },
+  "libraryLoading": { "message": "正在加载…" },
+  "libraryLoadError": { "message": "无法加载书签。" },
+  "loadMoreBookmarks": { "message": "加载更多" },
+  "tagsLabel": { "message": "标签" },
+  "tagInputPlaceholder": { "message": "输入标签并按 Enter" },
+  "tagHelp": { "message": "按 Enter 添加。标签仅保存在本地。" },
+  "tagSaving": { "message": "正在保存…" },
+  "tagAdded": { "message": "已添加标签" },
+  "tagRemoved": { "message": "已移除标签" },
+  "tagSaveError": { "message": "未保存" },
+  "removeTagLabel": {
+    "message": "移除标签 $TAG$",
+    "placeholders": { "tag": { "content": "$1" } }
+  },
+  "noteLabel": { "message": "私人备注" },
+  "noteHelp": { "message": "纯文本，输入时自动保存在本地。" },
+  "noteLoading": { "message": "正在加载…" },
+  "noteLoadError": { "message": "无法打开备注。" },
+  "noteSaving": { "message": "正在保存…" },
+  "noteSaved": { "message": "已保存" },
+  "noteSaveError": { "message": "未保存" },
+  "folderTitle": { "message": "文件夹" },
+  "folderBreadcrumbLabel": { "message": "文件夹路径" },
+  "folderAssignmentLabel": { "message": "保存到文件夹" },
+  "uncategorizedFolder": { "message": "未分类" },
+  "manageFolders": { "message": "管理文件夹" },
+  "renameTag": { "message": "重命名" },
+  "deleteTag": { "message": "删除" },
+  "renameTagPrompt": { "message": "输入新的标签名称" },
+  "deleteTagConfirmation": {
+    "message": "从 $COUNT$ 个书签中删除 $NAME$？该标签会从资料库中消失，但记录仍会保存在本地。",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
+  "newFolderName": { "message": "名称" },
+  "parentFolderLabel": { "message": "上级文件夹" },
+  "rootFolder": { "message": "无上级文件夹（顶层）" },
+  "createFolderButton": { "message": "创建文件夹" },
+  "renameFolder": { "message": "重命名" },
+  "renameFolderInputLabel": {
+    "message": "重命名 $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "saveFolderName": { "message": "保存名称" },
+  "deleteFolder": { "message": "删除" },
+  "deleteFolderConfirmation": {
+    "message": "删除 $NAME$ 及其所有子文件夹？书签将变为未分类，文件夹记录仍会保存在本地。",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "confirmDeleteFolder": { "message": "删除文件夹" },
+  "folderSaving": { "message": "正在保存…" },
+  "folderSaved": { "message": "已保存" },
+  "folderDeleting": { "message": "正在删除…" },
+  "folderDeleted": { "message": "文件夹已删除" },
+  "folderCreated": { "message": "文件夹已创建" },
+  "folderActionError": { "message": "无法更新文件夹。" },
+  "folderLoadError": { "message": "无法加载文件夹。" },
   "extensionName": {
     "message": "Bookmark X"
   },
   "extensionDescription": {
-    "message": "从已打开的页面获取 X 书签，并导出为本地私密 TXT 存档。"
+    "message": "在本地获取和整理 X 书签，并导出为私密 TXT 或 Markdown 文件。"
   },
   "eyebrow": {
     "message": "X 本地存档"
@@ -42,7 +150,7 @@
     "message": "已保存总数"
   },
   "currentLabel": {
-    "message": "X 中现有"
+    "message": "X 上的书签"
   },
   "archivedLabel": {
     "message": "已归档"
@@ -51,25 +159,58 @@
     "message": "尚未获取任何书签。"
   },
   "lastCaptureAt": {
-    "message": "获取于 $DATE$",
+    "message": "上次完整检查：$DATE$",
     "placeholders": {
       "date": {
         "content": "$1"
       }
     }
   },
+  "lastReviewLabel": { "message": "上次完整检查" },
+  "dateTimePattern": {
+    "message": "$DATE$ $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": {
-    "message": "从未获取"
+    "message": "尚未进行完整检查"
   },
   "unknownDate": {
     "message": "未知日期"
   },
   "captureTitle": {
-    "message": "获取书签"
+    "message": "更新书签"
   },
   "captureDescription": {
     "message": "Bookmark X 会滚动已打开的书签页面，并将每条可见帖子保存到本地。"
   },
+  "captureModeLabel": { "message": "检查模式" },
+  "captureModeQuick": { "message": "最近" },
+  "captureModeFull": { "message": "全部" },
+  "captureModeQuickHelp": {
+    "message": "检查新项目，连续遇到 $COUNT$ 个已保存书签后停止。",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "captureModeFullHelp": {
+    "message": "检查整个列表，并同步在其他设备上删除的书签。"
+  },
+  "captureModeFirstFullHelp": {
+    "message": "首次捕获必须安全地检查整个列表。"
+  },
+  "fullReviewReminder": {
+    "message": "距离上次完整检查已超过30天。建议现在执行一次。"
+  },
+  "captureRunningQuick": { "message": "正在快速更新" },
+  "captureRunningFull": { "message": "正在完整检查" },
+  "captureCompleteQuick": { "message": "快速更新完成" },
+  "captureCompleteFull": { "message": "完整检查完成" },
+  "captureCompleteFallback": {
+    "message": "检查点已变化；完整检查已完成"
+  },
+  "captureButtonQuick": { "message": "更新" },
+  "captureButtonFull": { "message": "全部检查" },
   "captureIdle": {
     "message": "已就绪"
   },
@@ -108,14 +249,27 @@
     "message": "停止获取"
   },
   "exportTitle": {
-    "message": "下载 TXT"
+    "message": "导出资料库"
   },
-  "exportFullButton": {
-    "message": "下载完整存档"
+  "exportLocalBadge": { "message": "仅限本地" },
+  "exportHelp": { "message": "选择文件夹、任一匹配标签，以及是否包含已归档帖子。" },
+  "exportFiltersSummary": { "message": "选择导出筛选条件" },
+  "exportFolderFilterLabel": { "message": "文件夹和子文件夹" },
+  "exportAllFolders": { "message": "所有文件夹" },
+  "exportTagFilterLabel": { "message": "标签（匹配任一已选项）" },
+  "exportTagFilterHelp": {
+    "message": "使用 Ctrl 或 Command 可多选。留空则包含所有标签。"
   },
-  "exportUrlsButton": {
-    "message": "仅 URL"
-  },
+  "exportIncludeArchived": { "message": "包含已归档帖子" },
+  "exportTxtButton": { "message": "导出 .TXT" },
+  "exportTxtDescription": { "message": "易读的纯文本" },
+  "exportMarkdownButton": { "message": "导出 .MD" },
+  "exportMarkdownDescription": { "message": "结构化 Markdown" },
+  "exportFormatMenuLabel": { "message": "选择导出格式" },
+  "exportPreparing": { "message": "正在准备导出…" },
+  "exportDownloaded": { "message": "导出文件已下载" },
+  "exportFailed": { "message": "无法创建导出文件。" },
+  "exportFieldRequired": { "message": "请在设置中至少启用一个导出字段。" },
   "moreOptions": {
     "message": "更多选项"
   },
@@ -151,5 +305,161 @@
   },
   "errorGeneric": {
     "message": "Bookmark X 无法完成该操作，请重试。"
-  }
+  },
+  "openSettingsButton": { "message": "打开设置" },
+  "openSettingsHelp": {
+    "message": "更改外观、采集限制和行为。"
+  },
+  "settingsTitle": { "message": "Bookmark X 设置" },
+  "skipToSettings": { "message": "跳到设置" },
+  "settingsEyebrow": { "message": "本地优先设计" },
+  "settingsIntro": { "message": "选择 Bookmark X 的外观、打开方式及私人归档内容。" },
+  "settingsAppearance": { "message": "外观" },
+  "settingLargeText": { "message": "使用更大字体" },
+  "settingHighContrast": { "message": "使用高对比度" },
+  "settingReduceMotion": { "message": "减少动态效果" },
+  "settingDateFormat": { "message": "日期格式" },
+  "settingTimeFormat": { "message": "时间格式" },
+  "settingFormatAuto": { "message": "按地区自动设置" },
+  "settingDateFormatDmy": { "message": "DD/MM/YYYY" },
+  "settingDateFormatMdy": { "message": "MM/DD/YYYY" },
+  "settingDateFormatYmd": { "message": "YYYY/MM/DD" },
+  "settingTimeFormat24": { "message": "24 小时制" },
+  "settingTimeFormat12": { "message": "12 小时制（AM/PM）" },
+  "settingsBehavior": { "message": "行为" },
+  "settingSurface": { "message": "打开收藏库的方式" },
+  "settingSurfaceModal": { "message": "紧凑窗口" },
+  "settingSurfaceSidePanel": { "message": "Chrome 侧边栏" },
+  "settingPrompt": { "message": "收藏后提示填写笔记" },
+  "settingMetadataSummary": { "message": "显示整理状态" },
+  "settingBreadcrumb": { "message": "显示文件夹路径" },
+  "settingTags": { "message": "显示标签" },
+  "settingNote": { "message": "显示私人笔记" },
+  "settingCategory": { "message": "显示未分类提示" },
+  "settingsExport": { "message": "导出" },
+  "settingsExportHelp": {
+    "message": "选择今后的 TXT 和 Markdown 导出可包含的详细信息。"
+  },
+  "settingExportLink": { "message": "帖子链接" },
+  "settingExportText": { "message": "帖子文本" },
+  "settingExportAuthor": { "message": "作者" },
+  "settingExportDate": { "message": "发布日期" },
+  "settingExportImages": { "message": "图片链接" },
+  "settingExportVideos": { "message": "视频链接" },
+  "settingExportNote": { "message": "私人笔记" },
+  "settingExportTags": { "message": "标签" },
+  "settingExportFolder": { "message": "文件夹路径" },
+  "settingExportFirstSaved": { "message": "首次捕获日期" },
+  "settingExportLastSeen": { "message": "最后查看日期" },
+  "settingsExportFieldRequired": { "message": "请至少保留一个导出字段。" },
+  "settingsSearch": { "message": "搜索" },
+  "settingLiveFilter": { "message": "输入时筛选结果" },
+  "settingsData": { "message": "数据" },
+  "settingKeepArchived": { "message": "将从 X 移除的帖子保留为归档" },
+  "settingQuickStopThreshold": {
+    "message": "识别到多少个已知书签后停止快速更新"
+  },
+  "settingQuickStopHelp": {
+    "message": "建议使用 15。数值越大，停止前检查的内容越多。"
+  },
+  "settingsDataHelp": { "message": "收藏内容保留在此设备的 IndexedDB 中。" },
+  "settingsSaving": { "message": "正在保存…" },
+  "settingsSaved": { "message": "已保存" },
+  "settingsSaveError": { "message": "无法保存设置。" },
+  "settingsLoadError": { "message": "无法加载设置。" },
+  "githubProjectEyebrow": { "message": "独立且开放" },
+  "githubProjectTitle": { "message": "GitHub 上的开源项目" },
+  "githubProjectDescription": {
+    "message": "查看代码、关注进展，若对您有用，可以为项目点亮星标。"
+  },
+  "githubStarAction": { "message": "在 GitHub 上加星" },
+  "githubStarCount": {
+    "message": "GitHub 上有 $COUNT$ 个星标",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "bookmarkPromptTitle": { "message": "为什么要收藏这个内容？" },
+  "bookmarkPromptClose": { "message": "关闭" },
+  "bookmarkPromptSave": { "message": "保存笔记" },
+  "bookmarkPromptTags": { "message": "标签" },
+  "bookmarkPromptTagsHelp": { "message": "多个标签请用逗号分隔。" },
+  "bookmarkPromptFolder": { "message": "文件夹" },
+  "bookmarkPromptChooseFolder": { "message": "选择现有文件夹" },
+  "bookmarkPromptChooseTag": { "message": "选择现有标签" },
+  "bookmarkPromptNote": { "message": "私人笔记" },
+  "bookmarkCategorized": { "message": "已分类" },
+  "bookmarkNeedsCategory": { "message": "待分类" },
+  "bookmarkMetadataLabel": { "message": "Bookmark X 已保存帖子的详细信息" },
+  "bookmarkMetadataMapped": { "message": "已由 Bookmark X 整理" },
+  "bookmarkMetadataArchived": { "message": "已在本地归档" },
+  "liveBookmarkPending": { "message": "正在等待 X 确认…" },
+  "liveBookmarkSaved": { "message": "已保存到本地。可添加备注、文件夹或标签。" },
+  "liveBookmarkArchived": { "message": "已从当前书签移除并保留在归档中。" },
+  "semanticTitle": { "message": "可选语义搜索" },
+  "semanticPrivacy": {
+    "message": "使用本地多语言模型按含义查找帖子。您的帖子、笔记、标签和文件夹绝不会离开此设备。"
+  },
+  "semanticConsentTitle": { "message": "下载前须知" },
+  "semanticConsentBody": {
+    "message": "只有在您选择“下载并启用”后，Bookmark X 才会从 Hugging Face 下载约 136 MB 的模型数据。之后模型可离线工作。"
+  },
+  "semanticQuotaHelp": {
+    "message": "扩展程序会申请无限本地存储空间，但仍受可用磁盘空间限制。搜索索引每个已保存帖子约占 1.5 KB。"
+  },
+  "semanticEnabled": { "message": "在搜索中使用语义结果" },
+  "semanticInstall": { "message": "下载并启用" },
+  "semanticCancel": { "message": "取消" },
+  "semanticReindex": { "message": "重新索引已保存帖子" },
+  "semanticRemove": { "message": "移除模型和索引" },
+  "semanticStorageEstimate": {
+    "message": "扩展程序已用存储空间：$USAGE$ / $QUOTA$。",
+    "placeholders": { "usage": { "content": "$1" }, "quota": { "content": "$2" } }
+  },
+  "semanticReady": {
+    "message": "$BACKEND$ 模型已就绪 · 已索引 $COUNT$ 个帖子",
+    "placeholders": { "backend": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "semanticDownloading": { "message": "正在下载模型…" },
+  "semanticIndexing": { "message": "正在本地索引已保存帖子…" },
+  "semanticError": { "message": "语义搜索需要处理。文本搜索仍可正常使用。" },
+  "semanticNotInstalled": { "message": "尚未安装语义模型。文本搜索已启用。" },
+  "semanticIndexProgress": {
+    "message": "已索引 $TOTAL$ 个帖子中的 $DONE$ 个",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "semanticDownloadProgress": {
+    "message": "模型下载：$PERCENT$%",
+    "placeholders": { "percent": { "content": "$1" } }
+  },
+  "semanticInstallError": { "message": "无法安装模型。文本搜索仍可正常使用。" },
+  "semanticReindexError": { "message": "无法重建语义索引。" },
+  "semanticRemoveError": { "message": "无法移除全部语义搜索数据。" },
+  "semanticToggleError": { "message": "无法更改语义搜索设置。" },
+  "liveBookmarkFailed": { "message": "X 未确认此更改。本地归档未被修改。" },
+  "primaryNavigation": { "message": "主导航" },
+  "navHome": { "message": "首页" },
+  "navLibrary": { "message": "收藏库" },
+  "navSettings": { "message": "设置" },
+  "bookmarkDetailTitle": { "message": "书签详情" },
+  "bookmarkMetadataOrganize": { "message": "编辑" },
+  "bookmarkSavedAt": {
+    "message": "保存于 $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "文件夹和标签" },
+  "organizationHelp": { "message": "查看书签的整理情况并管理文件夹。" },
+  "organizationCounts": {
+    "message": "$FOLDERS$ 个文件夹 · $TAGS$ 个标签",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$，$COUNT$ 个书签",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$，$COUNT$ 个书签",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": { "message": "打开一个书签以添加或移除标签。" },
+  "backToLibrary": { "message": "返回收藏库" },
+  "settingsViewHelp": { "message": "导出、备份、语言和偏好设置。" }
 }

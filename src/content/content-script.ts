@@ -1,21 +1,75 @@
-import type { ContentControlRequest, ContentEvent } from "../shared/protocol";
+import type {
+  BookmarkDecorationLookupResult,
+  BookmarkDecorationItem,
+  ContentControlRequest,
+  ContentEvent,
+  RuntimeResponse,
+  UiRequest,
+} from "../shared/protocol";
 import { extractBookmarks } from "./extract-bookmarks";
 import { hasReachedPageEnd, isPageLoading } from "./page-state";
 import { runScrape } from "./scrape-runner";
+import { isQuickStopThreshold, MAX_QUICK_CHECKPOINTS } from "../domain/quick-update";
 import { advanceTimeline } from "./timeline-navigation";
 import { waitForTimelineUpdate } from "./timeline-waiter";
+import { startLiveBookmarkObserver } from "./live-bookmark-observer";
+import { startBookmarkMetadataDecorator } from "./bookmark-metadata-decorator";
+import { createBookmarkModal } from "../surfaces/bookmark-modal";
+import { loadBookmarkMetadataDraft, saveBookmarkMetadata } from "./bookmark-metadata";
 
 let activeCapture: { runId: string; controller: AbortController } | undefined;
+let activeOrganizer: {
+  abort: AbortController;
+  destroy(): void;
+} | null = null;
 
 function send(event: ContentEvent): Promise<unknown> {
   return chrome.runtime.sendMessage(event);
 }
 
-async function capture(runId: string, controller: AbortController): Promise<void> {
+class CaptureDeliveryError extends Error {
+  constructor(readonly code: string) {
+    super(`Capture event was rejected: ${code}`);
+  }
+}
+
+async function sendCaptureEvent(event: ContentEvent): Promise<void> {
+  const response = await send(event);
+  if (typeof response !== "object" || response === null) {
+    throw new CaptureDeliveryError("invalid_response");
+  }
+  const envelope = response as Record<string, unknown>;
+  if (envelope.ok === true) return;
+  const error = envelope.error;
+  const code =
+    typeof error === "object" &&
+    error !== null &&
+    typeof (error as Record<string, unknown>).code === "string"
+      ? String((error as Record<string, unknown>).code)
+      : "rejected";
+  throw new CaptureDeliveryError(code);
+}
+
+async function capture(
+  runId: string,
+  controller: AbortController,
+  checkpointIds: readonly string[],
+  quickStopThreshold: number,
+): Promise<void> {
   try {
     const result = await runScrape({
       scan: () => extractBookmarks(document),
+      checkpointIds,
+      quickStopThreshold,
       isLoading: () => isPageLoading(document),
+      isPageValid: () => {
+        const location = new URL(window.location.href);
+        return (
+          (location.hostname === "x.com" || location.hostname === "www.x.com") &&
+          (location.pathname === "/i/bookmarks" ||
+            location.pathname.startsWith("/i/bookmarks/"))
+        );
+      },
       isAtEnd: () => {
         const scrollingElement = document.scrollingElement ?? document.documentElement;
         return hasReachedPageEnd({
@@ -43,24 +97,50 @@ async function capture(runId: string, controller: AbortController): Promise<void
         }),
       signal: controller.signal,
       onBatch: async (bookmarks) => {
-        await send({ type: "SCRAPE_BATCH", runId, bookmarks });
+        await sendCaptureEvent({ type: "SCRAPE_BATCH", runId, bookmarks });
       },
       onProgress: async ({ fetched }) => {
-        await send({ type: "SCRAPE_PROGRESS", runId, fetched });
+        await sendCaptureEvent({ type: "SCRAPE_PROGRESS", runId, fetched });
       },
     });
-    await send({
+    if (result.status === "incomplete") {
+      await sendCaptureEvent({
+        type: "SCRAPE_FAILED",
+        runId,
+        errorCode: result.errorCode ?? "scrape_incomplete",
+      });
+      return;
+    }
+    if (result.status === "completed") {
+      await sendCaptureEvent({
+        type: "SCRAPE_COMPLETE",
+        runId,
+        status: "completed",
+        fetched: result.fetched,
+        completionReason: result.completionReason ?? "stable_end",
+      });
+      return;
+    }
+    await sendCaptureEvent({
       type: "SCRAPE_COMPLETE",
       runId,
-      status: result.status,
+      status: "cancelled",
       fetched: result.fetched,
     });
-  } catch {
-    await send({
-      type: "SCRAPE_FAILED",
-      runId,
-      errorCode: controller.signal.aborted ? "capture_cancelled" : "scrape_failed",
-    });
+  } catch (error) {
+    if (error instanceof CaptureDeliveryError && error.code === "stale_capture") {
+      return;
+    }
+    try {
+      await send({
+        type: "SCRAPE_FAILED",
+        runId,
+        errorCode: controller.signal.aborted ? "capture_cancelled" : "scrape_failed",
+      });
+    } catch {
+      // Navigation or worker shutdown can make the final best-effort status
+      // unreachable. The background never finalizes without stable-end proof.
+    }
   } finally {
     if (activeCapture?.runId === runId) {
       activeCapture = undefined;
@@ -71,15 +151,128 @@ async function capture(runId: string, controller: AbortController): Promise<void
 function isControlRequest(value: unknown): value is ContentControlRequest {
   if (typeof value !== "object" || value === null) return false;
   const request = value as Record<string, unknown>;
+  if (request.type === "REFRESH_BOOKMARK_METADATA") {
+    return (
+      request.bookmarkIds === undefined ||
+      (Array.isArray(request.bookmarkIds) &&
+        request.bookmarkIds.length <= 100 &&
+        request.bookmarkIds.every(
+          (bookmarkId) => typeof bookmarkId === "string" && /^\d+$/.test(bookmarkId),
+        ))
+    );
+  }
+  if (typeof request.runId !== "string") return false;
+  if (request.type === "CANCEL_SCRAPE") return true;
+  if (request.type !== "START_SCRAPE") return false;
+  if (request.mode !== "quick" && request.mode !== "full") return false;
+  if (
+    !Array.isArray(request.checkpointIds) ||
+    request.checkpointIds.length > MAX_QUICK_CHECKPOINTS ||
+    !isQuickStopThreshold(request.quickStopThreshold)
+  ) {
+    return false;
+  }
   return (
-    (request.type === "START_SCRAPE" || request.type === "CANCEL_SCRAPE") &&
-    typeof request.runId === "string"
+    request.checkpointIds.every((id) => typeof id === "string" && /^\d+$/.test(id)) &&
+    new Set(request.checkpointIds).size === request.checkpointIds.length
   );
 }
+
+const metadataDecorator = startBookmarkMetadataDecorator({
+  document,
+  async lookup(ids) {
+    const response: RuntimeResponse<BookmarkDecorationLookupResult> =
+      await chrome.runtime.sendMessage({
+        type: "GET_BOOKMARK_DECORATIONS",
+        payload: { ids },
+      });
+    if (!response.ok) throw new Error(response.error.message);
+    return response.data;
+  },
+  onOrganize(item: BookmarkDecorationItem, translate) {
+    activeOrganizer?.destroy();
+    const abort = new AbortController();
+    const modal = createBookmarkModal({
+      document,
+      title: translate("bookmarkPromptTitle"),
+      bookmarkTitle: item.bookmark.text || item.bookmark.url,
+      labels: {
+        close: translate("bookmarkPromptClose"),
+        description: translate("bookmarkPromptNote"),
+        folder: translate("bookmarkPromptFolder"),
+        save: translate("bookmarkPromptSave"),
+        tags: translate("bookmarkPromptTags"),
+        tagsHelp: translate("bookmarkPromptTagsHelp"),
+        pending: translate("liveBookmarkPending"),
+      },
+      onSave: async (values) => {
+        modal.setState("pending", translate("liveBookmarkPending"));
+        try {
+          await saveBookmarkMetadata({
+            bookmark: item.bookmark,
+            values,
+            send: (request: UiRequest) => chrome.runtime.sendMessage(request),
+            signal: abort.signal,
+          });
+          modal.setState("ready", translate("liveBookmarkSaved"));
+          metadataDecorator.refresh(item.bookmark.id);
+          return true;
+        } catch {
+          if (!abort.signal.aborted) {
+            modal.setState("ready", translate("liveBookmarkFailed"));
+          }
+          return false;
+        }
+      },
+      onClose: () => {
+        abort.abort();
+        modal.destroy();
+        if (activeOrganizer?.abort === abort) activeOrganizer = null;
+      },
+    });
+    activeOrganizer = {
+      abort,
+      destroy() {
+        abort.abort();
+        modal.destroy();
+      },
+    };
+    modal.open();
+    void loadBookmarkMetadataDraft({
+      bookmark: item.bookmark,
+      send: (request: UiRequest) => chrome.runtime.sendMessage(request),
+      signal: abort.signal,
+    }).then(
+      ({ values, choices }) => {
+        if (abort.signal.aborted) return;
+        modal.setValues(values);
+        modal.setChoices(choices);
+        modal.setState("ready", "");
+      },
+      () => {
+        if (!abort.signal.aborted) {
+          modal.setState("ready", translate("liveBookmarkFailed"));
+        }
+      },
+    );
+  },
+});
 
 chrome.runtime.onMessage.addListener((request: unknown, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !isControlRequest(request)) {
     sendResponse({ accepted: false });
+    return false;
+  }
+
+  if (request.type === "REFRESH_BOOKMARK_METADATA") {
+    if (request.bookmarkIds) {
+      for (const bookmarkId of request.bookmarkIds) {
+        metadataDecorator.refresh(bookmarkId);
+      }
+    } else {
+      metadataDecorator.refresh();
+    }
+    sendResponse({ accepted: true });
     return false;
   }
 
@@ -99,6 +292,30 @@ chrome.runtime.onMessage.addListener((request: unknown, sender, sendResponse) =>
   const controller = new AbortController();
   activeCapture = { runId: request.runId, controller };
   sendResponse({ accepted: true });
-  void capture(request.runId, controller);
+  void capture(
+    request.runId,
+    controller,
+    request.checkpointIds,
+    request.quickStopThreshold,
+  );
   return false;
 });
+
+const liveBookmarkObserver = startLiveBookmarkObserver({
+  document,
+  send: (event) => chrome.runtime.sendMessage(event),
+  translate: (key) => chrome.i18n.getMessage(key) || key,
+  onPending: (article, bookmarkId) => metadataDecorator.setPending(article, bookmarkId),
+  onChanged: (bookmarkId) => metadataDecorator.refresh(bookmarkId),
+});
+
+window.addEventListener(
+  "pagehide",
+  () => {
+    activeCapture?.controller.abort();
+    activeOrganizer?.destroy();
+    liveBookmarkObserver.stop();
+    metadataDecorator.stop();
+  },
+  { once: true },
+);

@@ -1,46 +1,59 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { delimiter, resolve } from "node:path";
 
+import {
+  extensionDebugArguments,
+  isUnbrandedChromiumVersion,
+  loadUnpackedExtension,
+  navigateToExtensionContext,
+  waitForExtensionContext,
+} from "./chrome-smoke-readiness.mjs";
+
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const DIST_DIRECTORY = resolve(PROJECT_ROOT, "dist");
-const STARTUP_TIMEOUT_MS = 15_000;
+const STARTUP_TIMEOUT_MS = 30_000;
+const VISUAL_CHECKPOINT_DIRECTORY = process.env.BOOKMARK_X_VISUAL_DIR;
 
 const delay = (milliseconds) =>
   new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 
 async function findChromeBinary() {
-  if (process.env.CHROME_BIN) return process.env.CHROME_BIN;
-  const absoluteCandidates = ["/snap/chromium/current/usr/lib/chromium-browser/chrome"];
-  for (const executable of absoluteCandidates) {
+  const candidates = [
+    process.env.CHROME_BIN,
+    "/snap/chromium/current/usr/lib/chromium-browser/chrome",
+  ];
+  for (const candidate of ["chromium", "chromium-browser"]) {
+    for (const directory of (process.env.PATH ?? "").split(delimiter)) {
+      if (directory) candidates.push(resolve(directory, candidate));
+    }
+  }
+
+  const checked = [];
+  for (const executable of new Set(candidates.filter(Boolean))) {
     try {
       await access(executable, constants.X_OK);
-      return executable;
     } catch {
-      // Continue with binaries available through PATH.
+      continue;
+    }
+
+    const result = spawnSync(executable, ["--version"], {
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    const version = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+    checked.push(`${executable}: ${version || `exit ${result.status ?? "unknown"}`}`);
+    if (result.status === 0 && isUnbrandedChromiumVersion(version)) {
+      return { executable, version };
     }
   }
-  const candidates = [
-    "chromium",
-    "chromium-browser",
-    "google-chrome-for-testing",
-    "google-chrome",
-  ];
-  for (const candidate of candidates) {
-    for (const directory of (process.env.PATH ?? "").split(delimiter)) {
-      const executable = resolve(directory, candidate);
-      try {
-        await access(executable, constants.X_OK);
-        return executable;
-      } catch {
-        // Continue until a Chrome-compatible executable is found.
-      }
-    }
-  }
+
   throw new Error(
-    "No compatible browser found. Set CHROME_BIN to Chromium or Chrome for Testing.",
+    `No unbranded Chromium executable was found. Checked: ${
+      checked.length > 0 ? checked.join("; ") : "no executable candidates"
+    }. Set CHROME_BIN to an unbranded Chromium binary.`,
   );
 }
 
@@ -59,7 +72,7 @@ async function waitForDevToolsPort(profileDirectory) {
   throw new Error("Chrome DevTools did not become available.");
 }
 
-async function waitForServiceWorker(port) {
+async function waitForServiceWorker(port, extensionId) {
   const deadline = Date.now() + STARTUP_TIMEOUT_MS;
   while (Date.now() < deadline) {
     const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) =>
@@ -68,12 +81,27 @@ async function waitForServiceWorker(port) {
     const worker = targets.find(
       (target) =>
         target.type === "service_worker" &&
-        target.url.startsWith("chrome-extension://"),
+        target.url.startsWith(`chrome-extension://${extensionId}/`),
     );
     if (worker) return worker;
     await delay(100);
   }
   throw new Error("The Bookmark X service worker did not start.");
+}
+
+async function waitForPageTarget(port, predicate) {
+  const deadline = Date.now() + STARTUP_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) =>
+      response.json(),
+    );
+    const page = targets.find(
+      (target) => target.type === "page" && predicate(target.url),
+    );
+    if (page) return page;
+    await delay(100);
+  }
+  throw new Error("The expected extension page did not become available.");
 }
 
 async function openTarget(port, url) {
@@ -139,6 +167,40 @@ async function connectDevTools(webSocketUrl) {
   };
 }
 
+async function captureVisualCheckpoint(devTools, filename, viewport) {
+  if (!VISUAL_CHECKPOINT_DIRECTORY) return;
+  await mkdir(VISUAL_CHECKPOINT_DIRECTORY, { recursive: true });
+  await devTools.send("Page.enable");
+  await devTools.send("Emulation.setDeviceMetricsOverride", {
+    width: viewport.width,
+    height: viewport.height,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await devTools.send("Runtime.evaluate", {
+    expression: String.raw`(async () => {
+      await document.fonts.ready;
+      const deadline = Date.now() + 5000;
+      while (Date.now() < deadline) {
+        const loading = document.getElementById("loading-view");
+        if (!loading || loading.hidden) break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    })()`,
+    awaitPromise: true,
+  });
+  const screenshot = await devTools.send("Page.captureScreenshot", {
+    format: "png",
+    captureBeyondViewport: false,
+    fromSurface: true,
+  });
+  await writeFile(
+    resolve(VISUAL_CHECKPOINT_DIRECTORY, filename),
+    Buffer.from(screenshot.data, "base64"),
+  );
+}
+
 const uiScenario = String.raw`
 (async () => {
   const deadline = Date.now() + 5000;
@@ -155,6 +217,90 @@ const uiScenario = String.raw`
     openBookmarksVisible:
       document.getElementById("open-bookmarks-button")?.hidden === false,
     alertHidden: document.getElementById("alert")?.hidden === true,
+    typography: {
+      root: getComputedStyle(document.documentElement).fontSize,
+      body: getComputedStyle(document.body).fontSize,
+      heading: getComputedStyle(document.getElementById("app-title")).fontSize,
+      guidance: getComputedStyle(document.getElementById("page-guidance")).fontSize,
+    },
+  };
+})()
+`;
+
+const optionsDefaultsScenario = String.raw`
+(async () => {
+  const deadline = Date.now() + 5000;
+  while (
+    Date.now() < deadline &&
+    (document.documentElement?.dataset.settingsState !== "ready" ||
+      !document.getElementById("semantic-status")?.textContent)
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  const ids = [
+    "appearance-large-text",
+    "appearance-high-contrast",
+    "appearance-reduce-motion",
+    "surface-modal",
+    "surface-side-panel",
+    "behavior-prompt",
+    "metadata-summary",
+    "metadata-breadcrumb",
+    "metadata-tags",
+    "metadata-note",
+    "metadata-category",
+    "export-link",
+    "export-text",
+    "export-author",
+    "export-date",
+    "export-images",
+    "export-videos",
+    "export-note",
+    "export-tags",
+    "export-folder",
+    "export-first-saved",
+    "export-last-seen",
+    "search-live-filter",
+    "semantic-enabled",
+    "data-keep-archived",
+  ];
+  const semanticStorage = await chrome.storage.local.get("semanticSearchState");
+  return {
+    state: document.documentElement?.dataset.settingsState ?? "missing",
+    status: document.getElementById("settings-status")?.textContent ?? "missing",
+    checked: Object.fromEntries(
+      ids.map((id) => [id, document.getElementById(id)?.checked ?? "missing"]),
+    ),
+    semanticInstallHidden:
+      document.getElementById("semantic-install")?.hidden ?? "missing",
+    semanticStatus: document.getElementById("semantic-status")?.textContent ?? "",
+    huggingFaceRequests: performance
+      .getEntriesByType("resource")
+      .filter(({ name }) => /huggingface\.co|cdn\.hf\.co/u.test(name)).length,
+    semanticStateStored: Object.hasOwn(semanticStorage, "semanticSearchState"),
+    semanticModelCachePresent: (await caches.keys()).includes(
+      "bookmark-x-transformers-v1",
+    ),
+  };
+})()
+`;
+
+const sidePanelScenario = String.raw`
+(async () => {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const loading = document.getElementById("loading-view");
+    if (
+      document.documentElement?.dataset.surface === "side-panel" &&
+      (!loading || loading.hidden)
+    ) break;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return {
+    url: location.href,
+    title: document.title,
+    surface: document.documentElement?.dataset.surface ?? "missing",
+    dashboardVisible: document.getElementById("dashboard-view")?.hidden === false,
   };
 })()
 `;
@@ -172,6 +318,18 @@ const syntheticBookmarksPage = String.raw`
         <a href="/ada/status/111">
           <time datetime="2026-07-28T10:00:00.000Z">Jul 28</time>
         </a>
+        <div data-testid="tweetPhoto">
+          <img src="https://pbs.twimg.com/media/smoke?format=jpg&amp;name=large">
+        </div>
+        <div data-testid="videoPlayer">
+          <video
+            poster="https://pbs.twimg.com/ext_tw_video_thumb/111/pu/img/smoke.jpg"
+            src="https://video.twimg.com/ext_tw_video/111/pu/vid/avc1/temporary.mp4"
+          ></video>
+        </div>
+        <button type="button" data-testid="removeBookmark" aria-pressed="true">
+          Remove bookmark
+        </button>
       </article>
       <article data-testid="tweet">
         <div data-testid="User-Name">
@@ -207,6 +365,30 @@ const pageReadyScenario = String.raw`
 })()
 `;
 
+const delayedLoaderScenario = String.raw`
+(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 1300));
+  const main = document.querySelector("main");
+  if (!main) return { error: "timeline_missing" };
+  const loader = document.createElement("div");
+  loader.setAttribute("role", "progressbar");
+  loader.setAttribute("aria-label", "Loading more bookmarks");
+  main.append(loader);
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  loader.remove();
+
+  await new Promise((resolve) => setTimeout(resolve, 1270));
+  main.insertAdjacentHTML(
+    "beforeend",
+    '<article data-testid="tweet"><div data-testid="User-Name"><a href="/katherine"><span>Katherine Johnson</span></a><span>@katherine</span></div><div data-testid="tweetText">Late bookmark after a transient loader</div><a href="/katherine/status/333"><time datetime="2026-07-30T10:00:00.000Z">Jul 30</time></a></article>',
+  );
+  return {
+    loaderRemoved: !document.querySelector('[role="progressbar"]'),
+    articles: document.querySelectorAll('article[data-testid="tweet"]').length,
+  };
+})()
+`;
+
 const runtimeScenario = String.raw`
 (async () => {
   const before = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
@@ -222,12 +404,200 @@ const runtimeScenario = String.raw`
   }
   const exported = await chrome.runtime.sendMessage({
     type: "EXPORT_BOOKMARKS",
-    payload: { format: "urls", locale: "en" },
+    payload: {
+      format: "txt",
+      locale: "en",
+      folderId: null,
+      tagIds: [],
+      includeArchived: true,
+    },
   });
-  const cleared = await chrome.runtime.sendMessage({ type: "CLEAR_ARCHIVE" });
-  const after = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
+  const note = await chrome.runtime.sendMessage({
+    type: "SAVE_BOOKMARK_NOTE",
+    payload: { id: "111", note: "Preserved across live rebookmark" },
+  });
+  const decorations = await chrome.runtime.sendMessage({
+    type: "GET_BOOKMARK_DECORATIONS",
+    payload: { ids: ["111", "222"] },
+  });
 
-  return { before, completed, exported, cleared, after };
+  return { before, completed, exported, note, decorations };
+})()
+`;
+
+const metadataSetupScenario = String.raw`
+(async () => {
+  await chrome.storage.local.set({ uiLocale: "de" });
+  const created = await chrome.runtime.sendMessage({
+    type: "CREATE_FOLDER",
+    payload: { name: "Research and long-form artificial intelligence", parentId: null },
+  });
+  const tagged = await chrome.runtime.sendMessage({
+    type: "ADD_BOOKMARK_TAG",
+    payload: { id: "111", name: "Machine learning research" },
+  });
+  const assigned = created?.data?.folder?.id
+    ? await chrome.runtime.sendMessage({
+        type: "ASSIGN_BOOKMARK_FOLDER",
+        payload: { bookmarkId: "111", folderId: created.data.folder.id },
+      })
+    : null;
+  return { created, tagged, assigned };
+})()
+`;
+
+const filteredExportsScenario = (folderId, tagId) => String.raw`
+(async () => {
+  const txt = await chrome.runtime.sendMessage({
+    type: "EXPORT_BOOKMARKS",
+    payload: {
+      format: "txt",
+      locale: "en",
+      folderId: ${JSON.stringify(folderId)},
+      tagIds: [],
+      includeArchived: false,
+    },
+  });
+  const markdown = await chrome.runtime.sendMessage({
+    type: "EXPORT_BOOKMARKS",
+    payload: {
+      format: "md",
+      locale: "en",
+      folderId: ${JSON.stringify(folderId)},
+      tagIds: [${JSON.stringify(tagId)}],
+      includeArchived: false,
+    },
+  });
+  return { txt, markdown };
+})()
+`;
+
+const metadataStateScenario = (expectedState) => String.raw`
+(async () => {
+  const deadline = Date.now() + 6000;
+  while (Date.now() < deadline) {
+    const host = document.querySelector('article[data-testid="tweet"] bookmark-x-metadata');
+    if (host?.dataset.state === ${JSON.stringify(expectedState)}) {
+      return {
+        state: host.dataset.state,
+        hosts: document.querySelectorAll("bookmark-x-metadata").length,
+        text: host.shadowRoot?.textContent ?? "",
+        role: host.getAttribute("role"),
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return { state: "timeout", hosts: 0, text: "", role: null };
+})()
+`;
+
+const metadataPendingScenario = String.raw`
+(async () => {
+  const button = document.querySelector('button[data-testid="removeBookmark"]');
+  if (!button) return { state: "button-missing", hosts: 0, text: "" };
+  button.click();
+  const deadline = Date.now() + 3000;
+  while (Date.now() < deadline) {
+    const host = button.closest("article")?.querySelector("bookmark-x-metadata");
+    if (host?.dataset.state === "pending") {
+      return {
+        state: host.dataset.state,
+        hosts: button.closest("article")?.querySelectorAll("bookmark-x-metadata").length,
+        text: host.shadowRoot?.textContent ?? "",
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return { state: "timeout", hosts: 0, text: "" };
+})()
+`;
+
+const finishMetadataPendingScenario = String.raw`
+(async () => {
+  const button = document.querySelector(
+    'button[data-testid="removeBookmark"], button[data-testid="bookmark"]',
+  );
+  if (!button) return { state: "button-missing" };
+  button.dataset.testid = "bookmark";
+  button.setAttribute("aria-pressed", "false");
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const host = button.closest("article")?.querySelector("bookmark-x-metadata");
+    if (host?.dataset.state === "archived") {
+      button.dataset.testid = "removeBookmark";
+      button.setAttribute("aria-pressed", "true");
+      return { state: host.dataset.state };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return { state: "timeout" };
+})()
+`;
+
+const liveBookmarkPageScenario = String.raw`
+(async () => {
+  const button = document.querySelector('button[data-testid="removeBookmark"]');
+  if (!button) return { error: "live_button_missing" };
+  const waitForModalState = async (state, fromIndex) => {
+    const deadline = Date.now() + 6000;
+    while (Date.now() < deadline) {
+      const hosts = [...document.querySelectorAll("bookmark-x-note-modal")];
+      const host = hosts[fromIndex] ?? hosts.at(-1);
+      const current = host?.shadowRoot?.querySelector('[role="status"]')?.dataset.state;
+      if (current === state) {
+        return {
+          state: current,
+          formHidden: host.shadowRoot.querySelector("form")?.hidden ?? null,
+        };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return { state: "timeout", formHidden: null };
+  };
+
+  button.click();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  button.dataset.testid = "bookmark";
+  button.setAttribute("aria-pressed", "false");
+  const removed = await waitForModalState("success", 0);
+
+  button.click();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  button.dataset.testid = "removeBookmark";
+  button.setAttribute("aria-pressed", "true");
+  const saved = await waitForModalState("ready", 0);
+  return { removed, saved, finalButton: button.dataset.testid };
+})()
+`;
+
+const finalRuntimeScenario = String.raw`
+(async () => {
+  const bookmark = await chrome.runtime.sendMessage({
+    type: "GET_BOOKMARK",
+    payload: { id: "111" },
+  });
+  const stored = await chrome.storage.local.get("liveBookmarkContext");
+  const backup = await chrome.runtime.sendMessage({ type: "EXPORT_BACKUP" });
+  const cleared = await chrome.runtime.sendMessage({ type: "CLEAR_ARCHIVE" });
+  const restored = await chrome.runtime.sendMessage({
+    type: "RESTORE_BACKUP",
+    payload: { content: backup.data.content, mode: "replace", confirmed: true },
+  });
+  const restoredSettings = await chrome.runtime.sendMessage({ type: "GET_SETTINGS" });
+  const restoredStatus = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
+  const clearedAgain = await chrome.runtime.sendMessage({ type: "CLEAR_ARCHIVE" });
+  const after = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
+  return {
+    bookmark,
+    liveContext: stored.liveBookmarkContext ?? null,
+    backup,
+    cleared,
+    restored,
+    restoredSettings,
+    restoredStatus,
+    clearedAgain,
+    after,
+  };
 })()
 `;
 
@@ -264,20 +634,121 @@ const startContentCaptureScenario = String.raw`
     startedAt: now,
     updatedAt: now,
     errorCode: null,
+    mode: "full",
+    quickStopThreshold: 15,
+    checkpointIds: [],
+    checkpointCandidates: [],
+    checkpointMatchIds: [],
+    completionReason: null,
   };
   await chrome.storage.local.set({ scrapeRun: run });
   const response = await chrome.tabs.sendMessage(tab.id, {
     type: "START_SCRAPE",
     runId: run.id,
+    mode: "full",
+    quickStopThreshold: 15,
+    checkpointIds: [],
   });
   return { tabId: tab.id, ...response };
 })()
 `;
 
-function assertScenario(page, ui, start, result) {
-  const { before, completed, exported, cleared, after } = result;
+const startQuickCaptureScenario = String.raw`
+(async () => {
+  const tabs = await chrome.tabs.query({});
+  let tab;
+  for (const candidate of tabs) {
+    if (typeof candidate.id !== "number") continue;
+    try {
+      const probe = await chrome.tabs.sendMessage(candidate.id, {
+        type: "CANCEL_SCRAPE",
+        runId: "chrome-smoke-quick-probe",
+      });
+      if (probe?.accepted === true) {
+        tab = candidate;
+        break;
+      }
+    } catch {
+      // Tabs without Bookmark X's restricted content script are expected.
+    }
+  }
+  const { scrapeCheckpoints } = await chrome.storage.local.get("scrapeCheckpoints");
+  if (typeof tab?.id !== "number" || scrapeCheckpoints?.ids?.length < 3) {
+    return { accepted: false, reason: "checkpoints_missing", scrapeCheckpoints };
+  }
+  const now = new Date().toISOString();
+  const run = {
+    id: "chrome-smoke-quick-run",
+    tabId: tab.id,
+    status: "running",
+    fetched: 0,
+    added: 0,
+    updated: 0,
+    startedAt: now,
+    updatedAt: now,
+    errorCode: null,
+    mode: "quick",
+    quickStopThreshold: 3,
+    checkpointIds: scrapeCheckpoints.ids,
+    checkpointCandidates: [],
+    checkpointMatchIds: [],
+    completionReason: null,
+  };
+  await chrome.storage.local.set({ scrapeRun: run });
+  const response = await chrome.tabs.sendMessage(tab.id, {
+    type: "START_SCRAPE",
+    runId: run.id,
+    mode: "quick",
+    quickStopThreshold: 3,
+    checkpointIds: scrapeCheckpoints.ids,
+  });
+  return { ...response, checkpointIds: scrapeCheckpoints.ids };
+})()
+`;
+
+const waitForQuickCaptureScenario = String.raw`
+(async () => {
+  let status;
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
+    status = await chrome.runtime.sendMessage({ type: "GET_STATUS" });
+    if (status?.data?.scrape?.status !== "running") break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return status;
+})()
+`;
+
+function assertScenario(
+  page,
+  ui,
+  start,
+  delayedLoader,
+  result,
+  quickStart,
+  quickResult,
+  livePage,
+  finalResult,
+) {
+  const { before, completed, exported, note } = result;
+  const {
+    bookmark,
+    liveContext,
+    backup,
+    cleared,
+    restored,
+    restoredSettings,
+    restoredStatus,
+    clearedAgain,
+    after,
+  } = finalResult;
   if (page.url !== "https://x.com/i/bookmarks" || page.articles !== 2) {
     throw new Error(`The synthetic X page was not ready: ${JSON.stringify(page)}`);
+  }
+  if (!delayedLoader.loaderRemoved || delayedLoader.articles !== 3) {
+    throw new Error(
+      `The delayed loader fixture did not finish: ${JSON.stringify(delayedLoader)}`,
+    );
   }
   if (
     !ui.title.includes("Bookmark X") ||
@@ -290,6 +761,24 @@ function assertScenario(page, ui, start, result) {
       `The popup did not render its page-guidance state: ${JSON.stringify(ui)}`,
     );
   }
+  const typography = Object.fromEntries(
+    Object.entries(ui.typography ?? {}).map(([key, value]) => [
+      key,
+      Number.parseFloat(value),
+    ]),
+  );
+  if (
+    typography.root < 17 ||
+    typography.body < 15.5 ||
+    typography.body >= 18 ||
+    typography.heading < 19 ||
+    typography.heading >= 24 ||
+    typography.guidance < 13.5
+  ) {
+    throw new Error(
+      `The large-text setting did not scale popup typography: ${JSON.stringify(ui.typography)}`,
+    );
+  }
   if (!before.ok) {
     throw new Error("The service worker did not return local archive status.");
   }
@@ -297,23 +786,221 @@ function assertScenario(page, ui, start, result) {
     start.accepted !== true ||
     !completed.ok ||
     completed.data.scrape?.status !== "completed" ||
-    completed.data.scrape?.fetched !== 2 ||
-    completed.data.stats.total !== 2
+    completed.data.scrape?.completionReason !== "stable_end" ||
+    completed.data.scrape?.fetched !== 3 ||
+    completed.data.stats.total !== 3 ||
+    completed.data.quickUpdateAvailable !== true
   ) {
     throw new Error(
       `The DOM capture did not complete: ${JSON.stringify({ start, completed })}`,
     );
   }
   if (
+    quickStart.accepted !== true ||
+    quickStart.checkpointIds?.length !== 3 ||
+    !quickResult?.ok ||
+    quickResult.data.scrape?.status !== "completed" ||
+    quickResult.data.scrape?.mode !== "quick" ||
+    quickResult.data.scrape?.completionReason !== "checkpoint_stop" ||
+    quickResult.data.scrape?.fetched !== 3
+  ) {
+    throw new Error(
+      `The checkpoint quick update did not complete safely: ${JSON.stringify({ quickStart, quickResult })}`,
+    );
+  }
+  if (
     !exported.ok ||
-    exported.data.content !==
-      "\uFEFFhttps://x.com/grace/status/222\nhttps://x.com/ada/status/111\n" ||
-    !exported.data.filename.endsWith("-urls.txt")
+    !exported.data.content.includes("https://x.com/katherine/status/333") ||
+    !exported.data.content.includes("https://x.com/grace/status/222") ||
+    !exported.data.content.includes("https://x.com/ada/status/111") ||
+    !exported.data.content.includes("First saved:") ||
+    !exported.data.content.includes("Last seen:") ||
+    !exported.data.filename.endsWith(".txt")
   ) {
     throw new Error("The runtime TXT export did not match the scraped bookmarks.");
   }
+  if (!note.ok || note.data.bookmark?.note !== "Preserved across live rebookmark") {
+    throw new Error("The live bookmark setup note was not saved.");
+  }
+  if (
+    livePage.removed?.state !== "success" ||
+    livePage.removed?.formHidden !== true ||
+    livePage.saved?.state !== "ready" ||
+    livePage.saved?.formHidden !== false ||
+    livePage.finalButton !== "removeBookmark"
+  ) {
+    throw new Error(
+      `The synthetic live bookmark UI failed: ${JSON.stringify(livePage)}`,
+    );
+  }
+  if (
+    !bookmark.ok ||
+    bookmark.data.bookmark?.status !== "current" ||
+    bookmark.data.bookmark?.note !== "Preserved across live rebookmark" ||
+    bookmark.data.bookmark?.media?.images?.[0] !==
+      "https://pbs.twimg.com/media/smoke?format=jpg&name=large" ||
+    bookmark.data.bookmark?.media?.videos?.[0]?.thumbnailUrl !==
+      "https://pbs.twimg.com/ext_tw_video_thumb/111/pu/img/smoke.jpg" ||
+    bookmark.data.bookmark?.media?.videos?.[0]?.postUrl !==
+      "https://x.com/ada/status/111" ||
+    JSON.stringify(bookmark.data.bookmark?.media).includes("video.twimg.com") ||
+    liveContext?.state !== "saved" ||
+    liveContext?.bookmark?.id !== "111"
+  ) {
+    throw new Error(
+      `The live rebookmark did not preserve local metadata: ${JSON.stringify({ bookmark, liveContext })}`,
+    );
+  }
   if (!cleared.ok || !after.ok || after.data.stats.total !== 0) {
     throw new Error("The runtime archive clear flow did not finish.");
+  }
+  const parsedBackup = backup.ok ? JSON.parse(backup.data.content) : null;
+  if (
+    !backup.ok ||
+    parsedBackup?.schemaVersion !== 2 ||
+    parsedBackup?.data?.bookmarks?.length !== 3 ||
+    parsedBackup?.data?.bookmarks?.[0]?.media === undefined ||
+    parsedBackup?.data?.settings?.extension?.schemaVersion !== 2 ||
+    parsedBackup?.data?.settings?.extension?.settings?.behavior?.surface !== "modal" ||
+    !restored.ok ||
+    restored.data.bookmarks !== 3 ||
+    restored.data.reloadRequired !== true ||
+    !restoredSettings.ok ||
+    restoredSettings.data.settings.behavior.surface !== "modal" ||
+    !restoredStatus.ok ||
+    restoredStatus.data.stats.total !== 3 ||
+    restoredStatus.data.scrape !== null ||
+    restoredStatus.data.quickUpdateAvailable !== true ||
+    !clearedAgain.ok
+  ) {
+    throw new Error(
+      `The runtime JSON backup round-trip did not finish: ${JSON.stringify({
+        backupOk: backup.ok,
+        schemaVersion: parsedBackup?.schemaVersion,
+        bookmarkCount: parsedBackup?.data?.bookmarks?.length,
+        firstBookmarkHasMedia: parsedBackup?.data?.bookmarks?.[0]?.media !== undefined,
+        settingsSchemaVersion: parsedBackup?.data?.settings?.extension?.schemaVersion,
+        backupSurface:
+          parsedBackup?.data?.settings?.extension?.settings?.behavior?.surface,
+        restored,
+        restoredSettings,
+        restoredStatus,
+        clearedAgain,
+      })}`,
+    );
+  }
+}
+
+function assertOptionsDefaults(result, modelRequests) {
+  const expectedTrue = [
+    "appearance-large-text",
+    "appearance-high-contrast",
+    "surface-modal",
+    "behavior-prompt",
+    "metadata-summary",
+    "metadata-breadcrumb",
+    "metadata-tags",
+    "metadata-note",
+    "metadata-category",
+    "export-link",
+    "export-text",
+    "export-author",
+    "export-date",
+    "export-images",
+    "export-videos",
+    "export-note",
+    "export-tags",
+    "export-folder",
+    "export-first-saved",
+    "export-last-seen",
+    "search-live-filter",
+    "data-keep-archived",
+  ];
+  const expectedFalse = [
+    "appearance-reduce-motion",
+    "surface-side-panel",
+    "semantic-enabled",
+  ];
+  const mismatches = [
+    ...expectedTrue.filter((id) => result.checked[id] !== true),
+    ...expectedFalse.filter((id) => result.checked[id] !== false),
+  ];
+  if (
+    result.state !== "ready" ||
+    result.status !== "" ||
+    result.semanticInstallHidden !== false ||
+    !result.semanticStatus ||
+    result.huggingFaceRequests !== 0 ||
+    result.semanticStateStored !== false ||
+    result.semanticModelCachePresent !== false ||
+    modelRequests.length !== 0 ||
+    mismatches.length > 0
+  ) {
+    throw new Error(
+      `The options defaults did not render: ${JSON.stringify({ ...result, modelRequests, mismatches })}`,
+    );
+  }
+}
+
+function assertSidePanel(result) {
+  if (
+    !result.url.includes("popup.html?surface=side-panel") ||
+    !result.title.includes("Bookmark X") ||
+    result.surface !== "side-panel" ||
+    result.dashboardVisible !== true
+  ) {
+    throw new Error(`The Side Panel entry did not render: ${JSON.stringify(result)}`);
+  }
+}
+
+function assertFilteredExports(result) {
+  const txt = result.txt;
+  const markdown = result.markdown;
+  if (
+    !txt?.ok ||
+    !txt.data.filename.endsWith(".txt") ||
+    !txt.data.content.includes("1 item") ||
+    !txt.data.content.includes(
+      "Folder: Research and long-form artificial intelligence",
+    ) ||
+    !txt.data.content.includes("https://x.com/ada/status/111") ||
+    txt.data.content.includes("https://x.com/grace/status/222") ||
+    txt.data.content.includes("https://x.com/katherine/status/333") ||
+    !txt.data.content.includes("First saved:") ||
+    !txt.data.content.includes("Last seen:")
+  ) {
+    throw new Error(`The filtered TXT export failed: ${JSON.stringify(txt)}`);
+  }
+  if (
+    !markdown?.ok ||
+    !markdown.data.filename.endsWith(".md") ||
+    !markdown.data.content.includes("1 item") ||
+    !markdown.data.content.includes(
+      "**Folder:** Research and long\\-form artificial intelligence",
+    ) ||
+    !markdown.data.content.includes("**Tags:** Machine learning research") ||
+    !markdown.data.content.includes("https://x.com/ada/status/111") ||
+    markdown.data.content.includes("https://x.com/grace/status/222") ||
+    markdown.data.content.includes("https://x.com/katherine/status/333") ||
+    !markdown.data.content.includes("**First saved:**") ||
+    !markdown.data.content.includes("**Last seen:**")
+  ) {
+    throw new Error(
+      `The folder-and-tag Markdown export failed: ${JSON.stringify(markdown)}`,
+    );
+  }
+}
+
+function assertMetadataCheckpoint(result, expectedState, expectedText) {
+  if (
+    result.state !== expectedState ||
+    result.hosts !== 1 ||
+    !result.text.includes(expectedText) ||
+    (result.role !== undefined && result.role !== "group")
+  ) {
+    throw new Error(
+      `The injected metadata checkpoint failed: ${JSON.stringify({ result, expectedState, expectedText })}`,
+    );
   }
 }
 
@@ -329,7 +1016,9 @@ async function stopChrome(chromeProcess) {
 
 async function main() {
   await access(resolve(DIST_DIRECTORY, "manifest.json"));
-  const chromeBinary = await findChromeBinary();
+  const { executable: chromeBinary, version: chromeVersion } = await findChromeBinary();
+  console.log(`[chrome-smoke] browser: ${chromeBinary}`);
+  console.log(`[chrome-smoke] version: ${chromeVersion}`);
   const profileDirectory = await mkdtemp(
     resolve(PROJECT_ROOT, "chrome-smoke-profile-"),
   );
@@ -345,9 +1034,8 @@ async function main() {
       "--metrics-recording-only",
       "--no-first-run",
       "--no-default-browser-check",
+      ...extensionDebugArguments(),
       `--user-data-dir=${profileDirectory}`,
-      `--disable-extensions-except=${DIST_DIRECTORY}`,
-      `--load-extension=${DIST_DIRECTORY}`,
       "--remote-debugging-port=0",
       "about:blank",
     ],
@@ -360,18 +1048,106 @@ async function main() {
   });
 
   let popupDevTools;
+  let optionsDevTools;
+  let sidePanelDevTools;
   let pageDevTools;
-  let workerDevTools;
+  let browserDevTools;
   try {
     const port = await waitForDevToolsPort(profileDirectory);
-    const worker = await waitForServiceWorker(port);
-    const extensionId = new URL(worker.url).host;
-    const popupTarget = await openTarget(
-      port,
-      `chrome-extension://${extensionId}/popup.html`,
+    const browserTarget = await fetch(`http://127.0.0.1:${port}/json/version`).then(
+      (response) => response.json(),
     );
+    if (!browserTarget.webSocketDebuggerUrl) {
+      throw new Error("Chrome did not expose its browser DevTools target.");
+    }
+    browserDevTools = await connectDevTools(browserTarget.webSocketDebuggerUrl);
+    const extensionId = await loadUnpackedExtension(browserDevTools, DIST_DIRECTORY);
+    await waitForServiceWorker(port, extensionId);
+    const popupUrl = `chrome-extension://${extensionId}/popup.html`;
+    const popupTarget = await openTarget(port, "about:blank");
     popupDevTools = await connectDevTools(popupTarget.webSocketDebuggerUrl);
     await popupDevTools.send("Runtime.enable");
+    await navigateToExtensionContext(popupDevTools, popupUrl);
+
+    const optionsTarget = await openTarget(port, "about:blank");
+    optionsDevTools = await connectDevTools(optionsTarget.webSocketDebuggerUrl);
+    await optionsDevTools.send("Runtime.enable");
+    await optionsDevTools.send("Network.enable");
+    const modelRequests = [];
+    optionsDevTools.on("Network.requestWillBeSent", ({ request }) => {
+      if (/huggingface\.co|cdn\.hf\.co/u.test(request?.url ?? "")) {
+        modelRequests.push(request.url);
+      }
+    });
+    const optionsUrl = `chrome-extension://${extensionId}/options.html`;
+    await navigateToExtensionContext(optionsDevTools, optionsUrl);
+    const optionsEvaluation = await optionsDevTools.send("Runtime.evaluate", {
+      expression: optionsDefaultsScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (optionsEvaluation.exceptionDetails) {
+      throw new Error(
+        optionsEvaluation.exceptionDetails.exception?.description ??
+          optionsEvaluation.exceptionDetails.text,
+      );
+    }
+    assertOptionsDefaults(optionsEvaluation.result.value, modelRequests);
+
+    await openTarget(port, `chrome-extension://${extensionId}/sidepanel.html`);
+    const sidePanelTarget = await waitForPageTarget(
+      port,
+      (url) =>
+        url === `chrome-extension://${extensionId}/popup.html?surface=side-panel`,
+    );
+    sidePanelDevTools = await connectDevTools(sidePanelTarget.webSocketDebuggerUrl);
+    await sidePanelDevTools.send("Runtime.enable");
+    await waitForExtensionContext(
+      sidePanelDevTools,
+      `chrome-extension://${extensionId}/popup.html?surface=side-panel`,
+    );
+    const sidePanelEvaluation = await sidePanelDevTools.send("Runtime.evaluate", {
+      expression: sidePanelScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (sidePanelEvaluation.exceptionDetails) {
+      throw new Error(
+        sidePanelEvaluation.exceptionDetails.exception?.description ??
+          sidePanelEvaluation.exceptionDetails.text,
+      );
+    }
+    assertSidePanel(sidePanelEvaluation.result.value);
+
+    if (VISUAL_CHECKPOINT_DIRECTORY) {
+      await captureVisualCheckpoint(optionsDevTools, "options.png", {
+        width: 1180,
+        height: 900,
+      });
+      await captureVisualCheckpoint(sidePanelDevTools, "side-panel.png", {
+        width: 500,
+        height: 900,
+      });
+      await sidePanelDevTools.send("Runtime.evaluate", {
+        expression: `document.querySelector('[data-app-nav="library"]')?.click()`,
+      });
+      await delay(100);
+      await captureVisualCheckpoint(sidePanelDevTools, "side-panel-library.png", {
+        width: 500,
+        height: 900,
+      });
+      await sidePanelDevTools.send("Runtime.evaluate", {
+        expression: `document.querySelector('[data-app-nav="settings"]')?.click()`,
+      });
+      await delay(100);
+      await captureVisualCheckpoint(sidePanelDevTools, "side-panel-settings.png", {
+        width: 500,
+        height: 900,
+      });
+      await sidePanelDevTools.send("Runtime.evaluate", {
+        expression: `document.querySelector('[data-app-nav="home"]')?.click()`,
+      });
+    }
 
     const pageTarget = await openTarget(port, "about:blank");
     pageDevTools = await connectDevTools(pageTarget.webSocketDebuggerUrl);
@@ -415,10 +1191,12 @@ async function main() {
           uiEvaluation.exceptionDetails.text,
       );
     }
+    await captureVisualCheckpoint(popupDevTools, "popup.png", {
+      width: 440,
+      height: 900,
+    });
 
-    workerDevTools = await connectDevTools(worker.webSocketDebuggerUrl);
-    await workerDevTools.send("Runtime.enable");
-    const startEvaluation = await workerDevTools.send("Runtime.evaluate", {
+    const startEvaluation = await popupDevTools.send("Runtime.evaluate", {
       expression: startContentCaptureScenario,
       awaitPromise: true,
       returnByValue: true,
@@ -427,6 +1205,17 @@ async function main() {
       throw new Error(
         startEvaluation.exceptionDetails.exception?.description ??
           startEvaluation.exceptionDetails.text,
+      );
+    }
+    const delayedLoaderEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: delayedLoaderScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (delayedLoaderEvaluation.exceptionDetails) {
+      throw new Error(
+        delayedLoaderEvaluation.exceptionDetails.exception?.description ??
+          delayedLoaderEvaluation.exceptionDetails.text,
       );
     }
 
@@ -441,15 +1230,221 @@ async function main() {
           evaluation.exceptionDetails.text,
       );
     }
+    const uncategorizedEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: metadataStateScenario("uncategorized"),
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (uncategorizedEvaluation.exceptionDetails) {
+      throw new Error(
+        uncategorizedEvaluation.exceptionDetails.exception?.description ??
+          uncategorizedEvaluation.exceptionDetails.text,
+      );
+    }
+    if (
+      !evaluation.result.value.decorations?.ok ||
+      evaluation.result.value.decorations.data.items?.length !== 2
+    ) {
+      throw new Error(
+        `The runtime metadata lookup failed: ${JSON.stringify({ start: startEvaluation.result.value, completed: evaluation.result.value.completed, note: evaluation.result.value.note, decorations: evaluation.result.value.decorations })}`,
+      );
+    }
+    assertMetadataCheckpoint(
+      uncategorizedEvaluation.result.value,
+      "uncategorized",
+      "Uncategorized",
+    );
+    await captureVisualCheckpoint(pageDevTools, "metadata-uncategorized-en.png", {
+      width: 760,
+      height: 900,
+    });
+
+    const metadataSetupEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: metadataSetupScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (metadataSetupEvaluation.exceptionDetails) {
+      throw new Error(
+        metadataSetupEvaluation.exceptionDetails.exception?.description ??
+          metadataSetupEvaluation.exceptionDetails.text,
+      );
+    }
+    if (
+      !metadataSetupEvaluation.result.value.created?.ok ||
+      !metadataSetupEvaluation.result.value.tagged?.ok ||
+      !metadataSetupEvaluation.result.value.assigned?.ok
+    ) {
+      throw new Error(
+        `Could not prepare mapped metadata: ${JSON.stringify(metadataSetupEvaluation.result.value)}`,
+      );
+    }
+    const filteredExportsEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: filteredExportsScenario(
+        metadataSetupEvaluation.result.value.created.data.folder.id,
+        metadataSetupEvaluation.result.value.tagged.data.tag.id,
+      ),
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (filteredExportsEvaluation.exceptionDetails) {
+      throw new Error(
+        filteredExportsEvaluation.exceptionDetails.exception?.description ??
+          filteredExportsEvaluation.exceptionDetails.text,
+      );
+    }
+    assertFilteredExports(filteredExportsEvaluation.result.value);
+    const mappedEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: metadataStateScenario("mapped"),
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (mappedEvaluation.exceptionDetails) {
+      throw new Error(
+        mappedEvaluation.exceptionDetails.exception?.description ??
+          mappedEvaluation.exceptionDetails.text,
+      );
+    }
+    assertMetadataCheckpoint(mappedEvaluation.result.value, "mapped", "Ordner:");
+    await captureVisualCheckpoint(pageDevTools, "metadata-mapped-de.png", {
+      width: 760,
+      height: 900,
+    });
+
+    const pendingEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: metadataPendingScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (pendingEvaluation.exceptionDetails) {
+      throw new Error(
+        pendingEvaluation.exceptionDetails.exception?.description ??
+          pendingEvaluation.exceptionDetails.text,
+      );
+    }
+    assertMetadataCheckpoint(pendingEvaluation.result.value, "pending", "Warten");
+    await captureVisualCheckpoint(pageDevTools, "metadata-pending-de.png", {
+      width: 760,
+      height: 900,
+    });
+    const finishPendingEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: finishMetadataPendingScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (
+      finishPendingEvaluation.exceptionDetails ||
+      finishPendingEvaluation.result.value.state !== "archived"
+    ) {
+      throw new Error("The injected pending state did not settle as archived.");
+    }
+    const quickStartEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: startQuickCaptureScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (quickStartEvaluation.exceptionDetails) {
+      throw new Error(
+        quickStartEvaluation.exceptionDetails.exception?.description ??
+          quickStartEvaluation.exceptionDetails.text,
+      );
+    }
+    const quickEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: waitForQuickCaptureScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (quickEvaluation.exceptionDetails) {
+      throw new Error(
+        quickEvaluation.exceptionDetails.exception?.description ??
+          quickEvaluation.exceptionDetails.text,
+      );
+    }
+    const livePageEvaluation = await pageDevTools.send("Runtime.evaluate", {
+      expression: liveBookmarkPageScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (livePageEvaluation.exceptionDetails) {
+      throw new Error(
+        livePageEvaluation.exceptionDetails.exception?.description ??
+          livePageEvaluation.exceptionDetails.text,
+      );
+    }
+    if (VISUAL_CHECKPOINT_DIRECTORY) {
+      await captureVisualCheckpoint(pageDevTools, "bookmark-modal.png", {
+        width: 1180,
+        height: 900,
+      });
+      await navigateToExtensionContext(popupDevTools, popupUrl);
+      const detailEvaluation = await popupDevTools.send("Runtime.evaluate", {
+        expression: `(async () => {
+          document.querySelector('[data-app-nav="library"]')?.click();
+          const deadline = Date.now() + 2500;
+          while (Date.now() < deadline) {
+            const first = document.querySelector('.bookmark-option');
+            if (first) {
+              first.click();
+              break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+          while (Date.now() < deadline) {
+            const detail = document.querySelector('[data-app-view="detail"]');
+            const editor = document.getElementById('note-editor');
+            if (detail && !detail.hidden && editor && !editor.hidden) return { opened: true };
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+          const detail = document.querySelector('[data-app-view="detail"]');
+          const editor = document.getElementById('note-editor');
+          return {
+            opened: false,
+            optionCount: document.querySelectorAll('.bookmark-option').length,
+            detailHidden: detail?.hidden ?? null,
+            editorHidden: editor?.hidden ?? null,
+          };
+        })()`,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      if (!detailEvaluation.result.value?.opened) {
+        throw new Error(
+          `The visual checkpoint could not open bookmark details: ${JSON.stringify(detailEvaluation.result.value)}`,
+        );
+      }
+      await captureVisualCheckpoint(popupDevTools, "popup-detail.png", {
+        width: 400,
+        height: 900,
+      });
+    }
+    const finalEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: finalRuntimeScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (finalEvaluation.exceptionDetails) {
+      throw new Error(
+        finalEvaluation.exceptionDetails.exception?.description ??
+          finalEvaluation.exceptionDetails.text,
+      );
+    }
     assertScenario(
       pageEvaluation.result.value,
       uiEvaluation.result.value,
       startEvaluation.result.value,
+      delayedLoaderEvaluation.result.value,
       evaluation.result.value,
+      quickStartEvaluation.result.value,
+      quickEvaluation.result.value,
+      livePageEvaluation.result.value,
+      finalEvaluation.result.value,
     );
     console.log(
-      "Chrome smoke passed: X-page DOM scraping, UI, MV3 worker, IndexedDB, TXT export, and clear.",
+      "Chrome smoke passed: real Options and Side Panel pages, no pre-consent model cache/download, delayed-loader full review, checkpoint quick update, injected metadata states/localization, live unbookmark/rebookmark, metadata preservation, UI, MV3 worker, filtered TXT/Markdown exports with timestamps, JSON backup round-trip, and clear.",
     );
+    if (VISUAL_CHECKPOINT_DIRECTORY) {
+      console.log(`Visual checkpoints: ${VISUAL_CHECKPOINT_DIRECTORY}`);
+    }
   } catch (error) {
     const diagnostics = chromeErrors.join("").trim();
     if (diagnostics) {
@@ -458,8 +1453,10 @@ async function main() {
     throw error;
   } finally {
     popupDevTools?.close();
+    optionsDevTools?.close();
+    sidePanelDevTools?.close();
     pageDevTools?.close();
-    workerDevTools?.close();
+    browserDevTools?.close();
     await stopChrome(chromeProcess);
     await rm(profileDirectory, {
       recursive: true,
