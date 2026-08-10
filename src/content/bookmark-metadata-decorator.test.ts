@@ -102,9 +102,11 @@ describe("startBookmarkMetadataDecorator", () => {
     const local = renderArticle("123");
     const unknown = renderArticle("999");
     const lookup = vi.fn(async () => result());
+    const onOrganize = vi.fn();
     const decorator = startBookmarkMetadataDecorator({
       document,
       lookup,
+      onOrganize,
     });
 
     await settle();
@@ -125,8 +127,18 @@ describe("startBookmarkMetadataDecorator", () => {
     );
     expect(host?.shadowRoot?.textContent).toContain("Research");
     expect(host?.shadowRoot?.textContent).toContain("AI");
-    expect(host?.shadowRoot?.textContent).toContain("bookmarkMetadataMapped");
+    expect(host?.shadowRoot?.textContent).toContain("bookmarkPromptFolder:");
+    expect(host?.shadowRoot?.textContent).toContain("bookmarkPromptTags:");
+    expect(host?.shadowRoot?.textContent).not.toContain("bookmarkMetadataMapped");
+    expect(host?.shadowRoot?.querySelectorAll(".metadata-field")).toHaveLength(2);
     expect(host?.getAttribute("aria-label")).toBe("bookmarkMetadataLabel");
+    const organize = host?.shadowRoot?.querySelector<HTMLButtonElement>(".organize");
+    expect(organize?.textContent).toBe("bookmarkMetadataOrganize");
+    expect(organize?.getAttribute("aria-label")).toBe("bookmarkMetadataOrganize");
+    expect(organize?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(styles).toContain("margin-inline-start: auto");
+    organize?.click();
+    expect(onOrganize).toHaveBeenCalledOnce();
 
     decorator.stop();
   });
@@ -143,8 +155,9 @@ describe("startBookmarkMetadataDecorator", () => {
 
     const host = article.querySelector<HTMLElement>("bookmark-x-metadata")!;
     expect(host.dataset.state).toBe("uncategorized");
-    expect(host.shadowRoot?.textContent).toContain("bookmarkNeedsCategory");
+    expect(host.shadowRoot?.textContent).not.toContain("bookmarkNeedsCategory");
     expect(host.shadowRoot?.textContent).toContain("uncategorizedFolder");
+    expect(host.shadowRoot?.querySelector(".status")?.textContent).not.toContain("!");
 
     decorator.setPending(article, "123");
     expect(article.querySelectorAll("bookmark-x-metadata")).toHaveLength(1);
@@ -162,6 +175,32 @@ describe("startBookmarkMetadataDecorator", () => {
     await vi.waitFor(() => expect(host.dataset.state).toBe("mapped"));
     expect(article.querySelectorAll("bookmark-x-metadata")).toHaveLength(1);
     expect(host.shadowRoot?.textContent).not.toContain("bookmarkNeedsCategory");
+
+    current = {
+      ...uncategorizedResult(),
+      items: [
+        {
+          ...uncategorizedResult().items[0]!,
+          breadcrumb: ["Research"],
+        },
+      ],
+    };
+    decorator.refresh("123");
+    await vi.waitFor(() => expect(host.dataset.state).toBe("mapped"));
+    expect(host.shadowRoot?.textContent).not.toContain("uncategorizedFolder");
+
+    current = {
+      ...uncategorizedResult(),
+      items: [
+        {
+          ...uncategorizedResult().items[0]!,
+          tags: [{ id: "tag-ai", name: "AI", normalizedName: "ai" }],
+        },
+      ],
+    };
+    decorator.refresh("123");
+    await vi.waitFor(() => expect(host.dataset.state).toBe("mapped"));
+    expect(host.shadowRoot?.textContent).not.toContain("uncategorizedFolder");
 
     current = {
       ...result(),
@@ -208,10 +247,10 @@ describe("startBookmarkMetadataDecorator", () => {
     expect(host.dataset.largeText).toBe("false");
     expect(host.dataset.highContrast).toBe("false");
     expect(host.dataset.reduceMotion).toBe("true");
-    expect(host.dataset.state).toBe("mapped");
+    expect(host.dataset.state).toBe("uncategorized");
     expect(host.shadowRoot?.textContent).not.toContain("bookmarkMetadataMapped");
     expect(host.shadowRoot?.textContent).not.toContain("bookmarkNeedsCategory");
-    expect(host.shadowRoot?.textContent).not.toContain("uncategorizedFolder");
+    expect(host.shadowRoot?.textContent).toContain("uncategorizedFolder");
 
     current = {
       ...current,

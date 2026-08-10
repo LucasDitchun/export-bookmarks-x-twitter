@@ -1,18 +1,27 @@
 import type {
   BookmarkDecorationLookupResult,
+  BookmarkDecorationItem,
   ContentControlRequest,
   ContentEvent,
   RuntimeResponse,
+  UiRequest,
 } from "../shared/protocol";
 import { extractBookmarks } from "./extract-bookmarks";
 import { hasReachedPageEnd, isPageLoading } from "./page-state";
 import { runScrape } from "./scrape-runner";
+import { isQuickStopThreshold, MAX_QUICK_CHECKPOINTS } from "../domain/quick-update";
 import { advanceTimeline } from "./timeline-navigation";
 import { waitForTimelineUpdate } from "./timeline-waiter";
 import { startLiveBookmarkObserver } from "./live-bookmark-observer";
 import { startBookmarkMetadataDecorator } from "./bookmark-metadata-decorator";
+import { createBookmarkModal } from "../surfaces/bookmark-modal";
+import { loadBookmarkMetadataDraft, saveBookmarkMetadata } from "./bookmark-metadata";
 
 let activeCapture: { runId: string; controller: AbortController } | undefined;
+let activeOrganizer: {
+  abort: AbortController;
+  destroy(): void;
+} | null = null;
 
 function send(event: ContentEvent): Promise<unknown> {
   return chrome.runtime.sendMessage(event);
@@ -45,11 +54,13 @@ async function capture(
   runId: string,
   controller: AbortController,
   checkpointIds: readonly string[],
+  quickStopThreshold: number,
 ): Promise<void> {
   try {
     const result = await runScrape({
       scan: () => extractBookmarks(document),
       checkpointIds,
+      quickStopThreshold,
       isLoading: () => isPageLoading(document),
       isPageValid: () => {
         const location = new URL(window.location.href);
@@ -154,7 +165,11 @@ function isControlRequest(value: unknown): value is ContentControlRequest {
   if (request.type === "CANCEL_SCRAPE") return true;
   if (request.type !== "START_SCRAPE") return false;
   if (request.mode !== "quick" && request.mode !== "full") return false;
-  if (!Array.isArray(request.checkpointIds) || request.checkpointIds.length > 10) {
+  if (
+    !Array.isArray(request.checkpointIds) ||
+    request.checkpointIds.length > MAX_QUICK_CHECKPOINTS ||
+    !isQuickStopThreshold(request.quickStopThreshold)
+  ) {
     return false;
   }
   return (
@@ -173,6 +188,73 @@ const metadataDecorator = startBookmarkMetadataDecorator({
       });
     if (!response.ok) throw new Error(response.error.message);
     return response.data;
+  },
+  onOrganize(item: BookmarkDecorationItem, translate) {
+    activeOrganizer?.destroy();
+    const abort = new AbortController();
+    const modal = createBookmarkModal({
+      document,
+      title: translate("bookmarkPromptTitle"),
+      bookmarkTitle: item.bookmark.text || item.bookmark.url,
+      labels: {
+        close: translate("bookmarkPromptClose"),
+        description: translate("bookmarkPromptNote"),
+        folder: translate("bookmarkPromptFolder"),
+        save: translate("bookmarkPromptSave"),
+        tags: translate("bookmarkPromptTags"),
+        tagsHelp: translate("bookmarkPromptTagsHelp"),
+        pending: translate("liveBookmarkPending"),
+      },
+      onSave: async (values) => {
+        modal.setState("pending", translate("liveBookmarkPending"));
+        try {
+          await saveBookmarkMetadata({
+            bookmark: item.bookmark,
+            values,
+            send: (request: UiRequest) => chrome.runtime.sendMessage(request),
+            signal: abort.signal,
+          });
+          modal.setState("ready", translate("liveBookmarkSaved"));
+          metadataDecorator.refresh(item.bookmark.id);
+          return true;
+        } catch {
+          if (!abort.signal.aborted) {
+            modal.setState("ready", translate("liveBookmarkFailed"));
+          }
+          return false;
+        }
+      },
+      onClose: () => {
+        abort.abort();
+        modal.destroy();
+        if (activeOrganizer?.abort === abort) activeOrganizer = null;
+      },
+    });
+    activeOrganizer = {
+      abort,
+      destroy() {
+        abort.abort();
+        modal.destroy();
+      },
+    };
+    modal.open();
+    void loadBookmarkMetadataDraft({
+      bookmark: item.bookmark,
+      send: (request: UiRequest) => chrome.runtime.sendMessage(request),
+      signal: abort.signal,
+    }).then(
+      ({ values, choices }) => {
+        if (abort.signal.aborted) return;
+        modal.setValues(values);
+        modal.setChoices(choices);
+        modal.setState("ready", "");
+      },
+      () => {
+        if (!abort.signal.aborted) {
+          modal.setState("ready", translate("liveBookmarkFailed"));
+        }
+      },
+    );
   },
 });
 
@@ -210,7 +292,12 @@ chrome.runtime.onMessage.addListener((request: unknown, sender, sendResponse) =>
   const controller = new AbortController();
   activeCapture = { runId: request.runId, controller };
   sendResponse({ accepted: true });
-  void capture(request.runId, controller, request.checkpointIds);
+  void capture(
+    request.runId,
+    controller,
+    request.checkpointIds,
+    request.quickStopThreshold,
+  );
   return false;
 });
 
@@ -226,6 +313,7 @@ window.addEventListener(
   "pagehide",
   () => {
     activeCapture?.controller.abort();
+    activeOrganizer?.destroy();
     liveBookmarkObserver.stop();
     metadataDecorator.stop();
   },

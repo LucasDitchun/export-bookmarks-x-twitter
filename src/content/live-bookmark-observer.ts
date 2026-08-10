@@ -11,7 +11,7 @@ import {
   type BookmarkModalController,
 } from "../surfaces/bookmark-modal";
 import { extractBookmarks } from "./extract-bookmarks";
-import { loadBookmarkMetadataValues, saveBookmarkMetadata } from "./bookmark-metadata";
+import { loadBookmarkMetadataDraft, saveBookmarkMetadata } from "./bookmark-metadata";
 import { isContentBookmarkMedia } from "./bookmark-media";
 
 const DEFAULT_STABLE_FOR_MS = 900;
@@ -143,6 +143,7 @@ function modalLabels(translate: Translate) {
     folder: translate("bookmarkPromptFolder"),
     save: translate("bookmarkPromptSave"),
     tags: translate("bookmarkPromptTags"),
+    tagsHelp: translate("bookmarkPromptTagsHelp"),
     pending: translate("liveBookmarkPending"),
   };
 }
@@ -244,10 +245,12 @@ export function startLiveBookmarkObserver(
             await persistValues(values);
             options.onChanged?.(bookmark.id);
             active.modal?.setState("ready", options.translate("liveBookmarkSaved"));
+            return true;
           } catch {
             if (!metadataController.signal.aborted) {
               active.modal?.setState("ready", options.translate("liveBookmarkFailed"));
             }
+            return false;
           }
         },
         onClose: () => {
@@ -268,12 +271,15 @@ export function startLiveBookmarkObserver(
 
       active.prepareMetadata = async (record) => {
         savedBookmark = record;
-        const values = await loadBookmarkMetadataValues({
+        const { values, choices } = await loadBookmarkMetadataDraft({
           bookmark: record,
           send: options.send,
           signal: metadataController.signal,
         });
-        if (!metadataController.signal.aborted) modal?.setValues(values);
+        if (!metadataController.signal.aborted) {
+          modal?.setValues(values);
+          modal?.setChoices(choices);
+        }
       };
     }
 

@@ -55,8 +55,8 @@ old folder, and select **Reload** on the Bookmark X card at
 3. Wait until the bookmarks timeline is visible.
 4. Open **Bookmark X** from Chrome's extension menu.
 5. Confirm that the popup says the page is ready.
-6. Choose **Quick update** for recent additions or **Full review** to reconcile
-   the whole list. The first capture automatically uses a full review.
+6. Choose **Recent** for new additions or **All bookmarks** to reconcile the
+   whole list. The first capture automatically reviews all bookmarks.
 7. Select the capture button.
 8. Keep the X tab open while the extension scrolls and waits for new items to
    load. You may close the popup.
@@ -102,11 +102,12 @@ entries.
 
 ## Quick updates and full reviews
 
-Choose **Quick update** to fetch recent additions without traversing a large
-library every time. Bookmark X keeps ten recent local checkpoint IDs and stops
-only after recognizing three of them consecutively. The first capture is always
-a **Full review**. If a quick update cannot find enough checkpoints, it safely
-continues to the real end and becomes a full review automatically.
+Choose **Recent** to fetch new additions without traversing a large library
+every time. By default, Bookmark X stops after 15 already-known posts appear
+consecutively. Change that threshold under **Settings → Data** when a shorter or
+more conservative overlap is preferable. The first capture always reviews
+**All bookmarks**. If a recent update cannot prove the configured overlap, it
+safely continues to the real end and becomes a complete review automatically.
 
 A full review advances through the entire virtualized timeline, sends posts in
 batches of at most 100, and confirms the end only after repeated quiet checks
@@ -137,13 +138,27 @@ it current and restores its existing note, folder, and tags. Automatic opening
 is enabled by default and can be disabled in **Settings → Behavior**; the same
 setting chooses the in-page modal or Chrome Side Panel.
 
+The modal accepts new values or suggestions from existing folders and tags.
+Separate multiple tags with commas. A successful save closes the modal; an
+error keeps it open so the draft is not lost.
+
+## Organize notes, folders, and tags
+
+Open **Library → Folders and tags** to see usage counts, filter the library,
+create nested folders, and rename or delete folders and tags. Edit and delete
+actions appear on hover or keyboard focus; touch devices keep them visible.
+Deleting a folder leaves its posts uncategorized, while deleting a tag removes
+that tag assignment. Both use a confirmation and a recoverable soft-delete
+record internally instead of silently erasing related bookmarks.
+
 ## See your local context directly on X
 
 When a visible X post already exists in your local Bookmark X library, a compact
 card appears immediately after the post actions. Its isolated Shadow DOM shows
-the mapped or pending state, folder breadcrumb, tag badges, and a two-line note
-preview. Posts that still need a note, folder, or tag receive a discreet **Needs
-category** indicator. Unknown posts receive no injected UI.
+the folder and tags on separate, labeled rows, followed by a one-line note
+preview. **Uncategorized** appears only when the post has neither a folder nor a
+tag. Select **Edit** on the right to update its metadata. Unknown posts receive
+no injected UI.
 
 The card follows live saves, removals, modal edits, settings changes, and X's
 virtualized timeline without duplicating itself. Open **Settings → Behavior** to
@@ -170,6 +185,11 @@ is not supported.
 To change the language manually, open the popup, expand **More options**, and
 choose a language from the **Language** selector. The preference is stored
 locally and used the next time you open Bookmark X.
+
+The Home dashboard displays only the number of bookmarks currently found on X
+and the last successful complete review. Under **Settings → Appearance**, date
+format can follow the device or use day/month/year, month/day/year, or
+year/month/day; time can follow the device or use 24-hour or 12-hour notation.
 
 ## Optional local semantic search
 

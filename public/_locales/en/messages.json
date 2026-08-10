@@ -47,7 +47,7 @@
   },
   "archiveTitle": { "message": "Your bookmarks" },
   "totalLabel": { "message": "Total saved" },
-  "currentLabel": { "message": "On X now" },
+  "currentLabel": { "message": "Bookmarks on X" },
   "archivedLabel": { "message": "Archived" },
   "emptyArchive": { "message": "No bookmarks captured yet." },
   "libraryTitle": { "message": "Bookmark library" },
@@ -100,6 +100,16 @@
   "folderAssignmentLabel": { "message": "Save in folder" },
   "uncategorizedFolder": { "message": "Uncategorized" },
   "manageFolders": { "message": "Manage folders" },
+  "renameTag": { "message": "Rename" },
+  "deleteTag": { "message": "Delete" },
+  "renameTagPrompt": { "message": "Choose a new tag name" },
+  "deleteTagConfirmation": {
+    "message": "Delete $NAME$ from $COUNT$ bookmarks? The tag will disappear from your library, but its record will remain stored locally.",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
   "newFolderName": { "message": "Name" },
   "parentFolderLabel": { "message": "Parent folder" },
   "rootFolder": { "message": "No parent (top level)" },
@@ -112,7 +122,7 @@
   "saveFolderName": { "message": "Save name" },
   "deleteFolder": { "message": "Delete" },
   "deleteFolderConfirmation": {
-    "message": "Delete $NAME$ and all its subfolders? Bookmarks will become uncategorized.",
+    "message": "Delete $NAME$ and all its subfolders? Bookmarks will become uncategorized, and the folder records will remain stored locally.",
     "placeholders": { "name": { "content": "$1" } }
   },
   "confirmDeleteFolder": { "message": "Delete folder" },
@@ -127,17 +137,26 @@
     "message": "Last full review $DATE$",
     "placeholders": { "date": { "content": "$1" } }
   },
+  "lastReviewLabel": { "message": "Last full review" },
+  "dateTimePattern": {
+    "message": "$DATE$ at $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": { "message": "No full review yet" },
   "unknownDate": { "message": "Unknown date" },
-  "captureTitle": { "message": "Capture bookmarks" },
+  "captureTitle": { "message": "Update bookmarks" },
   "captureDescription": {
     "message": "Bookmark X scrolls your open bookmarks page and saves each visible post locally."
   },
   "captureModeLabel": { "message": "Review mode" },
-  "captureModeQuick": { "message": "Quick update" },
-  "captureModeFull": { "message": "Full review" },
+  "captureModeQuick": { "message": "Recent" },
+  "captureModeFull": { "message": "All bookmarks" },
   "captureModeQuickHelp": {
-    "message": "Finds new items, then stops after recognizing your recent bookmarks."
+    "message": "Checks new items and stops after $COUNT$ saved bookmarks in a row.",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "captureModeFullHelp": {
     "message": "Checks the entire list and reconciles bookmarks removed on another device."
@@ -155,8 +174,8 @@
   "captureCompleteFallback": {
     "message": "Checkpoints changed; full review complete"
   },
-  "captureButtonQuick": { "message": "Run quick update" },
-  "captureButtonFull": { "message": "Run full review" },
+  "captureButtonQuick": { "message": "Update" },
+  "captureButtonFull": { "message": "Review all" },
   "captureIdle": { "message": "Ready" },
   "captureRunning": { "message": "Capturing" },
   "captureComplete": { "message": "Complete" },
@@ -218,6 +237,9 @@
     "message": "Bookmark X could not complete that action. Try again."
   },
   "openSettingsButton": { "message": "Open settings" },
+  "openSettingsHelp": {
+    "message": "Change appearance, capture limits, and behavior."
+  },
   "settingsTitle": { "message": "Bookmark X settings" },
   "skipToSettings": { "message": "Skip to settings" },
   "settingsEyebrow": { "message": "Local by design" },
@@ -228,6 +250,14 @@
   "settingLargeText": { "message": "Use larger text" },
   "settingHighContrast": { "message": "Use high contrast" },
   "settingReduceMotion": { "message": "Reduce motion" },
+  "settingDateFormat": { "message": "Date format" },
+  "settingTimeFormat": { "message": "Time format" },
+  "settingFormatAuto": { "message": "Automatic for my region" },
+  "settingDateFormatDmy": { "message": "DD/MM/YYYY" },
+  "settingDateFormatMdy": { "message": "MM/DD/YYYY" },
+  "settingDateFormatYmd": { "message": "YYYY/MM/DD" },
+  "settingTimeFormat24": { "message": "24 hours" },
+  "settingTimeFormat12": { "message": "12 hours (AM/PM)" },
   "settingsBehavior": { "message": "Behavior" },
   "settingSurface": { "message": "Open the library as" },
   "settingSurfaceModal": { "message": "Compact window" },
@@ -260,6 +290,12 @@
   "settingLiveFilter": { "message": "Filter results while typing" },
   "settingsData": { "message": "Data" },
   "settingKeepArchived": { "message": "Keep posts removed from X as archived" },
+  "settingQuickStopThreshold": {
+    "message": "Stop a quick update after this many known bookmarks"
+  },
+  "settingQuickStopHelp": {
+    "message": "15 is recommended. A higher number checks further before stopping."
+  },
   "settingsDataHelp": {
     "message": "Bookmark content stays in IndexedDB on this device."
   },
@@ -281,7 +317,10 @@
   "bookmarkPromptClose": { "message": "Close" },
   "bookmarkPromptSave": { "message": "Save note" },
   "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptTagsHelp": { "message": "Separate multiple tags with commas." },
   "bookmarkPromptFolder": { "message": "Folder" },
+  "bookmarkPromptChooseFolder": { "message": "Choose an existing folder" },
+  "bookmarkPromptChooseTag": { "message": "Choose an existing tag" },
   "bookmarkPromptNote": { "message": "Private note" },
   "bookmarkCategorized": { "message": "Categorized" },
   "bookmarkNeedsCategory": { "message": "Needs category" },
@@ -356,6 +395,28 @@
   "navLibrary": { "message": "Library" },
   "navSettings": { "message": "Settings" },
   "bookmarkDetailTitle": { "message": "Bookmark details" },
+  "bookmarkMetadataOrganize": { "message": "Edit" },
+  "bookmarkSavedAt": {
+    "message": "Saved $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "Folders and tags" },
+  "organizationHelp": {
+    "message": "See how your bookmarks are organized and manage folders."
+  },
+  "organizationCounts": {
+    "message": "$FOLDERS$ folders · $TAGS$ tags",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$, $COUNT$ bookmarks",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ bookmarks",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": { "message": "Open a bookmark to add or remove tags." },
   "backToLibrary": { "message": "Back to library" },
   "settingsViewHelp": { "message": "Export, backup, language, and preferences." }
 }

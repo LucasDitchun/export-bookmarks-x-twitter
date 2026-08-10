@@ -30,6 +30,7 @@ describe("runScrape", () => {
     const result = await runScrape({
       scan: () => pages[Math.min(index, pages.length - 1)] ?? [],
       checkpointIds: ["6", "5", "4", "3"],
+      quickStopThreshold: 3,
       signal: controller.signal,
       scroll,
       waitForContent: async () => {
@@ -55,6 +56,33 @@ describe("runScrape", () => {
     expect(scroll).toHaveBeenCalledOnce();
   });
 
+  it("ignores unrelated X mutations after the quick checkpoint is proven", async () => {
+    const controller = new AbortController();
+    let waits = 0;
+
+    const result = await runScrape({
+      scan: () => [bookmark("6"), bookmark("5"), bookmark("4")],
+      checkpointIds: ["6", "5", "4"],
+      quickStopThreshold: 3,
+      signal: controller.signal,
+      scroll: vi.fn(),
+      waitForContent: async () => {
+        waits += 1;
+        if (waits === 3) controller.abort();
+        return { reason: "activity", loadingObserved: false };
+      },
+      onBatch: async () => undefined,
+      onProgress: () => undefined,
+    });
+
+    expect(result).toEqual({
+      status: "completed",
+      fetched: 3,
+      completionReason: "checkpoint_stop",
+    });
+    expect(waits).toBe(1);
+  });
+
   it("waits past a checkpoint match when a loader reveals a late bookmark", async () => {
     let page = 0;
     let loading = true;
@@ -76,6 +104,7 @@ describe("runScrape", () => {
     const result = await runScrape({
       scan: () => pages[page] ?? [],
       checkpointIds: ["6", "5", "4", "3", "2", "1"],
+      quickStopThreshold: 3,
       isLoading: () => loading,
       isAtEnd: () => true,
       scroll: vi.fn(),
@@ -114,6 +143,7 @@ describe("runScrape", () => {
     const result = await runScrape({
       scan: () => pages[Math.min(index, pages.length - 1)] ?? [],
       checkpointIds: ["6", "5", "1"],
+      quickStopThreshold: 3,
       isAtEnd: () => index >= 2,
       scroll: () => {
         index += 1;
@@ -143,6 +173,7 @@ describe("runScrape", () => {
     const result = await runScrape({
       scan: () => pages[Math.min(index, pages.length - 1)] ?? [],
       checkpointIds: ["6", "5", "4", "3", "2"],
+      quickStopThreshold: 3,
       scroll: () => {
         index += 1;
       },

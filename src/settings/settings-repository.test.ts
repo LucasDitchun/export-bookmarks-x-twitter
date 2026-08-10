@@ -130,7 +130,7 @@ describe("SettingsRepository", () => {
     expect(isStoredSettingsEnvelope(valid)).toBe(true);
     for (const invalid of [
       { ...valid, extra: true },
-      { ...valid, schemaVersion: 2 },
+      { ...valid, schemaVersion: SETTINGS_SCHEMA_VERSION + 1 },
       {
         ...valid,
         settings: { ...valid.settings, unknown: true },

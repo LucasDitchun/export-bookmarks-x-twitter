@@ -68,7 +68,14 @@ const metadataMessageKeys = [
   "bookmarkNeedsCategory",
   "bookmarkPromptFolder",
   "bookmarkPromptTags",
+  "bookmarkPromptTagsHelp",
   "bookmarkPromptNote",
+  "bookmarkPromptTitle",
+  "bookmarkPromptClose",
+  "bookmarkPromptSave",
+  "bookmarkMetadataOrganize",
+  "liveBookmarkSaved",
+  "liveBookmarkFailed",
   "uncategorizedFolder",
 ] as const;
 const localeMessageCache = new Map<string, Promise<Record<string, string>>>();

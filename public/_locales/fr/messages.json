@@ -90,6 +90,16 @@
   "folderAssignmentLabel": { "message": "Enregistrer dans le dossier" },
   "uncategorizedFolder": { "message": "Non classé" },
   "manageFolders": { "message": "Gérer les dossiers" },
+  "renameTag": { "message": "Renommer" },
+  "deleteTag": { "message": "Supprimer" },
+  "renameTagPrompt": { "message": "Choisissez un nouveau nom de tag" },
+  "deleteTagConfirmation": {
+    "message": "Supprimer $NAME$ de $COUNT$ favoris ? Le tag disparaîtra de la bibliothèque, mais son enregistrement restera stocké localement.",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
   "newFolderName": { "message": "Nom" },
   "parentFolderLabel": { "message": "Dossier parent" },
   "rootFolder": { "message": "Aucun parent (niveau supérieur)" },
@@ -102,7 +112,7 @@
   "saveFolderName": { "message": "Enregistrer le nom" },
   "deleteFolder": { "message": "Supprimer" },
   "deleteFolderConfirmation": {
-    "message": "Supprimer $NAME$ et tous ses sous-dossiers ? Les favoris deviendront non classés.",
+    "message": "Supprimer $NAME$ et tous ses sous-dossiers ? Les favoris deviendront non classés et les enregistrements resteront stockés localement.",
     "placeholders": { "name": { "content": "$1" } }
   },
   "confirmDeleteFolder": { "message": "Supprimer le dossier" },
@@ -156,7 +166,7 @@
     "message": "Total enregistré"
   },
   "currentLabel": {
-    "message": "Sur X"
+    "message": "Signets sur X"
   },
   "archivedLabel": {
     "message": "Archivés"
@@ -172,6 +182,14 @@
       }
     }
   },
+  "lastReviewLabel": { "message": "Dernière vérification complète" },
+  "dateTimePattern": {
+    "message": "$DATE$ à $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": {
     "message": "Aucune vérification complète"
   },
@@ -179,16 +197,17 @@
     "message": "Date inconnue"
   },
   "captureTitle": {
-    "message": "Capturer les signets"
+    "message": "Mettre à jour les signets"
   },
   "captureDescription": {
     "message": "Bookmark X fait défiler votre page de signets ouverte et enregistre localement chaque publication visible."
   },
   "captureModeLabel": { "message": "Mode de vérification" },
-  "captureModeQuick": { "message": "Mise à jour rapide" },
-  "captureModeFull": { "message": "Vérification complète" },
+  "captureModeQuick": { "message": "Récents" },
+  "captureModeFull": { "message": "Tous" },
   "captureModeQuickHelp": {
-    "message": "Trouve les nouveaux éléments, puis s’arrête après avoir reconnu vos signets récents."
+    "message": "Recherche les nouveautés puis s’arrête après $COUNT$ signets déjà enregistrés d’affilée.",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "captureModeFullHelp": {
     "message": "Vérifie toute la liste et réconcilie les signets supprimés sur un autre appareil."
@@ -206,8 +225,8 @@
   "captureCompleteFallback": {
     "message": "Points de contrôle modifiés ; vérification complète terminée"
   },
-  "captureButtonQuick": { "message": "Lancer la mise à jour rapide" },
-  "captureButtonFull": { "message": "Lancer la vérification complète" },
+  "captureButtonQuick": { "message": "Mettre à jour" },
+  "captureButtonFull": { "message": "Tout vérifier" },
   "captureIdle": {
     "message": "Prêt"
   },
@@ -308,6 +327,9 @@
     "message": "Bookmark X n’a pas pu terminer cette action. Réessayez."
   },
   "openSettingsButton": { "message": "Ouvrir les paramètres" },
+  "openSettingsHelp": {
+    "message": "Modifiez l’apparence, les limites de capture et le comportement."
+  },
   "settingsTitle": { "message": "Paramètres de Bookmark X" },
   "skipToSettings": { "message": "Accéder aux paramètres" },
   "settingsEyebrow": { "message": "Local par conception" },
@@ -318,6 +340,14 @@
   "settingLargeText": { "message": "Utiliser un texte plus grand" },
   "settingHighContrast": { "message": "Utiliser un contraste élevé" },
   "settingReduceMotion": { "message": "Réduire les animations" },
+  "settingDateFormat": { "message": "Format de date" },
+  "settingTimeFormat": { "message": "Format de l’heure" },
+  "settingFormatAuto": { "message": "Automatique pour ma région" },
+  "settingDateFormatDmy": { "message": "JJ/MM/AAAA" },
+  "settingDateFormatMdy": { "message": "MM/JJ/AAAA" },
+  "settingDateFormatYmd": { "message": "AAAA/MM/JJ" },
+  "settingTimeFormat24": { "message": "24 heures" },
+  "settingTimeFormat12": { "message": "12 heures (AM/PM)" },
   "settingsBehavior": { "message": "Comportement" },
   "settingSurface": { "message": "Ouvrir la bibliothèque comme" },
   "settingSurfaceModal": { "message": "Fenêtre compacte" },
@@ -352,6 +382,12 @@
   "settingKeepArchived": {
     "message": "Conserver comme archivées les publications retirées de X"
   },
+  "settingQuickStopThreshold": {
+    "message": "Arrêter la mise à jour rapide après ce nombre de signets connus"
+  },
+  "settingQuickStopHelp": {
+    "message": "15 est recommandé. Une valeur plus élevée vérifie davantage avant l’arrêt."
+  },
   "settingsDataHelp": {
     "message": "Le contenu reste dans IndexedDB sur cet appareil."
   },
@@ -373,7 +409,10 @@
   "bookmarkPromptClose": { "message": "Fermer" },
   "bookmarkPromptSave": { "message": "Enregistrer la note" },
   "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptTagsHelp": { "message": "Séparez plusieurs tags par des virgules." },
   "bookmarkPromptFolder": { "message": "Dossier" },
+  "bookmarkPromptChooseFolder": { "message": "Choisir un dossier existant" },
+  "bookmarkPromptChooseTag": { "message": "Choisir un tag existant" },
   "bookmarkPromptNote": { "message": "Note privée" },
   "bookmarkCategorized": { "message": "Classé" },
   "bookmarkNeedsCategory": { "message": "À classer" },
@@ -451,6 +490,30 @@
   "navLibrary": { "message": "Bibliothèque" },
   "navSettings": { "message": "Réglages" },
   "bookmarkDetailTitle": { "message": "Détails du favori" },
+  "bookmarkMetadataOrganize": { "message": "Modifier" },
+  "bookmarkSavedAt": {
+    "message": "Enregistré le $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "Dossiers et étiquettes" },
+  "organizationHelp": {
+    "message": "Consultez l’organisation de vos signets et gérez les dossiers."
+  },
+  "organizationCounts": {
+    "message": "$FOLDERS$ dossiers · $TAGS$ étiquettes",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$, $COUNT$ signets",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ signets",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": {
+    "message": "Ouvrez un signet pour ajouter ou retirer des étiquettes."
+  },
   "backToLibrary": { "message": "Retour à la bibliothèque" },
   "settingsViewHelp": { "message": "Exportation, sauvegarde, langue et préférences." }
 }

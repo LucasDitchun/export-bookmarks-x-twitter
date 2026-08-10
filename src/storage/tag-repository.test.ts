@@ -44,6 +44,21 @@ async function seedLegacyTags(
 }
 
 describe("TagRepository", () => {
+  it("counts bookmarks assigned to each tag", async () => {
+    const databaseName = `tag-usage-${crypto.randomUUID()}`;
+    await seed(databaseName, [
+      record("100"),
+      { ...record("200"), tagIds: ["tag-a", "tag-b"] },
+      { ...record("300"), tagIds: ["tag-a"] },
+    ]);
+    const repository = new TagRepository(databaseName);
+
+    await expect(repository.usage()).resolves.toEqual({
+      "tag-a": 2,
+      "tag-b": 1,
+    });
+  });
+
   it("creates, assigns, and reuses a tag by trimmed Unicode-insensitive name", async () => {
     const databaseName = `tags-${crypto.randomUUID()}`;
     await seed(databaseName, [record("100"), record("200")]);
@@ -122,6 +137,57 @@ describe("TagRepository", () => {
     expect(updated.tagIds).toEqual(["tag-2"]);
     await expect(repository.list()).resolves.toHaveLength(2);
     await expect(repository.remove("100", "tag-1")).resolves.toEqual(updated);
+  });
+
+  it("renames an active tag and soft-deletes it from every bookmark", async () => {
+    const databaseName = `soft-delete-tag-${crypto.randomUUID()}`;
+    await seed(databaseName, [record("100"), record("200")]);
+    const repository = new TagRepository(databaseName, {
+      createId: () => "tag-research",
+      now: () => new Date("2026-08-10T10:00:00.000Z"),
+    });
+    await repository.add("100", "Research");
+    await repository.add("200", "Research");
+
+    await expect(repository.rename("tag-research", "References")).resolves.toEqual({
+      id: "tag-research",
+      name: "References",
+      normalizedName: "references",
+    });
+    await expect(repository.delete("tag-research")).resolves.toEqual({
+      deletedTagId: "tag-research",
+      untaggedBookmarkCount: 2,
+    });
+    await expect(repository.list()).resolves.toEqual([]);
+
+    const bookmarks = new BookmarkRepository(databaseName);
+    await expect(bookmarks.get("100")).resolves.toMatchObject({ tagIds: [] });
+    await expect(bookmarks.get("200")).resolves.toMatchObject({ tagIds: [] });
+
+    const database = await new BookmarkDatabase(databaseName).open();
+    const transaction = database.transaction("tags", "readonly");
+    const stored = await new Promise<Record<string, unknown> | undefined>(
+      (resolve, reject) => {
+        const request = transaction
+          .objectStore("tags")
+          .get("tag-research") as IDBRequest<Record<string, unknown> | undefined>;
+        request.addEventListener("success", () => resolve(request.result), {
+          once: true,
+        });
+        request.addEventListener(
+          "error",
+          () => reject(request.error ?? new Error("Tag query failed.")),
+          { once: true },
+        );
+      },
+    );
+    await transactionDone(transaction);
+    expect(stored).toMatchObject({
+      id: "tag-research",
+      name: "References",
+      deletedAt: "2026-08-10T10:00:00.000Z",
+    });
+    database.close();
   });
 
   it("serializes concurrent note and tag updates without losing either field", async () => {

@@ -44,6 +44,21 @@ beforeEach(() => {
 });
 
 describe("shared library settings UI", () => {
+  it("reveals compact organization actions on hover, focus, and touch", () => {
+    const styles = readFileSync(resolve(process.cwd(), "src/popup/styles.css"), "utf8");
+
+    expect(styles).toContain(
+      ".organization-list > li:hover .organization-item-actions",
+    );
+    expect(styles).toContain(".organization-list > li:focus-within");
+    expect(styles).toContain(".folder-list-item:hover .folder-item-actions");
+    expect(styles).toContain(".folder-list-item:focus-within");
+    expect(styles).toContain("@media (hover: none)");
+    expect(styles).toMatch(
+      /\.folder-path-label\s*\{[^}]*display:\s*flex;[^}]*min-height:\s*2rem;[^}]*align-items:\s*center;/su,
+    );
+  });
+
   it("scales every declared popup font from the root large-text setting", () => {
     const styles = readFileSync(resolve(process.cwd(), "src/popup/styles.css"), "utf8");
 

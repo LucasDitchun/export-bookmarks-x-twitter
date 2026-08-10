@@ -35,6 +35,31 @@
             <input id="appearance-reduce-motion" type="checkbox" />
             <span data-i18n="settingReduceMotion">Reduce motion</span>
           </label>
+          <div class="regional-settings">
+            <label class="select-choice" for="appearance-date-format">
+              <span data-i18n="settingDateFormat">Date format</span>
+              <select id="appearance-date-format">
+                <option value="auto" data-i18n="settingFormatAuto">
+                  Automatic for my region
+                </option>
+                <option value="dmy" data-i18n="settingDateFormatDmy">DD/MM/YYYY</option>
+                <option value="mdy" data-i18n="settingDateFormatMdy">MM/DD/YYYY</option>
+                <option value="ymd" data-i18n="settingDateFormatYmd">YYYY/MM/DD</option>
+              </select>
+            </label>
+            <label class="select-choice" for="appearance-time-format">
+              <span data-i18n="settingTimeFormat">Time format</span>
+              <select id="appearance-time-format">
+                <option value="auto" data-i18n="settingFormatAuto">
+                  Automatic for my region
+                </option>
+                <option value="24h" data-i18n="settingTimeFormat24">24 hours</option>
+                <option value="12h" data-i18n="settingTimeFormat12">
+                  12 hours (AM/PM)
+                </option>
+              </select>
+            </label>
+          </div>
         </fieldset>
 
         <fieldset>
@@ -221,6 +246,24 @@
 
         <fieldset>
           <legend data-i18n="settingsData">Data</legend>
+          <label class="number-choice" for="data-quick-stop-threshold">
+            <span data-i18n="settingQuickStopThreshold">
+              Stop a quick update after this many known bookmarks
+            </span>
+            <input
+              id="data-quick-stop-threshold"
+              type="number"
+              min="3"
+              max="50"
+              step="1"
+              inputmode="numeric"
+              aria-describedby="data-quick-stop-help"
+            />
+            <small id="data-quick-stop-help" data-i18n="settingQuickStopHelp">
+              15 is recommended. A higher number checks further before stopping.
+            </small>
+          </label>
+          <div class="divider" aria-hidden="true"></div>
           <label class="choice" for="data-keep-archived">
             <input id="data-keep-archived" type="checkbox" />
             <span data-i18n="settingKeepArchived"

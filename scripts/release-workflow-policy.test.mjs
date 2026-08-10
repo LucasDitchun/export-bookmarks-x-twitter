@@ -61,6 +61,15 @@ describe("lean CI and staging policy", () => {
     expect(staging).not.toContain("workflow run");
   });
 
+  it("configures the staging commit identity before Git may create a merge", async () => {
+    const staging = await readWorkflow("release-train.yml");
+    const identity = staging.indexOf('git config user.name "github-actions[bot]"');
+    const merge = staging.indexOf('git merge --no-ff --no-commit "$SOURCE_SHA"');
+
+    expect(identity).toBeGreaterThan(0);
+    expect(merge).toBeGreaterThan(identity);
+  });
+
   it("isolates write permission from every command that executes repository dependencies", async () => {
     const staging = await readWorkflow("release-train.yml");
     const publishStart = staging.indexOf("  publish-staging:\n");

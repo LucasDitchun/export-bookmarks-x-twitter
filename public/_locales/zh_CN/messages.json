@@ -74,6 +74,16 @@
   "folderAssignmentLabel": { "message": "保存到文件夹" },
   "uncategorizedFolder": { "message": "未分类" },
   "manageFolders": { "message": "管理文件夹" },
+  "renameTag": { "message": "重命名" },
+  "deleteTag": { "message": "删除" },
+  "renameTagPrompt": { "message": "输入新的标签名称" },
+  "deleteTagConfirmation": {
+    "message": "从 $COUNT$ 个书签中删除 $NAME$？该标签会从资料库中消失，但记录仍会保存在本地。",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
   "newFolderName": { "message": "名称" },
   "parentFolderLabel": { "message": "上级文件夹" },
   "rootFolder": { "message": "无上级文件夹（顶层）" },
@@ -86,7 +96,7 @@
   "saveFolderName": { "message": "保存名称" },
   "deleteFolder": { "message": "删除" },
   "deleteFolderConfirmation": {
-    "message": "删除 $NAME$ 及其所有子文件夹？书签将变为未分类。",
+    "message": "删除 $NAME$ 及其所有子文件夹？书签将变为未分类，文件夹记录仍会保存在本地。",
     "placeholders": { "name": { "content": "$1" } }
   },
   "confirmDeleteFolder": { "message": "删除文件夹" },
@@ -140,7 +150,7 @@
     "message": "已保存总数"
   },
   "currentLabel": {
-    "message": "X 中现有"
+    "message": "X 上的书签"
   },
   "archivedLabel": {
     "message": "已归档"
@@ -156,6 +166,14 @@
       }
     }
   },
+  "lastReviewLabel": { "message": "上次完整检查" },
+  "dateTimePattern": {
+    "message": "$DATE$ $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": {
     "message": "尚未进行完整检查"
   },
@@ -163,16 +181,17 @@
     "message": "未知日期"
   },
   "captureTitle": {
-    "message": "获取书签"
+    "message": "更新书签"
   },
   "captureDescription": {
     "message": "Bookmark X 会滚动已打开的书签页面，并将每条可见帖子保存到本地。"
   },
   "captureModeLabel": { "message": "检查模式" },
-  "captureModeQuick": { "message": "快速更新" },
-  "captureModeFull": { "message": "完整检查" },
+  "captureModeQuick": { "message": "最近" },
+  "captureModeFull": { "message": "全部" },
   "captureModeQuickHelp": {
-    "message": "查找新内容，并在识别到近期书签后停止。"
+    "message": "检查新项目，连续遇到 $COUNT$ 个已保存书签后停止。",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "captureModeFullHelp": {
     "message": "检查整个列表，并同步在其他设备上删除的书签。"
@@ -190,8 +209,8 @@
   "captureCompleteFallback": {
     "message": "检查点已变化；完整检查已完成"
   },
-  "captureButtonQuick": { "message": "运行快速更新" },
-  "captureButtonFull": { "message": "运行完整检查" },
+  "captureButtonQuick": { "message": "更新" },
+  "captureButtonFull": { "message": "全部检查" },
   "captureIdle": {
     "message": "已就绪"
   },
@@ -288,6 +307,9 @@
     "message": "Bookmark X 无法完成该操作，请重试。"
   },
   "openSettingsButton": { "message": "打开设置" },
+  "openSettingsHelp": {
+    "message": "更改外观、采集限制和行为。"
+  },
   "settingsTitle": { "message": "Bookmark X 设置" },
   "skipToSettings": { "message": "跳到设置" },
   "settingsEyebrow": { "message": "本地优先设计" },
@@ -296,6 +318,14 @@
   "settingLargeText": { "message": "使用更大字体" },
   "settingHighContrast": { "message": "使用高对比度" },
   "settingReduceMotion": { "message": "减少动态效果" },
+  "settingDateFormat": { "message": "日期格式" },
+  "settingTimeFormat": { "message": "时间格式" },
+  "settingFormatAuto": { "message": "按地区自动设置" },
+  "settingDateFormatDmy": { "message": "DD/MM/YYYY" },
+  "settingDateFormatMdy": { "message": "MM/DD/YYYY" },
+  "settingDateFormatYmd": { "message": "YYYY/MM/DD" },
+  "settingTimeFormat24": { "message": "24 小时制" },
+  "settingTimeFormat12": { "message": "12 小时制（AM/PM）" },
   "settingsBehavior": { "message": "行为" },
   "settingSurface": { "message": "打开收藏库的方式" },
   "settingSurfaceModal": { "message": "紧凑窗口" },
@@ -326,6 +356,12 @@
   "settingLiveFilter": { "message": "输入时筛选结果" },
   "settingsData": { "message": "数据" },
   "settingKeepArchived": { "message": "将从 X 移除的帖子保留为归档" },
+  "settingQuickStopThreshold": {
+    "message": "识别到多少个已知书签后停止快速更新"
+  },
+  "settingQuickStopHelp": {
+    "message": "建议使用 15。数值越大，停止前检查的内容越多。"
+  },
   "settingsDataHelp": { "message": "收藏内容保留在此设备的 IndexedDB 中。" },
   "settingsSaving": { "message": "正在保存…" },
   "settingsSaved": { "message": "已保存" },
@@ -345,7 +381,10 @@
   "bookmarkPromptClose": { "message": "关闭" },
   "bookmarkPromptSave": { "message": "保存笔记" },
   "bookmarkPromptTags": { "message": "标签" },
+  "bookmarkPromptTagsHelp": { "message": "多个标签请用逗号分隔。" },
   "bookmarkPromptFolder": { "message": "文件夹" },
+  "bookmarkPromptChooseFolder": { "message": "选择现有文件夹" },
+  "bookmarkPromptChooseTag": { "message": "选择现有标签" },
   "bookmarkPromptNote": { "message": "私人笔记" },
   "bookmarkCategorized": { "message": "已分类" },
   "bookmarkNeedsCategory": { "message": "待分类" },
@@ -401,6 +440,26 @@
   "navLibrary": { "message": "收藏库" },
   "navSettings": { "message": "设置" },
   "bookmarkDetailTitle": { "message": "书签详情" },
+  "bookmarkMetadataOrganize": { "message": "编辑" },
+  "bookmarkSavedAt": {
+    "message": "保存于 $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "文件夹和标签" },
+  "organizationHelp": { "message": "查看书签的整理情况并管理文件夹。" },
+  "organizationCounts": {
+    "message": "$FOLDERS$ 个文件夹 · $TAGS$ 个标签",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$，$COUNT$ 个书签",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$，$COUNT$ 个书签",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": { "message": "打开一个书签以添加或移除标签。" },
   "backToLibrary": { "message": "返回收藏库" },
   "settingsViewHelp": { "message": "导出、备份、语言和偏好设置。" }
 }

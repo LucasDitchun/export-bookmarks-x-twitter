@@ -84,6 +84,16 @@
   "folderAssignmentLabel": { "message": "Salvar na pasta" },
   "uncategorizedFolder": { "message": "Sem categoria" },
   "manageFolders": { "message": "Gerenciar pastas" },
+  "renameTag": { "message": "Renomear" },
+  "deleteTag": { "message": "Excluir" },
+  "renameTagPrompt": { "message": "Digite o novo nome da tag" },
+  "deleteTagConfirmation": {
+    "message": "Excluir $NAME$ de $COUNT$ bookmarks? A tag desaparecerá da biblioteca, mas seu registro continuará salvo localmente.",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
   "newFolderName": { "message": "Nome" },
   "parentFolderLabel": { "message": "Pasta principal" },
   "rootFolder": { "message": "Sem pasta principal (nível superior)" },
@@ -96,7 +106,7 @@
   "saveFolderName": { "message": "Salvar nome" },
   "deleteFolder": { "message": "Excluir" },
   "deleteFolderConfirmation": {
-    "message": "Excluir $NAME$ e todas as subpastas? Os bookmarks ficarão sem categoria.",
+    "message": "Excluir $NAME$ e todas as subpastas? Os bookmarks ficarão sem categoria e os registros das pastas continuarão salvos localmente.",
     "placeholders": { "name": { "content": "$1" } }
   },
   "confirmDeleteFolder": { "message": "Excluir pasta" },
@@ -126,24 +136,33 @@
   },
   "archiveTitle": { "message": "Seus bookmarks" },
   "totalLabel": { "message": "Total salvo" },
-  "currentLabel": { "message": "No X agora" },
+  "currentLabel": { "message": "Bookmarks no X" },
   "archivedLabel": { "message": "Arquivados" },
   "emptyArchive": { "message": "Nenhum bookmark capturado ainda." },
   "lastCaptureAt": {
     "message": "Última revisão completa em $DATE$",
     "placeholders": { "date": { "content": "$1" } }
   },
+  "lastReviewLabel": { "message": "Última revisão completa" },
+  "dateTimePattern": {
+    "message": "$DATE$ às $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": { "message": "Nenhuma revisão completa ainda" },
   "unknownDate": { "message": "Data desconhecida" },
-  "captureTitle": { "message": "Capturar bookmarks" },
+  "captureTitle": { "message": "Atualizar bookmarks" },
   "captureDescription": {
     "message": "O Bookmark X rola a página aberta de bookmarks e salva localmente cada post visível."
   },
   "captureModeLabel": { "message": "Modo de revisão" },
-  "captureModeQuick": { "message": "Atualização rápida" },
-  "captureModeFull": { "message": "Revisão completa" },
+  "captureModeQuick": { "message": "Recentes" },
+  "captureModeFull": { "message": "Todos" },
   "captureModeQuickHelp": {
-    "message": "Encontra itens novos e para ao reconhecer seus bookmarks recentes."
+    "message": "Busca novos e para após $COUNT$ bookmarks já salvos seguidos.",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "captureModeFullHelp": {
     "message": "Verifica toda a lista e reconcilia bookmarks removidos em outro dispositivo."
@@ -161,8 +180,8 @@
   "captureCompleteFallback": {
     "message": "Os checkpoints mudaram; revisão completa concluída"
   },
-  "captureButtonQuick": { "message": "Executar atualização rápida" },
-  "captureButtonFull": { "message": "Executar revisão completa" },
+  "captureButtonQuick": { "message": "Atualizar" },
+  "captureButtonFull": { "message": "Revisar tudo" },
   "captureIdle": { "message": "Pronto" },
   "captureRunning": { "message": "Capturando" },
   "captureComplete": { "message": "Concluído" },
@@ -228,6 +247,9 @@
     "message": "O Bookmark X não concluiu essa ação. Tente novamente."
   },
   "openSettingsButton": { "message": "Abrir configurações" },
+  "openSettingsHelp": {
+    "message": "Altere a aparência, os limites de captura e o comportamento."
+  },
   "settingsTitle": { "message": "Configurações do Bookmark X" },
   "skipToSettings": { "message": "Ir para as configurações" },
   "settingsEyebrow": { "message": "Local por princípio" },
@@ -238,6 +260,14 @@
   "settingLargeText": { "message": "Usar texto maior" },
   "settingHighContrast": { "message": "Usar alto contraste" },
   "settingReduceMotion": { "message": "Reduzir movimento" },
+  "settingDateFormat": { "message": "Formato da data" },
+  "settingTimeFormat": { "message": "Formato da hora" },
+  "settingFormatAuto": { "message": "Automático para minha região" },
+  "settingDateFormatDmy": { "message": "DD/MM/AAAA" },
+  "settingDateFormatMdy": { "message": "MM/DD/AAAA" },
+  "settingDateFormatYmd": { "message": "AAAA/MM/DD" },
+  "settingTimeFormat24": { "message": "24 horas" },
+  "settingTimeFormat12": { "message": "12 horas (AM/PM)" },
   "settingsBehavior": { "message": "Comportamento" },
   "settingSurface": { "message": "Abrir a biblioteca como" },
   "settingSurfaceModal": { "message": "Janela compacta" },
@@ -272,6 +302,12 @@
   "settingKeepArchived": {
     "message": "Manter como arquivadas as postagens removidas do X"
   },
+  "settingQuickStopThreshold": {
+    "message": "Parar a atualização rápida após esta quantidade de bookmarks conhecidos"
+  },
+  "settingQuickStopHelp": {
+    "message": "15 é o recomendado. Um número maior verifica mais itens antes de parar."
+  },
   "settingsDataHelp": {
     "message": "O conteúdo dos bookmarks fica no IndexedDB deste dispositivo."
   },
@@ -293,7 +329,10 @@
   "bookmarkPromptClose": { "message": "Fechar" },
   "bookmarkPromptSave": { "message": "Salvar nota" },
   "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptTagsHelp": { "message": "Separe várias tags com vírgulas." },
   "bookmarkPromptFolder": { "message": "Pasta" },
+  "bookmarkPromptChooseFolder": { "message": "Escolher pasta existente" },
+  "bookmarkPromptChooseTag": { "message": "Escolher tag existente" },
   "bookmarkPromptNote": { "message": "Nota privada" },
   "bookmarkCategorized": { "message": "Categorizado" },
   "bookmarkNeedsCategory": { "message": "Precisa de categoria" },
@@ -363,6 +402,28 @@
   "navLibrary": { "message": "Biblioteca" },
   "navSettings": { "message": "Ajustes" },
   "bookmarkDetailTitle": { "message": "Detalhes do bookmark" },
+  "bookmarkMetadataOrganize": { "message": "Editar" },
+  "bookmarkSavedAt": {
+    "message": "Salvo em $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "Pastas e tags" },
+  "organizationHelp": {
+    "message": "Veja como seus bookmarks estão organizados e gerencie as pastas."
+  },
+  "organizationCounts": {
+    "message": "$FOLDERS$ pastas · $TAGS$ tags",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$, $COUNT$ bookmarks",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ bookmarks",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": { "message": "Abra um bookmark para adicionar ou remover tags." },
   "backToLibrary": { "message": "Voltar para a biblioteca" },
   "settingsViewHelp": {
     "message": "Exporte, faça backup, altere o idioma e as preferências."

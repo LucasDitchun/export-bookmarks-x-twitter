@@ -48,6 +48,8 @@ export function metadataRefreshRequest(request: unknown): ContentControlRequest 
   if (
     message.type === "SAVE_SETTINGS" ||
     message.type === "CREATE_FOLDER" ||
+    message.type === "RENAME_TAG" ||
+    message.type === "DELETE_TAG" ||
     message.type === "RENAME_FOLDER" ||
     message.type === "DELETE_FOLDER" ||
     message.type === "CLEAR_ARCHIVE" ||

@@ -22,6 +22,7 @@ All notable changes to Bookmark X are documented in this file.
 - add incremental bookmark updates (#17) (`bb786cd`)
 - add configurable TXT and Markdown exports (#18) (`1235cbd`)
 - redesign extension navigation and surfaces (#35) (`e7a52e8`)
+- improve bookmark management usability (#37) (`1c3062d`)
 
 ### Fixes
 
@@ -34,6 +35,7 @@ All notable changes to Bookmark X are documented in this file.
 - clear semantic data with archive (#30) (`0a75693`)
 - keep bookmark search results consistent (#32) (`5c05092`)
 - align semantic gate with staging profile (#36) (`dc05f2c`)
+- configure staging merge identity (#38) (`29542e0`)
 
 ### Performance
 

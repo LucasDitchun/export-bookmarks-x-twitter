@@ -635,6 +635,7 @@ const startContentCaptureScenario = String.raw`
     updatedAt: now,
     errorCode: null,
     mode: "full",
+    quickStopThreshold: 15,
     checkpointIds: [],
     checkpointCandidates: [],
     checkpointMatchIds: [],
@@ -645,6 +646,7 @@ const startContentCaptureScenario = String.raw`
     type: "START_SCRAPE",
     runId: run.id,
     mode: "full",
+    quickStopThreshold: 15,
     checkpointIds: [],
   });
   return { tabId: tab.id, ...response };
@@ -686,6 +688,7 @@ const startQuickCaptureScenario = String.raw`
     updatedAt: now,
     errorCode: null,
     mode: "quick",
+    quickStopThreshold: 3,
     checkpointIds: scrapeCheckpoints.ids,
     checkpointCandidates: [],
     checkpointMatchIds: [],
@@ -696,6 +699,7 @@ const startQuickCaptureScenario = String.raw`
     type: "START_SCRAPE",
     runId: run.id,
     mode: "quick",
+    quickStopThreshold: 3,
     checkpointIds: scrapeCheckpoints.ids,
   });
   return { ...response, checkpointIds: scrapeCheckpoints.ids };
@@ -856,7 +860,7 @@ function assertScenario(
     parsedBackup?.schemaVersion !== 2 ||
     parsedBackup?.data?.bookmarks?.length !== 3 ||
     parsedBackup?.data?.bookmarks?.[0]?.media === undefined ||
-    parsedBackup?.data?.settings?.extension?.schemaVersion !== 1 ||
+    parsedBackup?.data?.settings?.extension?.schemaVersion !== 2 ||
     parsedBackup?.data?.settings?.extension?.settings?.behavior?.surface !== "modal" ||
     !restored.ok ||
     restored.data.bookmarks !== 3 ||
@@ -866,10 +870,24 @@ function assertScenario(
     !restoredStatus.ok ||
     restoredStatus.data.stats.total !== 3 ||
     restoredStatus.data.scrape !== null ||
-    restoredStatus.data.quickUpdateAvailable !== false ||
+    restoredStatus.data.quickUpdateAvailable !== true ||
     !clearedAgain.ok
   ) {
-    throw new Error("The runtime JSON backup round-trip did not finish.");
+    throw new Error(
+      `The runtime JSON backup round-trip did not finish: ${JSON.stringify({
+        backupOk: backup.ok,
+        schemaVersion: parsedBackup?.schemaVersion,
+        bookmarkCount: parsedBackup?.data?.bookmarks?.length,
+        firstBookmarkHasMedia: parsedBackup?.data?.bookmarks?.[0]?.media !== undefined,
+        settingsSchemaVersion: parsedBackup?.data?.settings?.extension?.schemaVersion,
+        backupSurface:
+          parsedBackup?.data?.settings?.extension?.settings?.behavior?.surface,
+        restored,
+        restoredSettings,
+        restoredStatus,
+        clearedAgain,
+      })}`,
+    );
   }
 }
 
@@ -1234,7 +1252,7 @@ async function main() {
     assertMetadataCheckpoint(
       uncategorizedEvaluation.result.value,
       "uncategorized",
-      "Needs category",
+      "Uncategorized",
     );
     await captureVisualCheckpoint(pageDevTools, "metadata-uncategorized-en.png", {
       width: 760,
@@ -1287,11 +1305,7 @@ async function main() {
           mappedEvaluation.exceptionDetails.text,
       );
     }
-    assertMetadataCheckpoint(
-      mappedEvaluation.result.value,
-      "mapped",
-      "Von Bookmark X in der lokalen Sammlung erfasst",
-    );
+    assertMetadataCheckpoint(mappedEvaluation.result.value, "mapped", "Ordner:");
     await captureVisualCheckpoint(pageDevTools, "metadata-mapped-de.png", {
       width: 760,
       height: 900,
