@@ -36,6 +36,7 @@ All notable changes to Bookmark X are documented in this file.
 - keep bookmark search results consistent (#32) (`5c05092`)
 - align semantic gate with staging profile (#36) (`dc05f2c`)
 - configure staging merge identity (#38) (`29542e0`)
+- ignore staging preparation commits (#39) (`ba0a7f2`)
 
 ### Performance
 

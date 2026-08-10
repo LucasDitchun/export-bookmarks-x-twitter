@@ -16,7 +16,7 @@ const CONVENTIONAL_PATTERN =
   /^(?<type>[a-zA-Z][a-zA-Z0-9-]*)(?:\((?<scope>[^)]+)\))?(?<breaking>!)?: (?<summary>.+)$/u;
 const BREAKING_FOOTER_PATTERN = /^BREAKING(?: |-)?CHANGE:\s*.+$/imu;
 const RELEASE_COMMIT_PATTERN =
-  /^chore\(release\): prepare v\d+\.\d+\.\d+(?: \(#\d+\))?$/u;
+  /^chore\((?:release|staging)\): prepare v\d+\.\d+\.\d+(?: \(#\d+\))?$/u;
 const MAXIMUM_CHROME_COMPONENT = 65_535;
 
 export class Version {
