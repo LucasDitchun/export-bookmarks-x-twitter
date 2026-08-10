@@ -145,6 +145,8 @@ jobs:
             sha256sum --check SHA256SUMS
           )
 
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch --force origin develop staging || git fetch --force origin develop
           if git show-ref --verify --quiet refs/remotes/origin/staging; then
             git switch --create staging --track origin/staging
@@ -167,8 +169,6 @@ jobs:
             ':(exclude)public/manifest.json' \
             ':(exclude)download/bookmark-x.zip'
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             CHANGELOG.md \
             package.json \
