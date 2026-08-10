@@ -1250,7 +1250,7 @@ describe("popup app", () => {
     const app = createPopupApp({ document, locale: "en", sendMessage, translate });
     await app.ready;
 
-    expect(document.getElementById("total-count")?.textContent).toBe("42");
+    expect(document.getElementById("current-count")?.textContent).toBe("40");
     expect(document.getElementById("capture-state")?.textContent).toBe(
       "captureCompleteFull",
     );
@@ -1789,6 +1789,107 @@ describe("popup app", () => {
         filename: "bookmark-x-backup.json",
       }),
     );
+    app.destroy();
+  });
+
+  it("renames and soft-deletes tags from the organization dashboard with confirmation", async () => {
+    const requests: unknown[] = [];
+    const promptTagName = vi.fn(() => "References");
+    const confirmDelete = vi.fn(() => true);
+    const sendMessage = ((request) => {
+      requests.push(request);
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [libraryBookmark], nextCursor: null },
+        });
+      }
+      if (request.type === "LIST_FOLDERS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { folders: [], usage: {} },
+        });
+      }
+      if (request.type === "LIST_TAGS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            tags: [
+              {
+                id: "tag-research",
+                name: "Research",
+                normalizedName: "research",
+              },
+            ],
+            usage: { "tag-research": 2 },
+          },
+        });
+      }
+      if (request.type === "RENAME_TAG") {
+        return Promise.resolve({
+          ok: true as const,
+          data: {
+            tag: {
+              id: "tag-research",
+              name: "References",
+              normalizedName: "references",
+            },
+          },
+        });
+      }
+      if (request.type === "DELETE_TAG") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { deletedTagId: "tag-research", untaggedBookmarkCount: 2 },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({
+      document,
+      locale: "en",
+      sendMessage,
+      translate,
+      promptTagName,
+      confirmDelete,
+    });
+    await app.ready;
+
+    const tagOverview = document.getElementById("tag-overview-list");
+    expect(tagOverview?.textContent).toContain("Research");
+    const rename = tagOverview?.querySelector<HTMLButtonElement>(
+      ".organization-item-actions button",
+    );
+    expect(rename?.textContent).toBe("");
+    expect(rename?.getAttribute("aria-label")).toBe("renameTag");
+    expect(rename?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    rename?.click();
+    await vi.waitFor(() =>
+      expect(requests).toContainEqual({
+        type: "RENAME_TAG",
+        payload: { id: "tag-research", name: "References" },
+      }),
+    );
+    expect(tagOverview?.textContent).toContain("References");
+
+    const remove = tagOverview?.querySelectorAll<HTMLButtonElement>(
+      ".organization-item-actions button",
+    )[1];
+    expect(remove?.textContent).toBe("");
+    expect(remove?.getAttribute("aria-label")).toBe("deleteTag");
+    expect(remove?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    remove?.click();
+    await vi.waitFor(() =>
+      expect(requests).toContainEqual({
+        type: "DELETE_TAG",
+        payload: { id: "tag-research" },
+      }),
+    );
+    expect(confirmDelete).toHaveBeenCalledWith("deleteTagConfirmation:References|2");
+    expect(tagOverview?.textContent).not.toContain("References");
     app.destroy();
   });
 

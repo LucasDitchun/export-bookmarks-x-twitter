@@ -20,6 +20,7 @@ describe("createBookmarkModal", () => {
         folder: "Folder",
         save: "Save note",
         tags: "Tags",
+        tagsHelp: "Separate multiple tags with commas.",
       },
     });
     modal.open();
@@ -35,7 +36,38 @@ describe("createBookmarkModal", () => {
     expect(styles).toContain("min-height: 44px");
     expect(styles).toContain("font-size: 15px");
     expect(styles).toContain("max-width: 480px");
+    expect(styles).toContain("max-height: 84px");
+    expect(styles).toContain("overflow-y: auto");
     expect(styles).not.toContain("font-family: Georgia");
+    modal.setChoices({
+      folders: ["Reading / AI", "Reading / Design"],
+      tags: ["research", "accessibility"],
+    });
+    expect(
+      Array.from(
+        shadow?.querySelectorAll("#bookmark-x-modal-folder-choices option") ?? [],
+        (option) => option.getAttribute("value"),
+      ),
+    ).toEqual(["Reading / AI", "Reading / Design"]);
+    expect(
+      Array.from(
+        shadow?.querySelectorAll("#bookmark-x-modal-tag-choices option") ?? [],
+        (option) => option.getAttribute("value"),
+      ),
+    ).toEqual(["research", "accessibility"]);
+    expect(
+      shadow?.querySelector("#bookmark-x-modal-folder")?.getAttribute("list"),
+    ).toBe("bookmark-x-modal-folder-choices");
+    expect(shadow?.querySelector("#bookmark-x-modal-tags")?.getAttribute("list")).toBe(
+      "bookmark-x-modal-tag-choices",
+    );
+    expect(
+      shadow?.querySelector("#bookmark-x-modal-tags")?.getAttribute("aria-describedby"),
+    ).toBe("bookmark-x-modal-tags-help");
+    expect(shadow?.querySelector("#bookmark-x-modal-tags-help")?.textContent).toBe(
+      "Separate multiple tags with commas.",
+    );
+    expect(shadow?.querySelectorAll(".choice-select")).toHaveLength(0);
     const description = shadow?.querySelector("#bookmark-x-modal-description");
     const tags = shadow?.querySelector("#bookmark-x-modal-tags");
     expect(
@@ -149,9 +181,36 @@ describe("createBookmarkModal", () => {
         description: "Review the examples",
       }),
     );
+    await vi.waitFor(() => expect(modal.host.hidden).toBe(true));
+    modal.destroy();
+  });
 
-    shadow?.querySelector<HTMLElement>(".backdrop")?.click();
-    expect(modal.host.hidden).toBe(true);
+  it("keeps the dialog open when saving fails", async () => {
+    const modal = createBookmarkModal({
+      document,
+      title: "Bookmark note",
+      bookmarkTitle: "A useful post",
+      labels: {
+        close: "Close",
+        description: "Private note",
+        folder: "Folder",
+        save: "Save note",
+        tags: "Tags",
+      },
+      onSave: async () => false,
+    });
+    modal.open();
+
+    modal.host.shadowRoot
+      ?.querySelector("form")
+      ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() =>
+      expect(
+        modal.host.shadowRoot?.querySelector<HTMLButtonElement>(".save")?.disabled,
+      ).toBe(false),
+    );
+    expect(modal.host.hidden).toBe(false);
     modal.destroy();
   });
 });

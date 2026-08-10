@@ -47,6 +47,18 @@ describe("ExportRepository", () => {
       name: "Research",
       normalizedName: "research",
     });
+    transaction.objectStore(FOLDERS_STORE).put({
+      id: "deleted-folder",
+      name: "Old folder",
+      parentId: null,
+      deletedAt: "2026-08-04T00:00:00.000Z",
+    });
+    transaction.objectStore(TAGS_STORE).put({
+      id: "deleted-tag",
+      name: "Old tag",
+      normalizedName: "old tag",
+      deletedAt: "2026-08-04T00:00:00.000Z",
+    });
     await transactionDone(transaction);
     database.close();
 

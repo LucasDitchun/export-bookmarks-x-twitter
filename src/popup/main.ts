@@ -25,6 +25,11 @@ import { createAppNavigation } from "./navigation";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { SemanticSearchClient } from "../semantic/semantic-search-client";
 import type { SemanticCorpusResult } from "../shared/protocol";
+import {
+  DATE_TIME_PREFERENCES_KEY,
+  loadDateTimePreferences,
+  sanitizeDateTimePreferences,
+} from "../settings/date-time-preferences";
 
 function applySurfaceContext(): void {
   const params = new URLSearchParams(window.location.search);
@@ -48,6 +53,9 @@ async function startPopup(): Promise<void> {
     chrome.i18n.getUILanguage(),
   );
   const translate = await loadLocaleTranslator(locale);
+  const dateTimePreferences = await loadDateTimePreferences({
+    get: (key) => chrome.storage.local.get(key),
+  });
   document.documentElement.lang = getLocaleTag(locale);
   applyTranslations(document, translate);
   const liveBookmarkStatus = document.getElementById("live-bookmark-status");
@@ -103,6 +111,7 @@ async function startPopup(): Promise<void> {
   applyLibraryUiSettings(document, DEFAULT_SETTINGS);
   let filterAsYouType = DEFAULT_SETTINGS.search.filterAsYouType;
   let categorizationFields = DEFAULT_SETTINGS.behavior.metadata;
+  let quickStopThreshold = DEFAULT_SETTINGS.data.quickStopThreshold;
   let app: ReturnType<typeof createPopupApp> | null = null;
   const settingsUi = createSettingsUiController({
     document,
@@ -113,8 +122,10 @@ async function startPopup(): Promise<void> {
     onApply(settings) {
       filterAsYouType = settings.search.filterAsYouType;
       categorizationFields = settings.behavior.metadata;
+      quickStopThreshold = settings.data.quickStopThreshold;
       app?.setFilterAsYouType(filterAsYouType);
       app?.setCategorizationFields(categorizationFields);
+      app?.setQuickStopThreshold(quickStopThreshold);
     },
   });
   await settingsUi.refresh();
@@ -124,6 +135,11 @@ async function startPopup(): Promise<void> {
   ): void => {
     if (areaName === "local" && Object.hasOwn(changes, SETTINGS_STORAGE_KEY)) {
       void settingsUi.refresh();
+    }
+    if (areaName === "local" && Object.hasOwn(changes, DATE_TIME_PREFERENCES_KEY)) {
+      app?.setDateTimePreferences(
+        sanitizeDateTimePreferences(changes[DATE_TIME_PREFERENCES_KEY]?.newValue),
+      );
     }
     if (areaName === "local" && Object.hasOwn(changes, LIVE_BOOKMARK_CONTEXT_KEY)) {
       const value = changes[LIVE_BOOKMARK_CONTEXT_KEY]?.newValue;
@@ -145,6 +161,8 @@ async function startPopup(): Promise<void> {
     translate,
     filterAsYouType,
     categorizationFields,
+    dateTimePreferences,
+    quickStopThreshold,
     onBookmarkOpened: navigation.openDetail,
     semanticSearch: (query, view, limit) => semanticSearch.search(query, view, limit),
   });

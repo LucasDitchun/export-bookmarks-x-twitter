@@ -41,6 +41,25 @@ async function seed(
 }
 
 describe("FolderRepository", () => {
+  it("counts direct bookmarks and descendants in each folder", async () => {
+    const databaseName = `folder-usage-${crypto.randomUUID()}`;
+    await seed(
+      databaseName,
+      [
+        { id: "root", name: "Research", parentId: null },
+        { id: "child", name: "AI", parentId: "root" },
+      ],
+      [
+        bookmark({ id: "100", folderId: "root" }),
+        bookmark({ id: "200", folderId: "child" }),
+        bookmark({ id: "300", folderId: "child", status: "archived" }),
+      ],
+    );
+    const repository = new FolderRepository(databaseName);
+
+    await expect(repository.usage()).resolves.toEqual({ root: 3, child: 2 });
+  });
+
   it("creates root folders and subfolders with validated, trimmed names", async () => {
     const databaseName = `folders-create-${crypto.randomUUID()}`;
     const identifiers = ["folder-root", "folder-child"];
@@ -207,6 +226,35 @@ describe("FolderRepository", () => {
         },
         untouched,
       ]),
+    );
+
+    const folderRead = database.transaction("folders", "readonly");
+    const storedFolders = await new Promise<FolderRecord[]>((resolve, reject) => {
+      const request = folderRead.objectStore("folders").getAll();
+      request.addEventListener("success", () => resolve(request.result), {
+        once: true,
+      });
+      request.addEventListener(
+        "error",
+        () => reject(request.error ?? new Error("Folder query failed.")),
+        { once: true },
+      );
+    });
+    await transactionDone(folderRead);
+    expect(storedFolders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "child",
+          deletedAt: "2026-08-09T07:00:00.000Z",
+        }),
+        expect.objectContaining({
+          id: "grandchild",
+          deletedAt: "2026-08-09T07:00:00.000Z",
+        }),
+      ]),
+    );
+    expect(storedFolders.find((folder) => folder.id === "root")).not.toHaveProperty(
+      "deletedAt",
     );
     database.close();
   });

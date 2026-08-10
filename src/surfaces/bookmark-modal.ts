@@ -4,6 +4,7 @@ export interface BookmarkModalLabels {
   folder: string;
   save: string;
   tags: string;
+  tagsHelp?: string;
   pending?: string;
 }
 
@@ -13,6 +14,11 @@ export interface BookmarkModalValues {
   tags: string;
 }
 
+export interface BookmarkModalChoices {
+  folders: string[];
+  tags: string[];
+}
+
 export interface BookmarkModalOptions {
   document: Document;
   title: string;
@@ -20,7 +26,7 @@ export interface BookmarkModalOptions {
   labels: BookmarkModalLabels;
   values?: Partial<BookmarkModalValues>;
   onClose?: () => void;
-  onSave?: (values: BookmarkModalValues) => void | Promise<void>;
+  onSave?: (values: BookmarkModalValues) => boolean | void | Promise<boolean | void>;
 }
 
 export interface BookmarkModalController {
@@ -29,19 +35,36 @@ export interface BookmarkModalController {
   close(): void;
   destroy(): void;
   setValues(values: Partial<BookmarkModalValues>): void;
+  setChoices(choices: Partial<BookmarkModalChoices>): void;
   setState(state: "pending" | "ready" | "success" | "error", message: string): void;
 }
 
 const MODAL_STYLES = `
   :host {
     all: initial;
-    color-scheme: light;
+    --modal-bg: #fff;
+    --modal-subtle: #f7f9f9;
+    --modal-text: #0f1419;
+    --modal-muted: #536471;
+    --modal-line: #cfd9de;
+    --modal-action: #0f1419;
+    --modal-action-text: #fff;
+    color-scheme: light dark;
     font-family: "Segoe UI Variable Text", "Helvetica Neue", Helvetica, sans-serif;
     font-size: 15px;
     line-height: 1.4;
     position: fixed;
     inset: 0;
     z-index: 2147483647;
+  }
+  :host([data-theme="dark"]) {
+    --modal-bg: #000;
+    --modal-subtle: #16181c;
+    --modal-text: #e7e9ea;
+    --modal-muted: #8b98a5;
+    --modal-line: #2f3336;
+    --modal-action: #eff3f4;
+    --modal-action-text: #0f1419;
   }
   :host([hidden]) { display: none; }
   *, *::before, *::after { box-sizing: border-box; }
@@ -55,11 +78,11 @@ const MODAL_STYLES = `
     position: absolute;
   }
   .dialog {
-    background: #fff;
-    border: 1px solid #cfd9de;
+    background: var(--modal-bg);
+    border: 1px solid var(--modal-line);
     border-radius: 20px;
     box-shadow: 0 20px 64px rgb(15 20 25 / 24%);
-    color: #0f1419;
+    color: var(--modal-text);
     max-height: min(680px, calc(100vh - 32px));
     max-width: 480px;
     overflow: auto;
@@ -69,31 +92,38 @@ const MODAL_STYLES = `
   .heading { align-items: start; display: flex; gap: 12px; justify-content: space-between; }
   h2 { font-size: 1.25rem; letter-spacing: -0.02em; line-height: 1.2; margin: 0; }
   .bookmark {
-    background: #f7f9f9;
+    background: var(--modal-subtle);
     border-radius: 12px;
-    color: #536471;
-    display: -webkit-box;
+    color: var(--modal-muted);
     font-size: 0.875rem;
     margin: 14px 0;
-    overflow: hidden;
+    max-height: 84px;
+    overscroll-behavior: contain;
+    overflow-y: auto;
     overflow-wrap: anywhere;
     padding: 10px 12px;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    scrollbar-gutter: stable;
+    white-space: pre-wrap;
   }
-  .status { border: 1px solid #cfd9de; border-radius: 12px; margin: 0 0 14px; padding: 10px 12px; }
+  .status { border: 1px solid var(--modal-line); border-radius: 12px; margin: 0 0 14px; padding: 10px 12px; }
   .status[data-state="success"] { border-color: #16733d; }
   .status[data-state="error"] { border-color: #a52222; }
   form { display: grid; gap: 12px; }
   form[hidden] { display: none; }
-  label { color: #536471; display: block; font-size: 0.8125rem; font-weight: 700; }
+  label { color: var(--modal-muted); display: block; font-size: 0.8125rem; font-weight: 700; }
+  .field-help {
+    color: var(--modal-muted);
+    font-size: 0.75rem;
+    line-height: 1.35;
+    margin: 6px 2px 0;
+  }
   .metadata-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .field { min-width: 0; }
-  input, textarea {
-    background: white;
-    border: 1px solid #cfd9de;
+  input, select, textarea {
+    background: var(--modal-bg);
+    border: 1px solid var(--modal-line);
     border-radius: 12px;
-    color: #0f1419;
+    color: var(--modal-text);
     display: block;
     font: inherit;
     margin-top: 5px;
@@ -101,18 +131,24 @@ const MODAL_STYLES = `
     padding: 10px 12px;
     width: 100%;
   }
-  textarea { min-height: 112px; resize: vertical; }
+  textarea {
+    height: 120px;
+    max-height: 120px;
+    min-height: 120px;
+    overflow-y: auto;
+    resize: none;
+  }
   button {
-    background: #0f1419;
-    border: 1px solid #0f1419;
+    background: var(--modal-action);
+    border: 1px solid var(--modal-action);
     border-radius: 999px;
-    color: white;
+    color: var(--modal-action-text);
     cursor: pointer;
     font: 700 0.875rem/1 "Segoe UI Variable Text", "Helvetica Neue", Helvetica, sans-serif;
     min-height: 44px;
     padding: 10px 18px;
   }
-  .close { background: transparent; color: #0f1419; flex: 0 0 auto; }
+  .close { background: transparent; color: var(--modal-text); flex: 0 0 auto; }
   .save { margin-top: 2px; width: 100%; }
   :focus-visible { outline: 3px solid #1d9bf0; outline-offset: 2px; }
   @media (max-width: 520px) {
@@ -124,6 +160,23 @@ const MODAL_STYLES = `
     *, *::before, *::after { scroll-behavior: auto !important; }
   }
 `;
+
+function usesDarkTheme(document: Document): boolean {
+  const view = document.defaultView;
+  for (const element of [document.body, document.documentElement]) {
+    if (!element || !view) continue;
+    const values = view
+      .getComputedStyle(element)
+      .backgroundColor.match(/[\d.]+/g)
+      ?.map(Number);
+    if (!values || values.length < 3 || (values[3] ?? 1) === 0) continue;
+    const red = values[0] ?? 255;
+    const green = values[1] ?? 255;
+    const blue = values[2] ?? 255;
+    return red * 0.2126 + green * 0.7152 + blue * 0.0722 < 128;
+  }
+  return view?.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+}
 
 function appendLabelledInput(
   document: Document,
@@ -151,6 +204,7 @@ export function createBookmarkModal(
 ): BookmarkModalController {
   const { document } = options;
   const host = document.createElement("bookmark-x-note-modal");
+  host.dataset.theme = usesDarkTheme(document) ? "dark" : "light";
   host.hidden = true;
   host.tabIndex = -1;
   const shadow = host.attachShadow({ mode: "open" });
@@ -208,6 +262,17 @@ export function createBookmarkModal(
     options.labels.tags,
     options.values?.tags ?? "",
   );
+  const tagChoices = document.createElement("datalist");
+  tagChoices.id = "bookmark-x-modal-tag-choices";
+  tags.setAttribute("list", tagChoices.id);
+  if (options.labels.tagsHelp) {
+    const tagsHelp = document.createElement("p");
+    tagsHelp.className = "field-help";
+    tagsHelp.id = "bookmark-x-modal-tags-help";
+    tagsHelp.textContent = options.labels.tagsHelp;
+    tags.setAttribute("aria-describedby", tagsHelp.id);
+    tags.parentElement?.append(tagsHelp);
+  }
   const folder = appendLabelledInput(
     document,
     metadataGrid,
@@ -215,11 +280,14 @@ export function createBookmarkModal(
     options.labels.folder,
     options.values?.folder ?? "",
   );
+  const folderChoices = document.createElement("datalist");
+  folderChoices.id = "bookmark-x-modal-folder-choices";
+  folder.setAttribute("list", folderChoices.id);
   const saveButton = document.createElement("button");
   saveButton.className = "save";
   saveButton.type = "submit";
   saveButton.textContent = options.labels.save;
-  form.append(metadataGrid, saveButton);
+  form.append(metadataGrid, tagChoices, folderChoices, saveButton);
   form.hidden = options.labels.pending !== undefined;
   dialog.append(heading, bookmark, status, form);
   backdrop.append(dialog);
@@ -246,7 +314,11 @@ export function createBookmarkModal(
       return;
     }
     if (event.key !== "Tab") return;
-    const focusable = [closeButton, description, tags, folder, saveButton];
+    const focusable = Array.from(
+      shadow.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])",
+      ),
+    ).filter((element) => !element.hidden);
     const active = shadow.activeElement;
     if (event.shiftKey && active === focusable[0]) {
       event.preventDefault();
@@ -256,17 +328,28 @@ export function createBookmarkModal(
       focusable[0]?.focus();
     }
   });
+  let submitting = false;
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (submitting) return;
+    submitting = true;
+    saveButton.disabled = true;
     void Promise.resolve(
       options.onSave?.({
         description: description.value,
         folder: folder.value,
         tags: tags.value,
       }),
-    ).catch(() => undefined);
+    )
+      .then((saved) => {
+        if (saved !== false) close();
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        submitting = false;
+        if (!host.hidden) saveButton.disabled = false;
+      });
   });
-
   return {
     host,
     open() {
@@ -280,6 +363,23 @@ export function createBookmarkModal(
       if (values.tags !== undefined) tags.value = values.tags;
       if (values.folder !== undefined) folder.value = values.folder;
       if (values.description !== undefined) description.value = values.description;
+    },
+    setChoices(choices) {
+      const replaceOptions = (
+        target: HTMLDataListElement,
+        values: readonly string[] | undefined,
+      ): void => {
+        if (!values) return;
+        target.replaceChildren(
+          ...[...new Set(values)].map((value) => {
+            const option = document.createElement("option");
+            option.value = value;
+            return option;
+          }),
+        );
+      };
+      replaceOptions(tagChoices, choices.tags);
+      replaceOptions(folderChoices, choices.folders);
     },
     setState(state, message) {
       status.dataset.state = state;

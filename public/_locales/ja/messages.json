@@ -86,6 +86,16 @@
   "folderAssignmentLabel": { "message": "保存先フォルダー" },
   "uncategorizedFolder": { "message": "未分類" },
   "manageFolders": { "message": "フォルダーを管理" },
+  "renameTag": { "message": "名前を変更" },
+  "deleteTag": { "message": "削除" },
+  "renameTagPrompt": { "message": "タグの新しい名前を入力" },
+  "deleteTagConfirmation": {
+    "message": "$COUNT$ 件のブックマークから $NAME$ を削除しますか？タグはライブラリから消えますが、記録はローカルに保持されます。",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
   "newFolderName": { "message": "名前" },
   "parentFolderLabel": { "message": "親フォルダー" },
   "rootFolder": { "message": "親なし（最上位）" },
@@ -98,7 +108,7 @@
   "saveFolderName": { "message": "名前を保存" },
   "deleteFolder": { "message": "削除" },
   "deleteFolderConfirmation": {
-    "message": "$NAME$ とすべてのサブフォルダーを削除しますか？ブックマークは未分類になります。",
+    "message": "$NAME$ とすべてのサブフォルダーを削除しますか？ブックマークは未分類になり、フォルダーの記録はローカルに保持されます。",
     "placeholders": { "name": { "content": "$1" } }
   },
   "confirmDeleteFolder": { "message": "フォルダーを削除" },
@@ -152,7 +162,7 @@
     "message": "保存済み"
   },
   "currentLabel": {
-    "message": "Xに存在"
+    "message": "X のブックマーク"
   },
   "archivedLabel": {
     "message": "アーカイブ済み"
@@ -168,6 +178,14 @@
       }
     }
   },
+  "lastReviewLabel": { "message": "最終完全確認" },
+  "dateTimePattern": {
+    "message": "$DATE$ $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": {
     "message": "完全確認はまだありません"
   },
@@ -175,16 +193,17 @@
     "message": "日付不明"
   },
   "captureTitle": {
-    "message": "ブックマークを取得"
+    "message": "ブックマークを更新"
   },
   "captureDescription": {
     "message": "Bookmark Xが開いているブックマークページをスクロールし、表示された各ポストをローカルに保存します。"
   },
   "captureModeLabel": { "message": "確認モード" },
-  "captureModeQuick": { "message": "クイック更新" },
-  "captureModeFull": { "message": "完全確認" },
+  "captureModeQuick": { "message": "最近" },
+  "captureModeFull": { "message": "すべて" },
   "captureModeQuickHelp": {
-    "message": "新しい項目を見つけ、最近のブックマークを認識すると停止します。"
+    "message": "新しい項目を確認し、保存済みが $COUNT$ 件連続すると停止します。",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "captureModeFullHelp": {
     "message": "リスト全体を確認し、別の端末で削除されたブックマークを反映します。"
@@ -202,8 +221,8 @@
   "captureCompleteFallback": {
     "message": "チェックポイントが変わったため、完全確認を完了しました"
   },
-  "captureButtonQuick": { "message": "クイック更新を実行" },
-  "captureButtonFull": { "message": "完全確認を実行" },
+  "captureButtonQuick": { "message": "更新" },
+  "captureButtonFull": { "message": "すべて確認" },
   "captureIdle": {
     "message": "準備完了"
   },
@@ -304,6 +323,9 @@
     "message": "Bookmark Xで操作を完了できませんでした。もう一度お試しください。"
   },
   "openSettingsButton": { "message": "設定を開く" },
+  "openSettingsHelp": {
+    "message": "表示、取得件数の上限、動作を変更します。"
+  },
   "settingsTitle": { "message": "Bookmark X の設定" },
   "skipToSettings": { "message": "設定へ移動" },
   "settingsEyebrow": { "message": "ローカル設計" },
@@ -314,6 +336,14 @@
   "settingLargeText": { "message": "文字を大きくする" },
   "settingHighContrast": { "message": "高コントラストを使用" },
   "settingReduceMotion": { "message": "動きを減らす" },
+  "settingDateFormat": { "message": "日付形式" },
+  "settingTimeFormat": { "message": "時刻形式" },
+  "settingFormatAuto": { "message": "地域に合わせて自動" },
+  "settingDateFormatDmy": { "message": "DD/MM/YYYY" },
+  "settingDateFormatMdy": { "message": "MM/DD/YYYY" },
+  "settingDateFormatYmd": { "message": "YYYY/MM/DD" },
+  "settingTimeFormat24": { "message": "24時間" },
+  "settingTimeFormat12": { "message": "12時間（AM/PM）" },
   "settingsBehavior": { "message": "動作" },
   "settingSurface": { "message": "ライブラリの開き方" },
   "settingSurfaceModal": { "message": "コンパクトウィンドウ" },
@@ -346,6 +376,12 @@
   "settingLiveFilter": { "message": "入力中に結果を絞り込む" },
   "settingsData": { "message": "データ" },
   "settingKeepArchived": { "message": "X から削除された投稿をアーカイブに保持" },
+  "settingQuickStopThreshold": {
+    "message": "既知のブックマークを何件確認したらクイック更新を停止するか"
+  },
+  "settingQuickStopHelp": {
+    "message": "推奨値は15です。値を大きくすると停止前により多く確認します。"
+  },
   "settingsDataHelp": {
     "message": "ブックマーク内容はこの端末の IndexedDB に保存されます。"
   },
@@ -367,7 +403,10 @@
   "bookmarkPromptClose": { "message": "閉じる" },
   "bookmarkPromptSave": { "message": "メモを保存" },
   "bookmarkPromptTags": { "message": "タグ" },
+  "bookmarkPromptTagsHelp": { "message": "複数のタグはカンマで区切ってください。" },
   "bookmarkPromptFolder": { "message": "フォルダー" },
+  "bookmarkPromptChooseFolder": { "message": "既存のフォルダーを選択" },
+  "bookmarkPromptChooseTag": { "message": "既存のタグを選択" },
   "bookmarkPromptNote": { "message": "非公開メモ" },
   "bookmarkCategorized": { "message": "分類済み" },
   "bookmarkNeedsCategory": { "message": "要分類" },
@@ -441,6 +480,28 @@
   "navLibrary": { "message": "ライブラリ" },
   "navSettings": { "message": "設定" },
   "bookmarkDetailTitle": { "message": "ブックマークの詳細" },
+  "bookmarkMetadataOrganize": { "message": "編集" },
+  "bookmarkSavedAt": {
+    "message": "$DATE$ に保存",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "フォルダーとタグ" },
+  "organizationHelp": {
+    "message": "ブックマークの整理状況を確認し、フォルダーを管理します。"
+  },
+  "organizationCounts": {
+    "message": "フォルダー $FOLDERS$ 件 · タグ $TAGS$ 件",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$、ブックマーク $COUNT$ 件",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$、ブックマーク $COUNT$ 件",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": { "message": "ブックマークを開いてタグを追加または削除します。" },
   "backToLibrary": { "message": "ライブラリに戻る" },
   "settingsViewHelp": { "message": "エクスポート、バックアップ、言語、環境設定。" }
 }

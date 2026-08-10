@@ -1,4 +1,13 @@
 import type { ExtensionSettings, SettingsPatch } from "../settings/settings-repository";
+import {
+  DEFAULT_DATE_TIME_PREFERENCES,
+  type DateTimePreferences,
+} from "../settings/date-time-preferences";
+import {
+  DEFAULT_QUICK_STOP_THRESHOLD,
+  MAX_QUICK_STOP_THRESHOLD,
+  MIN_QUICK_STOP_THRESHOLD,
+} from "../domain/quick-update";
 import type { SendMessage, SettingsResult } from "../shared/protocol";
 import type { Translator } from "../popup/i18n";
 
@@ -7,12 +16,22 @@ interface OptionsAppOptions {
   sendMessage: SendMessage;
   translate: Translator;
   loadGithubStars?: () => Promise<number | null>;
+  loadDateTimePreferences?: () => Promise<DateTimePreferences>;
+  saveDateTimePreferences?: (preferences: DateTimePreferences) => Promise<void>;
 }
 
 function input(document: Document, id: string): HTMLInputElement {
   const element = document.getElementById(id);
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing settings input: #${id}`);
+  }
+  return element;
+}
+
+function select(document: Document, id: string): HTMLSelectElement {
+  const element = document.getElementById(id);
+  if (!(element instanceof HTMLSelectElement)) {
+    throw new Error(`Missing settings select: #${id}`);
   }
   return element;
 }
@@ -31,6 +50,8 @@ export function createOptionsApp(options: OptionsAppOptions): {
     largeText: input(document, "appearance-large-text"),
     highContrast: input(document, "appearance-high-contrast"),
     reduceMotion: input(document, "appearance-reduce-motion"),
+    dateFormat: select(document, "appearance-date-format"),
+    timeFormat: select(document, "appearance-time-format"),
     modal: input(document, "surface-modal"),
     sidePanel: input(document, "surface-side-panel"),
     prompt: input(document, "behavior-prompt"),
@@ -51,9 +72,11 @@ export function createOptionsApp(options: OptionsAppOptions): {
     exportFirstSaved: input(document, "export-first-saved"),
     exportLastSeen: input(document, "export-last-seen"),
     liveFilter: input(document, "search-live-filter"),
+    quickStopThreshold: input(document, "data-quick-stop-threshold"),
     keepArchived: input(document, "data-keep-archived"),
   };
   let settings: ExtensionSettings | null = null;
+  let dateTimePreferences = DEFAULT_DATE_TIME_PREFERENCES;
   let saveQueue = Promise.resolve();
   let destroyed = false;
 
@@ -82,7 +105,14 @@ export function createOptionsApp(options: OptionsAppOptions): {
     controls.exportFirstSaved.checked = next.export.includeFirstSavedAt;
     controls.exportLastSeen.checked = next.export.includeLastSeenAt;
     controls.liveFilter.checked = next.search.filterAsYouType;
+    controls.quickStopThreshold.value = String(next.data.quickStopThreshold);
     controls.keepArchived.checked = next.data.keepArchived;
+  };
+
+  const renderDateTimePreferences = (next: DateTimePreferences): void => {
+    dateTimePreferences = next;
+    controls.dateFormat.value = next.dateFormat;
+    controls.timeFormat.value = next.timeFormat;
   };
 
   const save = (patch: SettingsPatch): void => {
@@ -205,6 +235,20 @@ export function createOptionsApp(options: OptionsAppOptions): {
       controls.keepArchived,
       () => ({ data: { keepArchived: controls.keepArchived.checked } }),
     ],
+    [
+      controls.quickStopThreshold,
+      () => {
+        const requested = Number(controls.quickStopThreshold.value);
+        const quickStopThreshold = Number.isFinite(requested)
+          ? Math.min(
+              MAX_QUICK_STOP_THRESHOLD,
+              Math.max(MIN_QUICK_STOP_THRESHOLD, Math.round(requested)),
+            )
+          : DEFAULT_QUICK_STOP_THRESHOLD;
+        controls.quickStopThreshold.value = String(quickStopThreshold);
+        return { data: { quickStopThreshold } };
+      },
+    ],
   ];
   const exportControls = [
     controls.exportLink,
@@ -235,8 +279,41 @@ export function createOptionsApp(options: OptionsAppOptions): {
     return [control, listener] as const;
   });
 
-  const ready = sendMessage<SettingsResult>({ type: "GET_SETTINGS" }).then(
-    (response) => {
+  const saveDateTime = (next: DateTimePreferences): void => {
+    if (destroyed) return;
+    renderDateTimePreferences(next);
+    status.textContent = translate("settingsSaving");
+    saveQueue = saveQueue.then(async () => {
+      if (destroyed) return;
+      try {
+        await options.saveDateTimePreferences?.(next);
+        if (!destroyed) status.textContent = translate("settingsSaved");
+      } catch {
+        if (!destroyed) status.textContent = translate("settingsSaveError");
+      }
+    });
+  };
+  const dateFormatListener = (): void => {
+    saveDateTime({
+      ...dateTimePreferences,
+      dateFormat: controls.dateFormat.value as DateTimePreferences["dateFormat"],
+    });
+  };
+  const timeFormatListener = (): void => {
+    saveDateTime({
+      ...dateTimePreferences,
+      timeFormat: controls.timeFormat.value as DateTimePreferences["timeFormat"],
+    });
+  };
+  controls.dateFormat.addEventListener("change", dateFormatListener);
+  controls.timeFormat.addEventListener("change", timeFormatListener);
+
+  const ready = Promise.all([
+    sendMessage<SettingsResult>({ type: "GET_SETTINGS" }),
+    options.loadDateTimePreferences?.() ??
+      Promise.resolve(DEFAULT_DATE_TIME_PREFERENCES),
+  ]).then(
+    ([response, preferences]) => {
       if (destroyed) return;
       if (!response.ok) {
         document.documentElement.dataset.settingsState = "error";
@@ -244,6 +321,7 @@ export function createOptionsApp(options: OptionsAppOptions): {
         return;
       }
       render(response.data.settings);
+      renderDateTimePreferences(preferences);
       document.documentElement.dataset.settingsState = "ready";
       status.textContent = "";
     },
@@ -278,6 +356,8 @@ export function createOptionsApp(options: OptionsAppOptions): {
       for (const [control, listener] of listeners) {
         control.removeEventListener("change", listener);
       }
+      controls.dateFormat.removeEventListener("change", dateFormatListener);
+      controls.timeFormat.removeEventListener("change", timeFormatListener);
     },
   };
 }

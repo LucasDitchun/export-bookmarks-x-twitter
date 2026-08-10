@@ -60,6 +60,7 @@ export interface BookmarkDecorationLookupResult {
 
 export interface TagListResult {
   tags: BookmarkTag[];
+  usage?: Record<string, number>;
 }
 
 export interface TagAssignmentResult {
@@ -67,12 +68,22 @@ export interface TagAssignmentResult {
   tag: BookmarkTag;
 }
 
+export interface TagDetailResult {
+  tag: BookmarkTag;
+}
+
 export interface TagRemovalResult {
   bookmark: NotedBookmark;
 }
 
+export interface TagDeleteResult {
+  deletedTagId: string;
+  untaggedBookmarkCount: number;
+}
+
 export interface FolderListResult {
   folders: FolderRecord[];
+  usage?: Record<string, number>;
 }
 
 export interface FolderDetailResult {
@@ -166,6 +177,8 @@ export type UiRequest =
   | { type: "SAVE_BOOKMARK_NOTE"; payload: { id: string; note: string } }
   | { type: "LIST_TAGS" }
   | { type: "ADD_BOOKMARK_TAG"; payload: { id: string; name: string } }
+  | { type: "RENAME_TAG"; payload: { id: string; name: string } }
+  | { type: "DELETE_TAG"; payload: { id: string } }
   | {
       type: "REMOVE_BOOKMARK_TAG";
       payload: { id: string; tagId: string };
@@ -190,6 +203,7 @@ export type ContentControlRequest =
       type: "START_SCRAPE";
       runId: string;
       mode: ScrapeMode;
+      quickStopThreshold: number;
       checkpointIds: string[];
     }
   | { type: "CANCEL_SCRAPE"; runId: string }

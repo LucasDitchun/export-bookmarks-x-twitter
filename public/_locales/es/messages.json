@@ -84,6 +84,16 @@
   "folderAssignmentLabel": { "message": "Guardar en la carpeta" },
   "uncategorizedFolder": { "message": "Sin categoría" },
   "manageFolders": { "message": "Administrar carpetas" },
+  "renameTag": { "message": "Renombrar" },
+  "deleteTag": { "message": "Eliminar" },
+  "renameTagPrompt": { "message": "Elige un nuevo nombre para la etiqueta" },
+  "deleteTagConfirmation": {
+    "message": "¿Eliminar $NAME$ de $COUNT$ marcadores? La etiqueta desaparecerá de la biblioteca, pero su registro seguirá guardado localmente.",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
   "newFolderName": { "message": "Nombre" },
   "parentFolderLabel": { "message": "Carpeta superior" },
   "rootFolder": { "message": "Sin carpeta superior (nivel principal)" },
@@ -96,7 +106,7 @@
   "saveFolderName": { "message": "Guardar nombre" },
   "deleteFolder": { "message": "Eliminar" },
   "deleteFolderConfirmation": {
-    "message": "¿Eliminar $NAME$ y todas sus subcarpetas? Los marcadores quedarán sin categoría.",
+    "message": "¿Eliminar $NAME$ y todas sus subcarpetas? Los marcadores quedarán sin categoría y los registros seguirán guardados localmente.",
     "placeholders": { "name": { "content": "$1" } }
   },
   "confirmDeleteFolder": { "message": "Eliminar carpeta" },
@@ -150,7 +160,7 @@
     "message": "Total guardado"
   },
   "currentLabel": {
-    "message": "Ahora en X"
+    "message": "Marcadores en X"
   },
   "archivedLabel": {
     "message": "Archivados"
@@ -166,6 +176,14 @@
       }
     }
   },
+  "lastReviewLabel": { "message": "Última revisión completa" },
+  "dateTimePattern": {
+    "message": "$DATE$ a las $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": {
     "message": "Aún no hay una revisión completa"
   },
@@ -173,16 +191,17 @@
     "message": "Fecha desconocida"
   },
   "captureTitle": {
-    "message": "Capturar marcadores"
+    "message": "Actualizar marcadores"
   },
   "captureDescription": {
     "message": "Bookmark X desplaza la página abierta de marcadores y guarda localmente cada publicación visible."
   },
   "captureModeLabel": { "message": "Modo de revisión" },
-  "captureModeQuick": { "message": "Actualización rápida" },
-  "captureModeFull": { "message": "Revisión completa" },
+  "captureModeQuick": { "message": "Recientes" },
+  "captureModeFull": { "message": "Todos" },
   "captureModeQuickHelp": {
-    "message": "Encuentra elementos nuevos y se detiene al reconocer tus marcadores recientes."
+    "message": "Busca nuevos y se detiene tras $COUNT$ marcadores ya guardados seguidos.",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "captureModeFullHelp": {
     "message": "Comprueba toda la lista y concilia marcadores eliminados en otro dispositivo."
@@ -200,8 +219,8 @@
   "captureCompleteFallback": {
     "message": "Los puntos de control cambiaron; revisión completa completada"
   },
-  "captureButtonQuick": { "message": "Ejecutar actualización rápida" },
-  "captureButtonFull": { "message": "Ejecutar revisión completa" },
+  "captureButtonQuick": { "message": "Actualizar" },
+  "captureButtonFull": { "message": "Revisar todo" },
   "captureIdle": {
     "message": "Listo"
   },
@@ -302,6 +321,9 @@
     "message": "Bookmark X no pudo completar esa acción. Inténtalo de nuevo."
   },
   "openSettingsButton": { "message": "Abrir configuración" },
+  "openSettingsHelp": {
+    "message": "Cambia la apariencia, los límites de captura y el comportamiento."
+  },
   "settingsTitle": { "message": "Configuración de Bookmark X" },
   "skipToSettings": { "message": "Ir a la configuración" },
   "settingsEyebrow": { "message": "Local por diseño" },
@@ -312,6 +334,14 @@
   "settingLargeText": { "message": "Usar texto más grande" },
   "settingHighContrast": { "message": "Usar alto contraste" },
   "settingReduceMotion": { "message": "Reducir movimiento" },
+  "settingDateFormat": { "message": "Formato de fecha" },
+  "settingTimeFormat": { "message": "Formato de hora" },
+  "settingFormatAuto": { "message": "Automático para mi región" },
+  "settingDateFormatDmy": { "message": "DD/MM/AAAA" },
+  "settingDateFormatMdy": { "message": "MM/DD/AAAA" },
+  "settingDateFormatYmd": { "message": "AAAA/MM/DD" },
+  "settingTimeFormat24": { "message": "24 horas" },
+  "settingTimeFormat12": { "message": "12 horas (AM/PM)" },
   "settingsBehavior": { "message": "Comportamiento" },
   "settingSurface": { "message": "Abrir la biblioteca como" },
   "settingSurfaceModal": { "message": "Ventana compacta" },
@@ -346,6 +376,12 @@
   "settingKeepArchived": {
     "message": "Conservar como archivadas las publicaciones eliminadas de X"
   },
+  "settingQuickStopThreshold": {
+    "message": "Detener la actualización rápida tras esta cantidad de marcadores conocidos"
+  },
+  "settingQuickStopHelp": {
+    "message": "Se recomienda 15. Un número mayor comprueba más elementos antes de detenerse."
+  },
   "settingsDataHelp": {
     "message": "El contenido guardado permanece en IndexedDB en este dispositivo."
   },
@@ -367,7 +403,10 @@
   "bookmarkPromptClose": { "message": "Cerrar" },
   "bookmarkPromptSave": { "message": "Guardar nota" },
   "bookmarkPromptTags": { "message": "Etiquetas" },
+  "bookmarkPromptTagsHelp": { "message": "Separa varias etiquetas con comas." },
   "bookmarkPromptFolder": { "message": "Carpeta" },
+  "bookmarkPromptChooseFolder": { "message": "Elegir una carpeta existente" },
+  "bookmarkPromptChooseTag": { "message": "Elegir una etiqueta existente" },
   "bookmarkPromptNote": { "message": "Nota privada" },
   "bookmarkCategorized": { "message": "Categorizado" },
   "bookmarkNeedsCategory": { "message": "Falta categorizar" },
@@ -439,6 +478,28 @@
   "navLibrary": { "message": "Biblioteca" },
   "navSettings": { "message": "Ajustes" },
   "bookmarkDetailTitle": { "message": "Detalles del marcador" },
+  "bookmarkMetadataOrganize": { "message": "Editar" },
+  "bookmarkSavedAt": {
+    "message": "Guardado el $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "Carpetas y etiquetas" },
+  "organizationHelp": {
+    "message": "Consulta la organización de tus marcadores y administra carpetas."
+  },
+  "organizationCounts": {
+    "message": "$FOLDERS$ carpetas · $TAGS$ etiquetas",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$, $COUNT$ marcadores",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ marcadores",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": { "message": "Abre un marcador para añadir o quitar etiquetas." },
   "backToLibrary": { "message": "Volver a la biblioteca" },
   "settingsViewHelp": {
     "message": "Exportación, copia de seguridad, idioma y preferencias."

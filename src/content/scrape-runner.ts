@@ -1,4 +1,8 @@
 import type { BookmarkSnapshot } from "../domain/types";
+import {
+  DEFAULT_QUICK_STOP_THRESHOLD,
+  isQuickStopThreshold,
+} from "../domain/quick-update";
 
 export interface ScrapeProgress {
   fetched: number;
@@ -12,6 +16,7 @@ export interface ScrapeWaitResult {
 export interface ScrapeRunnerOptions {
   scan: () => BookmarkSnapshot[];
   checkpointIds?: readonly string[];
+  quickStopThreshold?: number;
   isLoading?: () => boolean;
   isAtEnd?: () => boolean;
   isPageValid?: () => boolean;
@@ -35,6 +40,7 @@ export interface ScrapeResult {
 export async function runScrape({
   scan,
   checkpointIds = [],
+  quickStopThreshold = DEFAULT_QUICK_STOP_THRESHOLD,
   isLoading = () => false,
   isAtEnd = () => true,
   isPageValid = () => true,
@@ -49,6 +55,9 @@ export async function runScrape({
 }: ScrapeRunnerOptions): Promise<ScrapeResult> {
   if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 100) {
     throw new RangeError("Scrape batch size must be between 1 and 100.");
+  }
+  if (!isQuickStopThreshold(quickStopThreshold)) {
+    throw new RangeError("Quick stop threshold is outside the supported range.");
   }
   if (!Number.isSafeInteger(idlePassLimit) || idlePassLimit < 1) {
     throw new RangeError("Idle pass limit must be a positive integer.");
@@ -82,7 +91,7 @@ export async function runScrape({
       consecutiveKnownCheckpoints = checkpointSet.has(id)
         ? consecutiveKnownCheckpoints + 1
         : 0;
-      if (checkpointSet.size > 0 && consecutiveKnownCheckpoints >= 3) {
+      if (checkpointSet.size > 0 && consecutiveKnownCheckpoints >= quickStopThreshold) {
         checkpointStop = true;
         break;
       }
@@ -112,6 +121,9 @@ export async function runScrape({
       lastReportedFetched = deliveredCount;
     }
 
+    const checkpointCandidateIds = checkpointStop
+      ? new Set(scan().map(({ id }) => id))
+      : null;
     const contentUpdate = waitForContent(signal);
     if (!loading && !quietEndCandidate && !checkpointStop) {
       scroll();
@@ -138,11 +150,14 @@ export async function runScrape({
     }
 
     if (checkpointStop && !signal?.aborted) {
+      const unseenBookmarkAppeared = scan().some(
+        ({ id }) => !checkpointCandidateIds?.has(id),
+      );
       const checkpointStayedQuiet =
         !loading &&
-        waitResult?.reason === "timeout" &&
         !waitResult?.loadingObserved &&
-        !loadingAfterWait;
+        !loadingAfterWait &&
+        !unseenBookmarkAppeared;
       if (checkpointStayedQuiet) {
         return {
           status: "completed",

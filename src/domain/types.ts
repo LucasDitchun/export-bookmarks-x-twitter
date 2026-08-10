@@ -13,6 +13,7 @@ export interface FolderRecord {
   id: string;
   name: string;
   parentId: string | null;
+  deletedAt?: string;
 }
 
 export interface BookmarkFolderMembership {
@@ -24,6 +25,7 @@ export interface BookmarkTag {
   id: string;
   name: string;
   normalizedName: string;
+  deletedAt?: string;
 }
 
 export type BookmarkStatus = "current" | "archived";
@@ -114,6 +116,7 @@ export interface ScrapeRun {
   updatedAt: string;
   errorCode: string | null;
   mode: ScrapeMode;
+  quickStopThreshold?: number;
   checkpointIds: string[];
   checkpointCandidates: string[];
   checkpointMatchIds: string[];

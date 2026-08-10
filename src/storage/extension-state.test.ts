@@ -45,7 +45,10 @@ describe("ExtensionStateRepository", () => {
     };
 
     await repository.setScrapeRun(run);
-    await expect(repository.getScrapeRun()).resolves.toEqual(run);
+    await expect(repository.getScrapeRun()).resolves.toEqual({
+      ...run,
+      quickStopThreshold: 15,
+    });
     await repository.clearScrapeRun();
     await expect(repository.getScrapeRun()).resolves.toBeNull();
   });
@@ -86,7 +89,7 @@ describe("ExtensionStateRepository", () => {
     });
   });
 
-  it("persists ten unique recent checkpoint IDs and clears them independently", async () => {
+  it("persists unique recent checkpoint IDs and clears them independently", async () => {
     const repository = new ExtensionStateRepository(new MemoryStorageArea());
 
     await repository.setScrapeCheckpoints({
@@ -106,7 +109,7 @@ describe("ExtensionStateRepository", () => {
     { ids: [], updatedAt: "2026-07-29T12:05:00.000Z" },
     { ids: ["1", "1"], updatedAt: "2026-07-29T12:05:00.000Z" },
     {
-      ids: Array.from({ length: 11 }, (_, index) => String(index + 1)),
+      ids: Array.from({ length: 51 }, (_, index) => String(index + 1)),
       updatedAt: "2026-07-29T12:05:00.000Z",
     },
     { ids: ["not-an-id"], updatedAt: "2026-07-29T12:05:00.000Z" },

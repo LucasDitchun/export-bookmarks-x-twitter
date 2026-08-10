@@ -235,7 +235,7 @@ describe("backup schema", () => {
     [
       "invalid settings envelope version",
       (draft: BookmarkXBackup) =>
-        Object.assign(draft.data.settings.extension, { schemaVersion: 2 }),
+        Object.assign(draft.data.settings.extension, { schemaVersion: 99 }),
     ],
     [
       "invalid complete setting type",

@@ -87,7 +87,45 @@ export class FolderRepository {
       transaction.objectStore(FOLDERS_STORE).getAll() as IDBRequest<FolderRecord[]>,
     );
     await transactionDone(transaction);
-    return sortFolders(folders);
+    return sortFolders(folders.filter((folder) => folder.deletedAt === undefined));
+  }
+
+  async usage(): Promise<Record<string, number>> {
+    const database = await this.connection.open();
+    const transaction = database.transaction(
+      [FOLDERS_STORE, BOOKMARKS_STORE],
+      "readonly",
+    );
+    const [folders, bookmarks] = await Promise.all([
+      requestAsPromise(
+        transaction.objectStore(FOLDERS_STORE).getAll() as IDBRequest<FolderRecord[]>,
+      ),
+      requestAsPromise(
+        transaction.objectStore(BOOKMARKS_STORE).getAll() as IDBRequest<
+          BookmarkRecord[]
+        >,
+      ),
+    ]);
+    await transactionDone(transaction);
+
+    const byId = new Map(
+      folders
+        .filter((folder) => folder.deletedAt === undefined)
+        .map((folder) => [folder.id, folder]),
+    );
+    const usage: Record<string, number> = {};
+    for (const bookmark of bookmarks) {
+      let folderId = bookmark.folderId;
+      const visited = new Set<string>();
+      while (folderId !== null && !visited.has(folderId)) {
+        const folder = byId.get(folderId);
+        if (!folder) break;
+        visited.add(folderId);
+        usage[folderId] = (usage[folderId] ?? 0) + 1;
+        folderId = folder.parentId;
+      }
+    }
+    return usage;
   }
 
   async create(input: CreateFolderInput): Promise<FolderRecord> {
@@ -103,11 +141,17 @@ export class FolderRepository {
             store.get(input.parentId) as IDBRequest<FolderRecord | undefined>,
           ),
     ]);
-    if (input.parentId !== null && parent === undefined) {
+    if (
+      input.parentId !== null &&
+      (parent === undefined || parent.deletedAt !== undefined)
+    ) {
       transaction.abort();
       throw new Error("The parent folder was not found.");
     }
-    assertUniqueSibling(folders, { name, parentId: input.parentId });
+    assertUniqueSibling(
+      folders.filter((folder) => folder.deletedAt === undefined),
+      { name, parentId: input.parentId },
+    );
     const folder: FolderRecord = {
       id: this.createId(),
       name,
@@ -127,11 +171,15 @@ export class FolderRepository {
       requestAsPromise(store.getAll() as IDBRequest<FolderRecord[]>),
       requestAsPromise(store.get(id) as IDBRequest<FolderRecord | undefined>),
     ]);
-    if (folder === undefined) {
+    if (folder === undefined || folder.deletedAt !== undefined) {
       transaction.abort();
       throw new Error(`Folder ${id} was not found.`);
     }
-    assertUniqueSibling(folders, { name, parentId: folder.parentId }, id);
+    assertUniqueSibling(
+      folders.filter((candidate) => candidate.deletedAt === undefined),
+      { name, parentId: folder.parentId },
+      id,
+    );
     const updated = { ...folder, name };
     store.put(updated);
     await transactionDone(transaction);
@@ -167,7 +215,7 @@ export class FolderRepository {
       transaction.abort();
       throw new Error(`Bookmark ${bookmarkId} was not found.`);
     }
-    if (folderId !== null && folder === undefined) {
+    if (folderId !== null && (folder === undefined || folder.deletedAt !== undefined)) {
       transaction.abort();
       throw new Error(`Folder ${folderId} was not found.`);
     }
@@ -198,7 +246,7 @@ export class FolderRepository {
     const folders = await requestAsPromise(
       folderStore.getAll() as IDBRequest<FolderRecord[]>,
     );
-    if (!folders.some((folder) => folder.id === id)) {
+    if (!folders.some((folder) => folder.id === id && folder.deletedAt === undefined)) {
       transaction.abort();
       throw new Error(`Folder ${id} was not found.`);
     }
@@ -216,7 +264,7 @@ export class FolderRepository {
       }
     }
     const deletedFolderIds = folders
-      .filter((folder) => deleted.has(folder.id))
+      .filter((folder) => folder.deletedAt === undefined && deleted.has(folder.id))
       .map(({ id: folderId }) => folderId);
     const bookmarkGroups = await Promise.all(
       deletedFolderIds.map((folderId) =>
@@ -246,7 +294,10 @@ export class FolderRepository {
     for (const keys of membershipKeyGroups) {
       for (const key of keys) membershipStore.delete(key);
     }
-    for (const folderId of deletedFolderIds) folderStore.delete(folderId);
+    for (const folderId of deletedFolderIds) {
+      const folder = folders.find((candidate) => candidate.id === folderId);
+      if (folder) folderStore.put({ ...folder, deletedAt: timestamp });
+    }
     await transactionDone(transaction);
     return {
       deletedFolderIds,

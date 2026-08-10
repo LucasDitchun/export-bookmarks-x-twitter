@@ -91,6 +91,14 @@ function sortById<T extends { id: string }>(items: readonly T[]): T[] {
   return [...items].sort((left, right) => left.id.localeCompare(right.id));
 }
 
+function activeTagSnapshot(tag: BookmarkTag): BookmarkTag {
+  return {
+    id: tag.id,
+    name: tag.name,
+    normalizedName: tag.normalizedName,
+  };
+}
+
 function exportFilename(now: Date): string {
   const timestamp = now
     .toISOString()
@@ -224,13 +232,16 @@ export class BackupRepository {
       exportedAt: exportedAt.toISOString(),
       data: {
         bookmarks: sortById(bookmarks),
-        folders: sortById(folders),
+        folders: sortById(folders.filter((folder) => folder.deletedAt === undefined)),
         tags: sortById(
-          tags.map((tag) => ({
-            ...tag,
-            name: tag.name.trim().normalize("NFKC"),
-            normalizedName: normalizeTagName(tag.name),
-          })),
+          tags
+            .filter((tag) => tag.deletedAt === undefined)
+            .map(activeTagSnapshot)
+            .map((tag) => ({
+              ...tag,
+              name: tag.name.trim().normalize("NFKC"),
+              normalizedName: normalizeTagName(tag.name),
+            })),
         ),
         archive: { lastSuccessfulSyncAt },
         settings: settingsFromStorage(storedSettings, extensionSettings),
@@ -296,7 +307,14 @@ export class BackupRepository {
       ),
     ]);
     await transactionDone(transaction);
-    return mergeBackup({ bookmarks, folders, tags }, backup);
+    return mergeBackup(
+      {
+        bookmarks,
+        folders: folders.filter((folder) => folder.deletedAt === undefined),
+        tags: tags.filter((tag) => tag.deletedAt === undefined).map(activeTagSnapshot),
+      },
+      backup,
+    );
   }
 
   private async writeIdb(backup: BookmarkXBackup, mode: RestoreMode): Promise<void> {

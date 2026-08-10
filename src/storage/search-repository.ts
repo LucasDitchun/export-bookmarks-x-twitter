@@ -186,6 +186,10 @@ export class SearchRepository {
       ),
     ]);
     await transactionDone(transaction);
-    return createSearchDocuments(bookmarks, folders, tags);
+    return createSearchDocuments(
+      bookmarks,
+      folders.filter((folder) => folder.deletedAt === undefined),
+      tags.filter((tag) => tag.deletedAt === undefined),
+    );
   }
 }

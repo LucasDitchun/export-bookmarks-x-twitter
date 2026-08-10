@@ -14,6 +14,10 @@ import { createSemanticOptionsUi } from "./semantic-options-ui";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { SemanticSearchClient } from "../semantic/semantic-search-client";
 import type { SemanticCorpusResult } from "../shared/protocol";
+import {
+  loadDateTimePreferences,
+  saveDateTimePreferences,
+} from "../settings/date-time-preferences";
 
 async function startOptions(): Promise<void> {
   const stored = await chrome.storage.local.get(LOCALE_STORAGE_KEY);
@@ -53,6 +57,15 @@ async function startOptions(): Promise<void> {
           set: (items) => chrome.storage.local.set(items),
         },
       }),
+    loadDateTimePreferences: () =>
+      loadDateTimePreferences({
+        get: (key) => chrome.storage.local.get(key),
+      }),
+    saveDateTimePreferences: (preferences) =>
+      saveDateTimePreferences(
+        { set: (items) => chrome.storage.local.set(items) },
+        preferences,
+      ),
   });
   const semanticUi = createSemanticOptionsUi({
     document,

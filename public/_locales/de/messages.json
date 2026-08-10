@@ -86,6 +86,16 @@
   "folderAssignmentLabel": { "message": "In Ordner speichern" },
   "uncategorizedFolder": { "message": "Nicht kategorisiert" },
   "manageFolders": { "message": "Ordner verwalten" },
+  "renameTag": { "message": "Umbenennen" },
+  "deleteTag": { "message": "Löschen" },
+  "renameTagPrompt": { "message": "Wähle einen neuen Tag-Namen" },
+  "deleteTagConfirmation": {
+    "message": "$NAME$ aus $COUNT$ Lesezeichen löschen? Der Tag verschwindet aus der Bibliothek, sein Datensatz bleibt jedoch lokal gespeichert.",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
   "newFolderName": { "message": "Name" },
   "parentFolderLabel": { "message": "Übergeordneter Ordner" },
   "rootFolder": { "message": "Kein übergeordneter Ordner (oberste Ebene)" },
@@ -98,7 +108,7 @@
   "saveFolderName": { "message": "Name speichern" },
   "deleteFolder": { "message": "Löschen" },
   "deleteFolderConfirmation": {
-    "message": "$NAME$ und alle Unterordner löschen? Lesezeichen werden nicht kategorisiert.",
+    "message": "$NAME$ und alle Unterordner löschen? Lesezeichen werden nicht kategorisiert und die Ordnerdatensätze bleiben lokal gespeichert.",
     "placeholders": { "name": { "content": "$1" } }
   },
   "confirmDeleteFolder": { "message": "Ordner löschen" },
@@ -152,7 +162,7 @@
     "message": "Gespeichert"
   },
   "currentLabel": {
-    "message": "Jetzt auf X"
+    "message": "Lesezeichen auf X"
   },
   "archivedLabel": {
     "message": "Archiviert"
@@ -168,6 +178,14 @@
       }
     }
   },
+  "lastReviewLabel": { "message": "Letzte vollständige Prüfung" },
+  "dateTimePattern": {
+    "message": "$DATE$ um $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": {
     "message": "Noch keine vollständige Prüfung"
   },
@@ -175,16 +193,17 @@
     "message": "Unbekanntes Datum"
   },
   "captureTitle": {
-    "message": "Lesezeichen erfassen"
+    "message": "Lesezeichen aktualisieren"
   },
   "captureDescription": {
     "message": "Bookmark X scrollt durch deine geöffnete Lesezeichenseite und speichert jeden sichtbaren Beitrag lokal."
   },
   "captureModeLabel": { "message": "Prüfmodus" },
-  "captureModeQuick": { "message": "Schnellaktualisierung" },
-  "captureModeFull": { "message": "Vollständige Prüfung" },
+  "captureModeQuick": { "message": "Neueste" },
+  "captureModeFull": { "message": "Alle" },
   "captureModeQuickHelp": {
-    "message": "Findet neue Einträge und stoppt, sobald deine letzten Lesezeichen erkannt wurden."
+    "message": "Sucht Neues und stoppt nach $COUNT$ bereits gespeicherten Lesezeichen in Folge.",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "captureModeFullHelp": {
     "message": "Prüft die gesamte Liste und gleicht auf anderen Geräten entfernte Lesezeichen ab."
@@ -202,8 +221,8 @@
   "captureCompleteFallback": {
     "message": "Prüfpunkte geändert; vollständige Prüfung abgeschlossen"
   },
-  "captureButtonQuick": { "message": "Schnell aktualisieren" },
-  "captureButtonFull": { "message": "Vollständig prüfen" },
+  "captureButtonQuick": { "message": "Aktualisieren" },
+  "captureButtonFull": { "message": "Alle prüfen" },
   "captureIdle": {
     "message": "Bereit"
   },
@@ -304,6 +323,9 @@
     "message": "Bookmark X konnte diese Aktion nicht abschließen. Versuche es erneut."
   },
   "openSettingsButton": { "message": "Einstellungen öffnen" },
+  "openSettingsHelp": {
+    "message": "Ändere Darstellung, Erfassungslimits und Verhalten."
+  },
   "settingsTitle": { "message": "Bookmark-X-Einstellungen" },
   "skipToSettings": { "message": "Zu den Einstellungen" },
   "settingsEyebrow": { "message": "Bewusst lokal" },
@@ -314,6 +336,14 @@
   "settingLargeText": { "message": "Größeren Text verwenden" },
   "settingHighContrast": { "message": "Hohen Kontrast verwenden" },
   "settingReduceMotion": { "message": "Bewegungen reduzieren" },
+  "settingDateFormat": { "message": "Datumsformat" },
+  "settingTimeFormat": { "message": "Zeitformat" },
+  "settingFormatAuto": { "message": "Automatisch für meine Region" },
+  "settingDateFormatDmy": { "message": "TT/MM/JJJJ" },
+  "settingDateFormatMdy": { "message": "MM/TT/JJJJ" },
+  "settingDateFormatYmd": { "message": "JJJJ/MM/TT" },
+  "settingTimeFormat24": { "message": "24 Stunden" },
+  "settingTimeFormat12": { "message": "12 Stunden (AM/PM)" },
   "settingsBehavior": { "message": "Verhalten" },
   "settingSurface": { "message": "Bibliothek öffnen als" },
   "settingSurfaceModal": { "message": "Kompaktes Fenster" },
@@ -346,6 +376,12 @@
   "settingLiveFilter": { "message": "Ergebnisse beim Tippen filtern" },
   "settingsData": { "message": "Daten" },
   "settingKeepArchived": { "message": "Von X entfernte Beiträge archiviert behalten" },
+  "settingQuickStopThreshold": {
+    "message": "Schnellaktualisierung nach so vielen bekannten Lesezeichen stoppen"
+  },
+  "settingQuickStopHelp": {
+    "message": "15 wird empfohlen. Eine höhere Zahl prüft vor dem Stoppen weiter."
+  },
   "settingsDataHelp": {
     "message": "Bookmark-Inhalte bleiben in IndexedDB auf diesem Gerät."
   },
@@ -367,7 +403,10 @@
   "bookmarkPromptClose": { "message": "Schließen" },
   "bookmarkPromptSave": { "message": "Notiz speichern" },
   "bookmarkPromptTags": { "message": "Tags" },
+  "bookmarkPromptTagsHelp": { "message": "Trenne mehrere Tags durch Kommas." },
   "bookmarkPromptFolder": { "message": "Ordner" },
+  "bookmarkPromptChooseFolder": { "message": "Vorhandenen Ordner auswählen" },
+  "bookmarkPromptChooseTag": { "message": "Vorhandenen Tag auswählen" },
   "bookmarkPromptNote": { "message": "Private Notiz" },
   "bookmarkCategorized": { "message": "Kategorisiert" },
   "bookmarkNeedsCategory": { "message": "Kategorie fehlt" },
@@ -445,6 +484,30 @@
   "navLibrary": { "message": "Bibliothek" },
   "navSettings": { "message": "Einstellungen" },
   "bookmarkDetailTitle": { "message": "Lesezeichen-Details" },
+  "bookmarkMetadataOrganize": { "message": "Bearbeiten" },
+  "bookmarkSavedAt": {
+    "message": "Gespeichert am $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "Ordner und Tags" },
+  "organizationHelp": {
+    "message": "Sieh dir die Organisation deiner Lesezeichen an und verwalte Ordner."
+  },
+  "organizationCounts": {
+    "message": "$FOLDERS$ Ordner · $TAGS$ Tags",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$, $COUNT$ Lesezeichen",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ Lesezeichen",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": {
+    "message": "Öffne ein Lesezeichen, um Tags hinzuzufügen oder zu entfernen."
+  },
   "backToLibrary": { "message": "Zurück zur Bibliothek" },
   "settingsViewHelp": { "message": "Export, Sicherung, Sprache und Einstellungen." }
 }
