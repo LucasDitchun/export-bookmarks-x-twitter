@@ -192,7 +192,7 @@ async function captureVisualCheckpoint(devTools, filename, viewport) {
   });
   const screenshot = await devTools.send("Page.captureScreenshot", {
     format: "png",
-    captureBeyondViewport: true,
+    captureBeyondViewport: false,
     fromSurface: true,
   });
   await writeFile(
@@ -764,10 +764,12 @@ function assertScenario(
     ]),
   );
   if (
-    typography.root < 18 ||
-    typography.body < 18 ||
-    typography.heading <= 25 ||
-    typography.guidance <= 17
+    typography.root < 17 ||
+    typography.body < 15.5 ||
+    typography.body >= 18 ||
+    typography.heading < 19 ||
+    typography.heading >= 24 ||
+    typography.guidance < 13.5
   ) {
     throw new Error(
       `The large-text setting did not scale popup typography: ${JSON.stringify(ui.typography)}`,
@@ -1108,6 +1110,25 @@ async function main() {
         width: 500,
         height: 900,
       });
+      await sidePanelDevTools.send("Runtime.evaluate", {
+        expression: `document.querySelector('[data-app-nav="library"]')?.click()`,
+      });
+      await delay(100);
+      await captureVisualCheckpoint(sidePanelDevTools, "side-panel-library.png", {
+        width: 500,
+        height: 900,
+      });
+      await sidePanelDevTools.send("Runtime.evaluate", {
+        expression: `document.querySelector('[data-app-nav="settings"]')?.click()`,
+      });
+      await delay(100);
+      await captureVisualCheckpoint(sidePanelDevTools, "side-panel-settings.png", {
+        width: 500,
+        height: 900,
+      });
+      await sidePanelDevTools.send("Runtime.evaluate", {
+        expression: `document.querySelector('[data-app-nav="home"]')?.click()`,
+      });
     }
 
     const pageTarget = await openTarget(port, "about:blank");
@@ -1335,6 +1356,52 @@ async function main() {
         livePageEvaluation.exceptionDetails.exception?.description ??
           livePageEvaluation.exceptionDetails.text,
       );
+    }
+    if (VISUAL_CHECKPOINT_DIRECTORY) {
+      await captureVisualCheckpoint(pageDevTools, "bookmark-modal.png", {
+        width: 1180,
+        height: 900,
+      });
+      await navigateToExtensionContext(popupDevTools, popupUrl);
+      const detailEvaluation = await popupDevTools.send("Runtime.evaluate", {
+        expression: `(async () => {
+          document.querySelector('[data-app-nav="library"]')?.click();
+          const deadline = Date.now() + 2500;
+          while (Date.now() < deadline) {
+            const first = document.querySelector('.bookmark-option');
+            if (first) {
+              first.click();
+              break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+          while (Date.now() < deadline) {
+            const detail = document.querySelector('[data-app-view="detail"]');
+            const editor = document.getElementById('note-editor');
+            if (detail && !detail.hidden && editor && !editor.hidden) return { opened: true };
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+          const detail = document.querySelector('[data-app-view="detail"]');
+          const editor = document.getElementById('note-editor');
+          return {
+            opened: false,
+            optionCount: document.querySelectorAll('.bookmark-option').length,
+            detailHidden: detail?.hidden ?? null,
+            editorHidden: editor?.hidden ?? null,
+          };
+        })()`,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      if (!detailEvaluation.result.value?.opened) {
+        throw new Error(
+          `The visual checkpoint could not open bookmark details: ${JSON.stringify(detailEvaluation.result.value)}`,
+        );
+      }
+      await captureVisualCheckpoint(popupDevTools, "popup-detail.png", {
+        width: 400,
+        height: 900,
+      });
     }
     const finalEvaluation = await popupDevTools.send("Runtime.evaluate", {
       expression: finalRuntimeScenario,

@@ -49,8 +49,19 @@
       </section>
 
       <div id="dashboard-view" class="dashboard" hidden>
-        <section class="capture-card" aria-labelledby="capture-heading">
-          <h2 id="capture-heading" data-i18n="captureTitle">Capture from the page</h2>
+        <section
+          class="capture-card app-view"
+          data-app-view="home"
+          aria-labelledby="capture-heading"
+        >
+          <h2
+            id="capture-heading"
+            data-view-heading
+            tabindex="-1"
+            data-i18n="captureTitle"
+          >
+            Capture from the page
+          </h2>
           <p id="page-guidance" class="guidance"></p>
           <button
             id="open-bookmarks-button"
@@ -98,34 +109,52 @@
           </button>
         </section>
 
-        <section class="archive-card" aria-labelledby="archive-heading">
-          <h2 id="archive-heading" data-i18n="archiveTitle">Your bookmarks</h2>
+        <section class="archive-card">
+          <section
+            class="archive-summary app-view"
+            data-app-view="home"
+            aria-labelledby="archive-heading"
+          >
+            <h2 id="archive-heading" data-i18n="archiveTitle">Your bookmarks</h2>
 
-          <div class="archive-total">
-            <strong id="total-count">0</strong>
-            <span data-i18n="totalLabel">Total saved</span>
-          </div>
+            <div class="archive-total">
+              <strong id="total-count">0</strong>
+              <span data-i18n="totalLabel">Total saved</span>
+            </div>
 
-          <p class="archive-breakdown">
-            <span
-              ><strong id="current-count">0</strong>
-              <span data-i18n="currentLabel">On X now</span></span
-            >
-            <span aria-hidden="true">·</span>
-            <span
-              ><strong id="archived-count">0</strong>
-              <span data-i18n="archivedLabel">Archived</span></span
-            >
-          </p>
-          <p id="last-sync" class="last-sync"></p>
-          <p id="empty-note" class="empty-note" data-i18n="emptyArchive">
-            No bookmarks captured yet.
-          </p>
+            <p class="archive-breakdown">
+              <span
+                ><strong id="current-count">0</strong>
+                <span data-i18n="currentLabel">On X now</span></span
+              >
+              <span aria-hidden="true">·</span>
+              <span
+                ><strong id="archived-count">0</strong>
+                <span data-i18n="archivedLabel">Archived</span></span
+              >
+            </p>
+            <p id="last-sync" class="last-sync"></p>
+            <p id="empty-note" class="empty-note" data-i18n="emptyArchive">
+              No bookmarks captured yet.
+            </p>
+          </section>
 
-          <section class="library" aria-labelledby="library-heading">
+          <section
+            class="library app-view"
+            data-app-view="library"
+            aria-labelledby="library-heading"
+            hidden
+          >
             <div class="library-heading-row">
               <div>
-                <h3 id="library-heading" data-i18n="libraryTitle">Bookmark library</h3>
+                <h2
+                  id="library-heading"
+                  data-view-heading
+                  tabindex="-1"
+                  data-i18n="libraryTitle"
+                >
+                  Bookmark library
+                </h2>
                 <p class="library-help" data-i18n="libraryHelp">
                   Select a bookmark to add a private note.
                 </p>
@@ -236,7 +265,33 @@
                 Load more
               </button>
             </div>
+          </section>
 
+          <section
+            class="detail-view app-view"
+            data-app-view="detail"
+            aria-labelledby="bookmark-detail-heading"
+            hidden
+          >
+            <div class="view-title-row">
+              <button
+                class="back-button"
+                type="button"
+                data-detail-back
+                data-i18n-aria-label="backToLibrary"
+                aria-label="Back to library"
+              >
+                <span aria-hidden="true">←</span>
+              </button>
+              <h2
+                id="bookmark-detail-heading"
+                data-view-heading
+                tabindex="-1"
+                data-i18n="bookmarkDetailTitle"
+              >
+                Bookmark details
+              </h2>
+            </div>
             <section
               id="note-editor"
               class="note-editor"
@@ -301,7 +356,7 @@
                 </label>
                 <textarea
                   id="note-textarea"
-                  rows="7"
+                  rows="5"
                   maxlength="20000"
                   spellcheck="true"
                   disabled
@@ -366,176 +421,232 @@
             </section>
           </section>
 
-          <section class="export-actions" aria-labelledby="export-heading">
-            <div class="export-heading-row">
-              <h3 id="export-heading" data-i18n="exportTitle">Export library</h3>
-              <span class="export-local-badge" data-i18n="exportLocalBadge"
-                >Local only</span
+          <section
+            class="settings-view app-view"
+            data-app-view="settings"
+            aria-labelledby="settings-view-heading"
+            hidden
+          >
+            <div class="view-heading-block">
+              <h2
+                id="settings-view-heading"
+                data-view-heading
+                tabindex="-1"
+                data-i18n="navSettings"
               >
+                Settings
+              </h2>
+              <p data-i18n="settingsViewHelp">
+                Export, backup, language, and preferences.
+              </p>
             </div>
-            <p class="export-help" data-i18n="exportHelp">
-              Choose a folder, any matching tags, and whether to include archived posts.
-            </p>
-            <details id="export-filter-details" class="export-filters">
-              <summary data-i18n="exportFiltersSummary">Choose export filters</summary>
-              <div class="export-filter-grid">
-                <label for="export-folder-filter" data-i18n="exportFolderFilterLabel"
-                  >Folder and subfolders</label
+            <section class="export-actions" aria-labelledby="export-heading">
+              <div class="export-heading-row">
+                <h3 id="export-heading" data-i18n="exportTitle">Export library</h3>
+                <span class="export-local-badge" data-i18n="exportLocalBadge"
+                  >Local only</span
                 >
-                <select id="export-folder-filter">
-                  <option value="" data-i18n="exportAllFolders">All folders</option>
-                </select>
-                <label for="export-tag-filter" data-i18n="exportTagFilterLabel"
-                  >Tags (match any selected)</label
-                >
-                <select
-                  id="export-tag-filter"
-                  multiple
-                  size="3"
-                  aria-describedby="export-tag-help"
-                ></select>
-                <p
-                  id="export-tag-help"
-                  class="export-filter-help"
-                  data-i18n="exportTagFilterHelp"
-                >
-                  Use Ctrl or Command to select multiple. Leave empty for every tag.
-                </p>
-                <label class="export-archived-choice" for="export-include-archived">
-                  <input id="export-include-archived" type="checkbox" checked />
-                  <span data-i18n="exportIncludeArchived">Include archived posts</span>
-                </label>
               </div>
-            </details>
-            <div
-              class="export-split-button"
-              role="group"
-              aria-labelledby="export-heading"
-            >
-              <button
-                id="export-primary-button"
-                class="button button-download export-primary"
-                type="button"
-                data-i18n="exportTxtButton"
-              >
-                Export .TXT
-              </button>
-              <button
-                id="export-menu-button"
-                class="button button-download export-menu-toggle"
-                type="button"
-                aria-haspopup="menu"
-                aria-expanded="false"
-                aria-controls="export-format-menu"
-                data-i18n-aria-label="exportFormatMenuLabel"
-                aria-label="Choose export format"
-              >
-                <span aria-hidden="true">⌄</span>
-              </button>
+              <p class="export-help" data-i18n="exportHelp">
+                Choose a folder, any matching tags, and whether to include archived
+                posts.
+              </p>
+              <details id="export-filter-details" class="export-filters">
+                <summary data-i18n="exportFiltersSummary">
+                  Choose export filters
+                </summary>
+                <div class="export-filter-grid">
+                  <label for="export-folder-filter" data-i18n="exportFolderFilterLabel"
+                    >Folder and subfolders</label
+                  >
+                  <select id="export-folder-filter">
+                    <option value="" data-i18n="exportAllFolders">All folders</option>
+                  </select>
+                  <label for="export-tag-filter" data-i18n="exportTagFilterLabel"
+                    >Tags (match any selected)</label
+                  >
+                  <select
+                    id="export-tag-filter"
+                    multiple
+                    size="3"
+                    aria-describedby="export-tag-help"
+                  ></select>
+                  <p
+                    id="export-tag-help"
+                    class="export-filter-help"
+                    data-i18n="exportTagFilterHelp"
+                  >
+                    Use Ctrl or Command to select multiple. Leave empty for every tag.
+                  </p>
+                  <label class="export-archived-choice" for="export-include-archived">
+                    <input id="export-include-archived" type="checkbox" checked />
+                    <span data-i18n="exportIncludeArchived"
+                      >Include archived posts</span
+                    >
+                  </label>
+                </div>
+              </details>
               <div
-                id="export-format-menu"
-                class="export-format-menu"
-                role="menu"
-                hidden
+                class="export-split-button"
+                role="group"
+                aria-labelledby="export-heading"
               >
-                <button type="button" role="menuitem" data-export-format="txt">
-                  <strong data-i18n="exportTxtButton">Export .TXT</strong>
-                  <span data-i18n="exportTxtDescription">Readable plain text</span>
+                <button
+                  id="export-primary-button"
+                  class="button button-download export-primary"
+                  type="button"
+                  data-i18n="exportTxtButton"
+                >
+                  Export .TXT
                 </button>
-                <button type="button" role="menuitem" data-export-format="md">
-                  <strong data-i18n="exportMarkdownButton">Export .MD</strong>
-                  <span data-i18n="exportMarkdownDescription">Structured Markdown</span>
+                <button
+                  id="export-menu-button"
+                  class="button button-download export-menu-toggle"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="export-format-menu"
+                  data-i18n-aria-label="exportFormatMenuLabel"
+                  aria-label="Choose export format"
+                >
+                  <span aria-hidden="true">⌄</span>
                 </button>
+                <div
+                  id="export-format-menu"
+                  class="export-format-menu"
+                  role="menu"
+                  hidden
+                >
+                  <button type="button" role="menuitem" data-export-format="txt">
+                    <strong data-i18n="exportTxtButton">Export .TXT</strong>
+                    <span data-i18n="exportTxtDescription">Readable plain text</span>
+                  </button>
+                  <button type="button" role="menuitem" data-export-format="md">
+                    <strong data-i18n="exportMarkdownButton">Export .MD</strong>
+                    <span data-i18n="exportMarkdownDescription"
+                      >Structured Markdown</span
+                    >
+                  </button>
+                </div>
               </div>
-            </div>
-            <p
-              id="export-status"
-              class="quiet-status export-status"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-            ></p>
-          </section>
+              <p
+                id="export-status"
+                class="quiet-status export-status"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              ></p>
+            </section>
 
-          <details class="more-actions">
-            <summary data-i18n="moreOptions">More options</summary>
-            <div class="language-control">
-              <label for="language-select" data-i18n="languageLabel">Language</label>
-              <select id="language-select">
-                <option value="en" lang="en">English</option>
-                <option value="pt_BR" lang="pt-BR">Português</option>
-                <option value="ja" lang="ja">日本語</option>
-                <option value="es" lang="es">Español</option>
-                <option value="zh_CN" lang="zh-CN">简体中文</option>
-                <option value="de" lang="de">Deutsch</option>
-                <option value="fr" lang="fr">Français</option>
-                <option value="it" lang="it">Italiano</option>
-              </select>
-            </div>
-            <button
-              id="open-settings-button"
-              class="text-button"
-              type="button"
-              data-i18n="openSettingsButton"
-            >
-              Open settings
-            </button>
-            <section class="backup-tools" aria-labelledby="backup-heading">
-              <h3 id="backup-heading" data-i18n="backupTitle">Backup &amp; restore</h3>
-              <p data-i18n="backupDescription">
-                Download or restore your local library, folders, tags, notes, and
-                settings as JSON.
+            <details class="more-actions">
+              <summary data-i18n="moreOptions">More options</summary>
+              <div class="language-control">
+                <label for="language-select" data-i18n="languageLabel">Language</label>
+                <select id="language-select">
+                  <option value="en" lang="en">English</option>
+                  <option value="pt_BR" lang="pt-BR">Português</option>
+                  <option value="ja" lang="ja">日本語</option>
+                  <option value="es" lang="es">Español</option>
+                  <option value="zh_CN" lang="zh-CN">简体中文</option>
+                  <option value="de" lang="de">Deutsch</option>
+                  <option value="fr" lang="fr">Français</option>
+                  <option value="it" lang="it">Italiano</option>
+                </select>
+              </div>
+              <button
+                id="open-settings-button"
+                class="text-button"
+                type="button"
+                data-i18n="openSettingsButton"
+              >
+                Open settings
+              </button>
+              <section class="backup-tools" aria-labelledby="backup-heading">
+                <h3 id="backup-heading" data-i18n="backupTitle">
+                  Backup &amp; restore
+                </h3>
+                <p data-i18n="backupDescription">
+                  Download or restore your local library, folders, tags, notes, and
+                  settings as JSON.
+                </p>
+                <button
+                  id="export-backup-button"
+                  class="button button-secondary"
+                  type="button"
+                  data-i18n="exportBackupButton"
+                >
+                  Download JSON backup
+                </button>
+                <label for="backup-file-input" data-i18n="backupFileLabel">
+                  JSON backup file
+                </label>
+                <input
+                  id="backup-file-input"
+                  type="file"
+                  accept="application/json,.json"
+                />
+                <label for="backup-restore-mode" data-i18n="restoreModeLabel">
+                  Restore mode
+                </label>
+                <select id="backup-restore-mode">
+                  <option value="merge" data-i18n="restoreModeMerge">
+                    Merge with this library
+                  </option>
+                  <option value="replace" data-i18n="restoreModeReplace">
+                    Replace this library
+                  </option>
+                </select>
+                <button
+                  id="restore-backup-button"
+                  class="button button-secondary"
+                  type="button"
+                  disabled
+                  data-i18n="restoreBackupButton"
+                >
+                  Restore backup
+                </button>
+                <p id="backup-status" class="quiet-status" role="status"></p>
+              </section>
+              <p data-i18n="localOnlyNote">
+                Stored locally. Nothing is uploaded by Bookmark X.
               </p>
               <button
-                id="export-backup-button"
-                class="button button-secondary"
-                type="button"
-                data-i18n="exportBackupButton"
+                id="open-clear-dialog-button"
+                class="text-button danger"
+                data-i18n="clearArchiveButton"
               >
-                Download JSON backup
+                Clear archive
               </button>
-              <label for="backup-file-input" data-i18n="backupFileLabel">
-                JSON backup file
-              </label>
-              <input
-                id="backup-file-input"
-                type="file"
-                accept="application/json,.json"
-              />
-              <label for="backup-restore-mode" data-i18n="restoreModeLabel">
-                Restore mode
-              </label>
-              <select id="backup-restore-mode">
-                <option value="merge" data-i18n="restoreModeMerge">
-                  Merge with this library
-                </option>
-                <option value="replace" data-i18n="restoreModeReplace">
-                  Replace this library
-                </option>
-              </select>
-              <button
-                id="restore-backup-button"
-                class="button button-secondary"
-                type="button"
-                disabled
-                data-i18n="restoreBackupButton"
-              >
-                Restore backup
-              </button>
-              <p id="backup-status" class="quiet-status" role="status"></p>
-            </section>
-            <p data-i18n="localOnlyNote">
-              Stored locally. Nothing is uploaded by Bookmark X.
-            </p>
-            <button
-              id="open-clear-dialog-button"
-              class="text-button danger"
-              data-i18n="clearArchiveButton"
-            >
-              Clear archive
-            </button>
-          </details>
+            </details>
+          </section>
         </section>
+
+        <nav
+          class="app-navigation"
+          data-i18n-aria-label="primaryNavigation"
+          aria-label="Primary"
+        >
+          <button type="button" data-app-nav="home">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3.5 10.8 12 3.7l8.5 7.1v9.5h-6v-6.1h-5v6.1h-6Z" />
+            </svg>
+            <span data-i18n="navHome">Home</span>
+          </button>
+          <button type="button" data-app-nav="library">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 4.5h14v15H5zM8 8h8M8 12h8M8 16h5" />
+            </svg>
+            <span data-i18n="navLibrary">Library</span>
+          </button>
+          <button type="button" data-app-nav="settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 8.4a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2Zm0-5.1 1.1 2.1 2.3.6 2-1.1 1.7 1.7-1.1 2 .6 2.3 2.1 1.1v2.4l-2.1 1.1-.6 2.3 1.1 2-1.7 1.7-2-1.1-2.3.6-1.1 2.1H9.6l-1.1-2.1-2.3-.6-2 1.1-1.7-1.7 1.1-2-.6-2.3-2.1-1.1V12L3 10.9l.6-2.3-1.1-2 1.7-1.7 2 1.1 2.3-.6 1.1-2.1Z"
+              />
+            </svg>
+            <span data-i18n="navSettings">Settings</span>
+          </button>
+        </nav>
       </div>
     </main>
 

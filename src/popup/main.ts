@@ -21,6 +21,7 @@ import {
   LIVE_BOOKMARK_CONTEXT_KEY,
 } from "../storage/live-bookmark-state";
 import { renderLiveBookmarkStatus } from "./live-bookmark-status";
+import { createAppNavigation } from "./navigation";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { SemanticSearchClient } from "../semantic/semantic-search-client";
 import type { SemanticCorpusResult } from "../shared/protocol";
@@ -136,6 +137,7 @@ async function startPopup(): Promise<void> {
   document.getElementById("open-settings-button")?.addEventListener("click", () => {
     void chrome.runtime.openOptionsPage();
   });
+  const navigation = createAppNavigation({ document });
   app = createPopupApp({
     document,
     locale,
@@ -143,6 +145,7 @@ async function startPopup(): Promise<void> {
     translate,
     filterAsYouType,
     categorizationFields,
+    onBookmarkOpened: navigation.openDetail,
     semanticSearch: (query, view, limit) => semanticSearch.search(query, view, limit),
   });
   window.addEventListener(
@@ -151,6 +154,7 @@ async function startPopup(): Promise<void> {
       chrome.storage.onChanged.removeListener(refreshSettings);
       settingsUi.destroy();
       semanticSearch.destroy();
+      navigation.destroy();
       app?.destroy();
     },
     { once: true },

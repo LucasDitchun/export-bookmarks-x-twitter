@@ -114,7 +114,11 @@ describe("startBookmarkMetadataDecorator", () => {
     expect(host?.previousElementSibling?.getAttribute("data-testid")).toBe("actions");
     expect(unknown.querySelector("bookmark-x-metadata")).toBeNull();
     expect(host?.shadowRoot).not.toBeNull();
-    expect(host?.shadowRoot?.querySelector("style")).not.toBeNull();
+    const styles = host?.shadowRoot?.querySelector("style")?.textContent ?? "";
+    expect(styles).not.toContain("#a8d500");
+    expect(styles).not.toContain("#f8ffe2");
+    expect(styles).not.toContain("border-left: 4px");
+    expect(styles).toContain("font-size: 14px");
     expect(host?.shadowRoot?.querySelector("img")).toBeNull();
     expect(host?.shadowRoot?.textContent).toContain(
       '<img src=x onerror="alert(1)">Keep this for the launch plan.',

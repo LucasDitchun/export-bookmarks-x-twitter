@@ -445,5 +445,12 @@
   },
   "liveBookmarkFailed": {
     "message": "X n’a pas confirmé ce changement. Votre archive locale n’a pas été modifiée."
-  }
+  },
+  "primaryNavigation": { "message": "Navigation principale" },
+  "navHome": { "message": "Accueil" },
+  "navLibrary": { "message": "Bibliothèque" },
+  "navSettings": { "message": "Réglages" },
+  "bookmarkDetailTitle": { "message": "Détails du favori" },
+  "backToLibrary": { "message": "Retour à la bibliothèque" },
+  "settingsViewHelp": { "message": "Exportation, sauvegarde, langue et préférences." }
 }

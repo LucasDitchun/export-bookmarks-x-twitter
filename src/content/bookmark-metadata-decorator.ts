@@ -65,49 +65,46 @@ type Translate = (key: string) => string;
 
 const componentStyles = String.raw`
   :host {
-    --bx-accent: #a8d500;
-    --bx-border: #53610d;
-    --bx-ink: #152000;
-    --bx-muted: #384511;
-    --bx-surface: #f8ffe2;
+    --bx-border: #cfd9de;
+    --bx-ink: #0f1419;
+    --bx-muted: #536471;
+    --bx-surface: #ffffff;
+    --bx-soft: #eff3f4;
     color: var(--bx-ink);
     display: block;
     font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 16px;
-    line-height: 1.5;
+    font-size: 14px;
+    line-height: 1.4;
     min-width: 0;
   }
 
-  :host([data-large-text="true"]) { font-size: 18px; }
+  :host([data-large-text="true"]) { font-size: 15px; }
 
   .card {
     background: var(--bx-surface);
     border: 1px solid var(--bx-border);
-    border-left: 4px solid var(--bx-accent);
-    border-radius: 0 10px 10px 0;
+    border-radius: 12px;
     box-sizing: border-box;
     display: grid;
-    gap: 8px;
-    margin: 8px 12px 4px;
+    gap: 6px;
+    margin: 6px 12px 4px;
     max-width: calc(100% - 24px);
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
 
   .status-row, .tags, .breadcrumb {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
     min-width: 0;
   }
 
   .status, .category, .tag {
-    border: 1px solid currentColor;
     border-radius: 999px;
-    font-size: 0.875em;
-    font-weight: 750;
-    letter-spacing: 0.01em;
-    padding: 2px 8px;
+    font-size: 0.8125em;
+    font-weight: 650;
+    padding: 2px 7px;
     max-width: 100%;
     overflow-wrap: anywhere;
     white-space: normal;
@@ -117,20 +114,21 @@ const componentStyles = String.raw`
   .status[data-state="pending"]::before { content: "… "; }
   .status[data-state="archived"]::before { content: "↺ "; }
   .category::before { content: "! "; }
-  .category { background: #fff3c4; color: #5b4100; }
-  .tag { background: #e6f5b2; color: #253300; font-weight: 650; }
+  .status { background: var(--bx-soft); color: var(--bx-muted); }
+  .category { background: #fff3c4; color: #6b4e00; }
+  .tag { background: var(--bx-soft); color: var(--bx-ink); }
 
-  .breadcrumb { color: var(--bx-muted); font-weight: 650; }
+  .breadcrumb { color: var(--bx-muted); font-size: 0.875em; font-weight: 600; }
   .crumb + .crumb::before { content: "›"; margin-inline-end: 6px; }
 
   .note {
-    color: var(--bx-ink);
+    color: var(--bx-muted);
     display: -webkit-box;
     margin: 0;
     overflow: hidden;
     overflow-wrap: anywhere;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
   }
 
   .visually-hidden {
@@ -146,23 +144,23 @@ const componentStyles = String.raw`
   }
 
   :host([data-high-contrast="true"]) {
-    --bx-accent: #b9f300;
     --bx-border: #111;
-    --bx-ink: #080a00;
-    --bx-muted: #252b13;
-    --bx-surface: #fbffe9;
+    --bx-ink: #000;
+    --bx-muted: #242424;
+    --bx-surface: #fff;
+    --bx-soft: #f1f1f1;
   }
 
   @media (prefers-color-scheme: dark) {
     :host {
-      --bx-accent: #c8ff3d;
-      --bx-border: #a7bd68;
-      --bx-ink: #f4ffd6;
-      --bx-muted: #d5e5a9;
-      --bx-surface: #172000;
+      --bx-border: #536471;
+      --bx-ink: #e7e9ea;
+      --bx-muted: #8b98a5;
+      --bx-surface: #000;
+      --bx-soft: #16181c;
     }
     .category { background: #3a2b00; color: #ffe28a; }
-    .tag { background: #2e3b0d; color: #efffc0; }
+    .tag { background: #16181c; color: #e7e9ea; }
   }
 
   @media (forced-colors: active) {

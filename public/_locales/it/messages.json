@@ -429,5 +429,12 @@
   "semanticToggleError": { "message": "Impossibile modificare la ricerca semantica." },
   "liveBookmarkFailed": {
     "message": "X non ha confermato questa modifica. L’archivio locale non è stato modificato."
-  }
+  },
+  "primaryNavigation": { "message": "Navigazione principale" },
+  "navHome": { "message": "Home" },
+  "navLibrary": { "message": "Raccolta" },
+  "navSettings": { "message": "Impostazioni" },
+  "bookmarkDetailTitle": { "message": "Dettagli del segnalibro" },
+  "backToLibrary": { "message": "Torna alla raccolta" },
+  "settingsViewHelp": { "message": "Esportazione, backup, lingua e preferenze." }
 }

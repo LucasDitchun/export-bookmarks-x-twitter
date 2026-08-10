@@ -9,7 +9,7 @@ describe("createBookmarkModal", () => {
     document.body.replaceChildren();
   });
 
-  it("creates an isolated, labelled dialog with large controls and plain text", () => {
+  it("creates a compact isolated dialog that prioritizes the private note", () => {
     const modal = createBookmarkModal({
       document,
       title: "Why are you saving this?",
@@ -31,7 +31,21 @@ describe("createBookmarkModal", () => {
     expect(shadow?.textContent).toContain("<img src=x onerror=alert(1)>");
     expect(shadow?.querySelector("img")).toBeNull();
     expect(shadow?.querySelector("textarea")?.getAttribute("maxlength")).toBe("20000");
-    expect(shadow?.querySelector("style")?.textContent).toContain("min-height: 44px");
+    const styles = shadow?.querySelector("style")?.textContent ?? "";
+    expect(styles).toContain("min-height: 44px");
+    expect(styles).toContain("font-size: 15px");
+    expect(styles).toContain("max-width: 480px");
+    expect(styles).not.toContain("font-family: Georgia");
+    const description = shadow?.querySelector("#bookmark-x-modal-description");
+    const tags = shadow?.querySelector("#bookmark-x-modal-tags");
+    expect(
+      description && tags
+        ? Boolean(
+            description.compareDocumentPosition(tags) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+          )
+        : false,
+    ).toBe(true);
     expect(document.activeElement).toBe(host);
   });
 
@@ -66,6 +80,28 @@ describe("createBookmarkModal", () => {
     expect(document.body.contains(modal.host)).toBe(false);
   });
 
+  it("keeps metadata fields visually hidden while X is confirming the action", () => {
+    const modal = createBookmarkModal({
+      document,
+      title: "Bookmark note",
+      bookmarkTitle: "A useful post",
+      labels: {
+        close: "Close",
+        description: "Private note",
+        folder: "Folder",
+        pending: "Waiting for X",
+        save: "Save note",
+        tags: "Tags",
+      },
+    });
+    modal.open();
+
+    const form = modal.host.shadowRoot?.querySelector("form");
+    expect(form?.hidden).toBe(true);
+    expect(form ? getComputedStyle(form).display : null).toBe("none");
+    modal.destroy();
+  });
+
   it("submits plain values and keeps keyboard focus inside the dialog", async () => {
     const onSave = vi.fn(async () => undefined);
     const modal = createBookmarkModal({
@@ -94,13 +130,15 @@ describe("createBookmarkModal", () => {
     );
     expect(shadow?.activeElement).toBe(shadow?.querySelector(".save"));
 
-    const fields = shadow?.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-      "input, textarea",
+    const tags = shadow?.querySelector<HTMLInputElement>("#bookmark-x-modal-tags");
+    const folder = shadow?.querySelector<HTMLInputElement>("#bookmark-x-modal-folder");
+    const description = shadow?.querySelector<HTMLTextAreaElement>(
+      "#bookmark-x-modal-description",
     );
-    if (!fields) throw new Error("Missing modal fields");
-    fields[0]!.value = "research, ai";
-    fields[1]!.value = "Reading / AI";
-    fields[2]!.value = "Review the examples";
+    if (!tags || !folder || !description) throw new Error("Missing modal fields");
+    tags.value = "research, ai";
+    folder.value = "Reading / AI";
+    description.value = "Review the examples";
     shadow
       ?.querySelector("form")
       ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));

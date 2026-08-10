@@ -45,6 +45,7 @@ interface PopupAppOptions {
   confirmRestore?: (message: string) => boolean;
   reload?: () => void;
   filterAsYouType?: boolean;
+  onBookmarkOpened?: () => void;
   semanticSearch?: (
     query: string,
     view: BookmarkView,
@@ -208,6 +209,7 @@ export function createPopupApp(options: PopupAppOptions): {
     confirmRestore = (message) => window.confirm(message),
     reload = () => window.location.reload(),
     filterAsYouType: initialFilterAsYouType = true,
+    onBookmarkOpened,
     semanticSearch,
     categorizationFields:
       initialCategorizationFields = DEFAULT_BOOKMARK_CATEGORIZATION_FIELDS,
@@ -431,7 +433,7 @@ export function createPopupApp(options: PopupAppOptions): {
       bookmarkTags.setAttribute("role", "list");
       appendTags(bookmarkTags, bookmark.tagIds, false);
       button.append(title, author, bookmarkTags);
-      button.addEventListener("click", () => void selectBookmark(bookmark.id));
+      button.addEventListener("click", () => void selectBookmark(bookmark.id, true));
       item.append(button);
       elements.bookmarkList.append(item);
     }
@@ -692,7 +694,7 @@ export function createPopupApp(options: PopupAppOptions): {
     }).catch(() => undefined);
   };
 
-  async function selectBookmark(id: string): Promise<void> {
+  async function selectBookmark(id: string, explicitOpen = false): Promise<void> {
     if (selectedBookmarkId !== id) queueDebouncedNote();
     const version = ++selectionVersion;
     selectedBookmarkId = id;
@@ -731,6 +733,7 @@ export function createPopupApp(options: PopupAppOptions): {
     setTagStatus(null);
     renderSelectedTags();
     renderBookmarkList();
+    if (explicitOpen) onBookmarkOpened?.();
   }
 
   async function loadLibrary(cursor?: string, selectFirst = true): Promise<void> {
