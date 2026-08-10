@@ -8,13 +8,18 @@ import type {
   SendMessage,
 } from "./protocol";
 import type { Translator } from "./i18n";
+import { createIconButton } from "../ui/icons";
 
 interface FolderUiOptions {
   document: Document;
   sendMessage: SendMessage;
   translate: Translator;
   onBookmarkUpdated: (bookmark: BookmarkRecord) => void;
-  onFoldersChanged?: (folders: readonly FolderRecord[]) => void;
+  onFoldersChanged?: (
+    folders: readonly FolderRecord[],
+    usage: Readonly<Record<string, number>>,
+  ) => void;
+  onFolderSelected?: (folderPath: string) => void;
 }
 
 interface FolderElements {
@@ -24,6 +29,8 @@ interface FolderElements {
   createName: HTMLInputElement;
   createParent: HTMLSelectElement;
   list: HTMLUListElement;
+  managerStatus: HTMLElement | null;
+  overviewList: HTMLUListElement | null;
   status: HTMLElement;
 }
 
@@ -41,6 +48,10 @@ function getElements(document: Document): FolderElements {
     createName: requireElement(document, "folder-name"),
     createParent: requireElement(document, "folder-parent"),
     list: requireElement(document, "folder-list"),
+    managerStatus: document.getElementById("folder-manager-status"),
+    overviewList: document.getElementById(
+      "folder-overview-list",
+    ) as HTMLUListElement | null,
     status: requireElement(document, "folder-status"),
   };
 }
@@ -61,18 +72,30 @@ export function createFolderUi(options: FolderUiOptions): {
   ready: Promise<void>;
   setBookmark: (bookmark: BookmarkRecord | null) => void;
 } {
-  const { document, onBookmarkUpdated, onFoldersChanged, sendMessage, translate } =
-    options;
+  const {
+    document,
+    onBookmarkUpdated,
+    onFoldersChanged,
+    onFolderSelected,
+    sendMessage,
+    translate,
+  } = options;
   const elements = getElements(document);
   let folders: FolderRecord[] = [];
+  let usage: Record<string, number> = {};
   let bookmark: BookmarkRecord | null = null;
   let busy = false;
   let editingId: string | null = null;
   let deletingId: string | null = null;
 
   const setStatus = (key: string | null, state = "idle"): void => {
-    elements.status.textContent = key === null ? "" : translate(key);
+    const message = key === null ? "" : translate(key);
+    elements.status.textContent = message;
     elements.status.dataset.state = state;
+    if (elements.managerStatus) {
+      elements.managerStatus.textContent = message;
+      elements.managerStatus.dataset.state = state;
+    }
   };
 
   const pathLabel = (folder: FolderRecord): string =>
@@ -127,10 +150,12 @@ export function createFolderUi(options: FolderUiOptions): {
     action: string,
     folderId: string,
   ): HTMLButtonElement => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "text-button folder-action";
-    button.textContent = translate(labelKey);
+    const button = createIconButton({
+      document,
+      icon: action === "delete" ? "trash" : "edit",
+      label: translate(labelKey),
+      className: "folder-action",
+    });
     button.dataset.folderAction = action;
     button.dataset.folderId = folderId;
     button.disabled = busy;
@@ -177,7 +202,7 @@ export function createFolderUi(options: FolderUiOptions): {
         const name = document.createElement("span");
         const actions = document.createElement("span");
         name.className = "folder-path-label";
-        name.textContent = pathLabel(folder);
+        name.textContent = `${pathLabel(folder)} · ${usage[folder.id] ?? 0}`;
         actions.className = "folder-item-actions";
         const rename = createActionButton("renameFolder", "rename", folder.id);
         rename.addEventListener("click", () => {
@@ -229,10 +254,35 @@ export function createFolderUi(options: FolderUiOptions): {
     }
   };
 
+  const renderOverview = (): void => {
+    if (!elements.overviewList) return;
+    elements.overviewList.replaceChildren();
+    for (const folder of folders) {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      const name = document.createElement("span");
+      const count = document.createElement("strong");
+      const label = pathLabel(folder);
+      button.type = "button";
+      button.className = "organization-item";
+      button.setAttribute(
+        "aria-label",
+        translate("folderUsageLabel", [label, String(usage[folder.id] ?? 0)]),
+      );
+      name.textContent = label;
+      count.textContent = String(usage[folder.id] ?? 0);
+      button.append(name, count);
+      button.addEventListener("click", () => onFolderSelected?.(label));
+      item.append(button);
+      elements.overviewList.append(item);
+    }
+  };
+
   const render = (): void => {
     renderSelects();
     renderBreadcrumb();
     renderFolderList();
+    renderOverview();
   };
 
   async function renameFolder(id: string, name: string): Promise<void> {
@@ -251,7 +301,7 @@ export function createFolderUi(options: FolderUiOptions): {
           folder.id === response.data.folder.id ? response.data.folder : folder,
         ),
       );
-      onFoldersChanged?.(folders);
+      onFoldersChanged?.(folders, usage);
       editingId = null;
       setStatus("folderSaved", "saved");
     } catch {
@@ -277,7 +327,8 @@ export function createFolderUi(options: FolderUiOptions): {
       }
       const deleted = new Set(response.data.deletedFolderIds);
       folders = folders.filter((folder) => !deleted.has(folder.id));
-      onFoldersChanged?.(folders);
+      for (const folderId of deleted) delete usage[folderId];
+      onFoldersChanged?.(folders, usage);
       if (
         bookmark !== null &&
         bookmark.folderId !== null &&
@@ -313,6 +364,7 @@ export function createFolderUi(options: FolderUiOptions): {
         }
         bookmark = response.data.bookmark;
         onBookmarkUpdated(bookmark);
+        void refreshFolders();
         setStatus("folderSaved", "saved");
       })
       .catch(() => {
@@ -341,7 +393,8 @@ export function createFolderUi(options: FolderUiOptions): {
       .then((response) => {
         if (!response.ok || !response.data?.folder) throw new Error("create failed");
         folders = sortFolders([...folders, response.data.folder]);
-        onFoldersChanged?.(folders);
+        usage[response.data.folder.id] = 0;
+        onFoldersChanged?.(folders, usage);
         elements.createName.value = "";
         setStatus("folderCreated", "saved");
       })
@@ -352,17 +405,22 @@ export function createFolderUi(options: FolderUiOptions): {
       });
   });
 
-  const ready = sendMessage<FolderListResult>({ type: "LIST_FOLDERS" })
-    .then((response) => {
-      if (!response.ok || !Array.isArray(response.data?.folders)) {
-        throw new Error("folder list failed");
-      }
-      folders = sortFolders(response.data.folders);
-      onFoldersChanged?.(folders);
-      setStatus(null);
-    })
-    .catch(() => setStatus("folderLoadError", "error"))
-    .finally(render);
+  async function refreshFolders(): Promise<void> {
+    return sendMessage<FolderListResult>({ type: "LIST_FOLDERS" })
+      .then((response) => {
+        if (!response.ok || !Array.isArray(response.data?.folders)) {
+          throw new Error("folder list failed");
+        }
+        folders = sortFolders(response.data.folders);
+        usage = response.data.usage ?? {};
+        onFoldersChanged?.(folders, usage);
+        setStatus(null);
+      })
+      .catch(() => setStatus("folderLoadError", "error"))
+      .finally(render);
+  }
+
+  const ready = refreshFolders();
 
   render();
   return {

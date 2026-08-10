@@ -1,7 +1,13 @@
 import type { StorageArea } from "../storage/extension-state";
+import {
+  DEFAULT_QUICK_STOP_THRESHOLD,
+  isQuickStopThreshold,
+  sanitizeQuickStopThreshold,
+} from "../domain/quick-update";
 
 export const SETTINGS_STORAGE_KEY = "settings";
-export const SETTINGS_SCHEMA_VERSION = 1 as const;
+export const SETTINGS_SCHEMA_VERSION = 2 as const;
+const LEGACY_SETTINGS_SCHEMA_VERSION = 1 as const;
 
 export type LibrarySurface = "modal" | "sidePanel";
 
@@ -40,6 +46,7 @@ export interface ExtensionSettings {
   };
   data: {
     keepArchived: boolean;
+    quickStopThreshold: number;
   };
 }
 
@@ -85,7 +92,10 @@ export const DEFAULT_SETTINGS: Readonly<ExtensionSettings> = Object.freeze({
     includeLastSeenAt: true,
   }),
   search: Object.freeze({ filterAsYouType: true }),
-  data: Object.freeze({ keepArchived: true }),
+  data: Object.freeze({
+    keepArchived: true,
+    quickStopThreshold: DEFAULT_QUICK_STOP_THRESHOLD,
+  }),
 });
 
 export function hasEnabledExportSetting(
@@ -125,19 +135,14 @@ function isExactBooleanRecord(
 }
 
 /** Strict import-boundary guard for a complete canonical settings envelope. */
-export function isStoredSettingsEnvelope(
-  value: unknown,
-): value is StoredSettingsEnvelope {
+function isCanonicalSettings(value: unknown): value is ExtensionSettings {
   if (
     !isRecord(value) ||
-    !hasExactly(value, ["schemaVersion", "settings"]) ||
-    value.schemaVersion !== SETTINGS_SCHEMA_VERSION ||
-    !isRecord(value.settings) ||
-    !hasExactly(value.settings, ["appearance", "behavior", "export", "search", "data"])
+    !hasExactly(value, ["appearance", "behavior", "export", "search", "data"])
   ) {
     return false;
   }
-  const settings = value.settings;
+  const settings = value;
   if (
     !isExactBooleanRecord(settings.appearance, [
       "largeText",
@@ -170,11 +175,71 @@ export function isStoredSettingsEnvelope(
       "includeLastSeenAt",
     ]) ||
     !isExactBooleanRecord(settings.search, ["filterAsYouType"]) ||
-    !isExactBooleanRecord(settings.data, ["keepArchived"])
+    !isRecord(settings.data) ||
+    !hasExactly(settings.data, ["keepArchived", "quickStopThreshold"]) ||
+    typeof settings.data.keepArchived !== "boolean" ||
+    !isQuickStopThreshold(settings.data.quickStopThreshold)
   ) {
     return false;
   }
   return hasEnabledExportSetting(settings.export as ExtensionSettings["export"]);
+}
+
+function isLegacySettings(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    hasExactly(value, ["appearance", "behavior", "export", "search", "data"]) &&
+    isCanonicalSettings({
+      ...value,
+      data: isRecord(value.data)
+        ? {
+            ...value.data,
+            quickStopThreshold: DEFAULT_QUICK_STOP_THRESHOLD,
+          }
+        : value.data,
+    }) &&
+    isExactBooleanRecord(value.data, ["keepArchived"])
+  );
+}
+
+export function normalizeStoredSettingsEnvelope(
+  value: unknown,
+): StoredSettingsEnvelope | null {
+  if (
+    !isRecord(value) ||
+    !hasExactly(value, ["schemaVersion", "settings"]) ||
+    !isRecord(value.settings)
+  ) {
+    return null;
+  }
+  if (
+    value.schemaVersion === SETTINGS_SCHEMA_VERSION &&
+    isCanonicalSettings(value.settings)
+  ) {
+    return value as unknown as StoredSettingsEnvelope;
+  }
+  if (
+    value.schemaVersion === LEGACY_SETTINGS_SCHEMA_VERSION &&
+    isLegacySettings(value.settings)
+  ) {
+    return {
+      schemaVersion: SETTINGS_SCHEMA_VERSION,
+      settings: sanitizeSettings(value.settings),
+    };
+  }
+  return null;
+}
+
+/** Strict import-boundary guard for a complete canonical settings envelope. */
+export function isStoredSettingsEnvelope(
+  value: unknown,
+): value is StoredSettingsEnvelope {
+  return (
+    isRecord(value) &&
+    hasExactly(value, ["schemaVersion", "settings"]) &&
+    value.schemaVersion === SETTINGS_SCHEMA_VERSION &&
+    isCanonicalSettings(value.settings)
+  );
 }
 
 function booleanOr(value: unknown, fallback: boolean): boolean {
@@ -267,6 +332,10 @@ function sanitizeSettings(
     },
     data: {
       keepArchived: booleanOr(data.keepArchived, fallback.data.keepArchived),
+      quickStopThreshold: sanitizeQuickStopThreshold(
+        data.quickStopThreshold,
+        fallback.data.quickStopThreshold,
+      ),
     },
   };
 }
@@ -342,7 +411,19 @@ export function isSettingsPatch(value: unknown): value is SettingsPatch {
   if (value.search !== undefined && !booleanPatch(value.search, ["filterAsYouType"])) {
     return false;
   }
-  return value.data === undefined || booleanPatch(value.data, ["keepArchived"]);
+  if (value.data === undefined) return true;
+  if (
+    !isRecord(value.data) ||
+    !hasOnly(value.data, ["keepArchived", "quickStopThreshold"])
+  ) {
+    return false;
+  }
+  return (
+    (value.data.keepArchived === undefined ||
+      typeof value.data.keepArchived === "boolean") &&
+    (value.data.quickStopThreshold === undefined ||
+      isQuickStopThreshold(value.data.quickStopThreshold))
+  );
 }
 
 export class SettingsRepository {
@@ -351,16 +432,13 @@ export class SettingsRepository {
   async get(): Promise<ExtensionSettings> {
     const values = await this.storage.get(SETTINGS_STORAGE_KEY);
     const stored = values[SETTINGS_STORAGE_KEY];
-    if (
-      isRecord(stored) &&
-      stored.schemaVersion === SETTINGS_SCHEMA_VERSION &&
-      isRecord(stored.settings)
-    ) {
-      return ensureEnabledExportSetting(sanitizeSettings(stored.settings));
-    }
+    const normalized = normalizeStoredSettingsEnvelope(stored);
+    if (normalized) return ensureEnabledExportSetting(normalized.settings);
+    const recoverableSettings =
+      isRecord(stored) && isRecord(stored.settings) ? stored.settings : stored;
     // Pre-schema builds stored the settings object directly. Reading it here is the
     // only migration needed for schema v1; the next save writes the envelope.
-    return ensureEnabledExportSetting(sanitizeSettings(stored));
+    return ensureEnabledExportSetting(sanitizeSettings(recoverableSettings));
   }
 
   async save(patch: SettingsPatch): Promise<ExtensionSettings> {

@@ -7,7 +7,10 @@ import type {
   TagListResult,
   UiRequest,
 } from "../shared/protocol";
-import type { BookmarkModalValues } from "../surfaces/bookmark-modal";
+import type {
+  BookmarkModalChoices,
+  BookmarkModalValues,
+} from "../surfaces/bookmark-modal";
 
 const MAX_NOTE_LENGTH = 20_000;
 const MAX_TAG_LENGTH = 50;
@@ -149,6 +152,14 @@ export async function loadBookmarkMetadataValues(options: {
   send: SendMetadataRequest;
   signal?: AbortSignal;
 }): Promise<BookmarkModalValues> {
+  return (await loadBookmarkMetadataDraft(options)).values;
+}
+
+export async function loadBookmarkMetadataDraft(options: {
+  bookmark: BookmarkRecord;
+  send: SendMetadataRequest;
+  signal?: AbortSignal;
+}): Promise<{ values: BookmarkModalValues; choices: BookmarkModalChoices }> {
   const [tagData, folderData] = await Promise.all([
     sendChecked<unknown>(options.send, { type: "LIST_TAGS" }, options.signal),
     sendChecked<unknown>(options.send, { type: "LIST_FOLDERS" }, options.signal),
@@ -158,12 +169,20 @@ export async function loadBookmarkMetadataValues(options: {
   }
   const tagsById = new Map(tagData.tags.map((tag) => [tag.id, tag]));
   return {
-    description: options.bookmark.note,
-    folder: folderPathFor(options.bookmark.folderId, folderData.folders),
-    tags: options.bookmark.tagIds
-      .map((id) => tagsById.get(id)?.name)
-      .filter((name): name is string => typeof name === "string")
-      .join(", "),
+    values: {
+      description: options.bookmark.note,
+      folder: folderPathFor(options.bookmark.folderId, folderData.folders),
+      tags: options.bookmark.tagIds
+        .map((id) => tagsById.get(id)?.name)
+        .filter((name): name is string => typeof name === "string")
+        .join(", "),
+    },
+    choices: {
+      folders: folderData.folders.map((folder) =>
+        folderPathFor(folder.id, folderData.folders),
+      ),
+      tags: tagData.tags.map((tag) => tag.name),
+    },
   };
 }
 

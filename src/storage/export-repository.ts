@@ -39,13 +39,16 @@ export class ExportRepository {
       ),
     ]);
     await transactionDone(transaction);
-    const canonicalTags = tags.map((tag) => ({
-      ...tag,
-      normalizedName: tag.normalizedName || normalizeTagName(tag.name),
-    }));
+    const activeFolders = folders.filter((folder) => folder.deletedAt === undefined);
+    const canonicalTags = tags
+      .filter((tag) => tag.deletedAt === undefined)
+      .map((tag) => ({
+        ...tag,
+        normalizedName: tag.normalizedName || normalizeTagName(tag.name),
+      }));
     return {
       bookmarks,
-      folders: sortFolders(folders),
+      folders: sortFolders(activeFolders),
       tags: canonicalTags.sort((left, right) =>
         left.normalizedName === right.normalizedName
           ? left.id.localeCompare(right.id)

@@ -6,7 +6,7 @@ import {
   type SupportedLocale,
 } from "./types";
 import {
-  isStoredSettingsEnvelope,
+  normalizeStoredSettingsEnvelope,
   type StoredSettingsEnvelope,
 } from "../settings/settings-repository";
 import { emptyBookmarkMedia, isBookmarkMedia } from "./bookmark-media";
@@ -346,7 +346,8 @@ function validateBackupValue(value: unknown, allowLegacy: boolean): BookmarkXBac
   if (settings.uiLocale !== null && !isSupportedLocale(settings.uiLocale)) {
     fail("interface locale");
   }
-  if (!isStoredSettingsEnvelope(settings.extension)) {
+  const extensionSettings = normalizeStoredSettingsEnvelope(settings.extension);
+  if (!extensionSettings) {
     fail("extension settings");
   }
   return {
@@ -365,7 +366,7 @@ function validateBackupValue(value: unknown, allowLegacy: boolean): BookmarkXBac
       },
       settings: {
         uiLocale: settings.uiLocale,
-        extension: structuredClone(settings.extension),
+        extension: structuredClone(extensionSettings),
       },
     },
   };

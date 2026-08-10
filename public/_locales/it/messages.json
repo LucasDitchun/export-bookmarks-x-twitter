@@ -84,6 +84,16 @@
   "folderAssignmentLabel": { "message": "Salva nella cartella" },
   "uncategorizedFolder": { "message": "Senza categoria" },
   "manageFolders": { "message": "Gestisci cartelle" },
+  "renameTag": { "message": "Rinomina" },
+  "deleteTag": { "message": "Elimina" },
+  "renameTagPrompt": { "message": "Scegli un nuovo nome per il tag" },
+  "deleteTagConfirmation": {
+    "message": "Eliminare $NAME$ da $COUNT$ segnalibri? Il tag scomparirà dalla libreria, ma il suo record resterà salvato localmente.",
+    "placeholders": {
+      "name": { "content": "$1" },
+      "count": { "content": "$2" }
+    }
+  },
   "newFolderName": { "message": "Nome" },
   "parentFolderLabel": { "message": "Cartella principale" },
   "rootFolder": { "message": "Nessuna cartella principale (primo livello)" },
@@ -96,7 +106,7 @@
   "saveFolderName": { "message": "Salva nome" },
   "deleteFolder": { "message": "Elimina" },
   "deleteFolderConfirmation": {
-    "message": "Eliminare $NAME$ e tutte le sottocartelle? I segnalibri diventeranno senza categoria.",
+    "message": "Eliminare $NAME$ e tutte le sottocartelle? I segnalibri diventeranno senza categoria e i record resteranno salvati localmente.",
     "placeholders": { "name": { "content": "$1" } }
   },
   "confirmDeleteFolder": { "message": "Elimina cartella" },
@@ -150,7 +160,7 @@
     "message": "Totale salvato"
   },
   "currentLabel": {
-    "message": "Ora su X"
+    "message": "Segnalibri su X"
   },
   "archivedLabel": {
     "message": "Archiviati"
@@ -166,6 +176,14 @@
       }
     }
   },
+  "lastReviewLabel": { "message": "Ultima revisione completa" },
+  "dateTimePattern": {
+    "message": "$DATE$ alle $TIME$",
+    "placeholders": {
+      "date": { "content": "$1" },
+      "time": { "content": "$2" }
+    }
+  },
   "neverCaptured": {
     "message": "Nessuna revisione completa"
   },
@@ -173,16 +191,17 @@
     "message": "Data sconosciuta"
   },
   "captureTitle": {
-    "message": "Acquisisci segnalibri"
+    "message": "Aggiorna segnalibri"
   },
   "captureDescription": {
     "message": "Bookmark X scorre la pagina dei segnalibri aperta e salva localmente ogni post visibile."
   },
   "captureModeLabel": { "message": "Modalità di revisione" },
-  "captureModeQuick": { "message": "Aggiornamento rapido" },
-  "captureModeFull": { "message": "Revisione completa" },
+  "captureModeQuick": { "message": "Recenti" },
+  "captureModeFull": { "message": "Tutti" },
   "captureModeQuickHelp": {
-    "message": "Trova i nuovi elementi e si ferma dopo aver riconosciuto i segnalibri recenti."
+    "message": "Cerca i nuovi e si ferma dopo $COUNT$ segnalibri già salvati consecutivi.",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "captureModeFullHelp": {
     "message": "Controlla l’intero elenco e riconcilia i segnalibri rimossi su un altro dispositivo."
@@ -200,8 +219,8 @@
   "captureCompleteFallback": {
     "message": "Checkpoint cambiati; revisione completa completata"
   },
-  "captureButtonQuick": { "message": "Esegui aggiornamento rapido" },
-  "captureButtonFull": { "message": "Esegui revisione completa" },
+  "captureButtonQuick": { "message": "Aggiorna" },
+  "captureButtonFull": { "message": "Controlla tutto" },
   "captureIdle": {
     "message": "Pronto"
   },
@@ -302,6 +321,9 @@
     "message": "Bookmark X non ha potuto completare l’azione. Riprova."
   },
   "openSettingsButton": { "message": "Apri impostazioni" },
+  "openSettingsHelp": {
+    "message": "Modifica aspetto, limiti di acquisizione e comportamento."
+  },
   "settingsTitle": { "message": "Impostazioni di Bookmark X" },
   "skipToSettings": { "message": "Vai alle impostazioni" },
   "settingsEyebrow": { "message": "Locale per scelta" },
@@ -312,6 +334,14 @@
   "settingLargeText": { "message": "Usa testo più grande" },
   "settingHighContrast": { "message": "Usa contrasto elevato" },
   "settingReduceMotion": { "message": "Riduci movimento" },
+  "settingDateFormat": { "message": "Formato data" },
+  "settingTimeFormat": { "message": "Formato ora" },
+  "settingFormatAuto": { "message": "Automatico per la mia area" },
+  "settingDateFormatDmy": { "message": "GG/MM/AAAA" },
+  "settingDateFormatMdy": { "message": "MM/GG/AAAA" },
+  "settingDateFormatYmd": { "message": "AAAA/MM/GG" },
+  "settingTimeFormat24": { "message": "24 ore" },
+  "settingTimeFormat12": { "message": "12 ore (AM/PM)" },
   "settingsBehavior": { "message": "Comportamento" },
   "settingSurface": { "message": "Apri la raccolta come" },
   "settingSurfaceModal": { "message": "Finestra compatta" },
@@ -344,6 +374,12 @@
   "settingLiveFilter": { "message": "Filtra i risultati durante la digitazione" },
   "settingsData": { "message": "Dati" },
   "settingKeepArchived": { "message": "Mantieni archiviati i post rimossi da X" },
+  "settingQuickStopThreshold": {
+    "message": "Ferma l’aggiornamento rapido dopo questo numero di segnalibri noti"
+  },
+  "settingQuickStopHelp": {
+    "message": "15 è consigliato. Un numero maggiore controlla più elementi prima di fermarsi."
+  },
   "settingsDataHelp": {
     "message": "Il contenuto resta in IndexedDB su questo dispositivo."
   },
@@ -365,7 +401,10 @@
   "bookmarkPromptClose": { "message": "Chiudi" },
   "bookmarkPromptSave": { "message": "Salva nota" },
   "bookmarkPromptTags": { "message": "Tag" },
+  "bookmarkPromptTagsHelp": { "message": "Separa più tag con le virgole." },
   "bookmarkPromptFolder": { "message": "Cartella" },
+  "bookmarkPromptChooseFolder": { "message": "Scegli una cartella esistente" },
+  "bookmarkPromptChooseTag": { "message": "Scegli un tag esistente" },
   "bookmarkPromptNote": { "message": "Nota privata" },
   "bookmarkCategorized": { "message": "Categorizzato" },
   "bookmarkNeedsCategory": { "message": "Da categorizzare" },
@@ -435,6 +474,28 @@
   "navLibrary": { "message": "Raccolta" },
   "navSettings": { "message": "Impostazioni" },
   "bookmarkDetailTitle": { "message": "Dettagli del segnalibro" },
+  "bookmarkMetadataOrganize": { "message": "Modifica" },
+  "bookmarkSavedAt": {
+    "message": "Salvato il $DATE$",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "organizationTitle": { "message": "Cartelle e tag" },
+  "organizationHelp": {
+    "message": "Controlla l’organizzazione dei segnalibri e gestisci le cartelle."
+  },
+  "organizationCounts": {
+    "message": "$FOLDERS$ cartelle · $TAGS$ tag",
+    "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
+  },
+  "folderUsageLabel": {
+    "message": "$NAME$, $COUNT$ segnalibri",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ segnalibri",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagsManageHelp": { "message": "Apri un segnalibro per aggiungere o rimuovere tag." },
   "backToLibrary": { "message": "Torna alla raccolta" },
   "settingsViewHelp": { "message": "Esportazione, backup, lingua e preferenze." }
 }

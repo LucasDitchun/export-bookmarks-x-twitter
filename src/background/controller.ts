@@ -18,9 +18,14 @@ import {
 import { folderBreadcrumb } from "../domain/folder-tree";
 import { isBookmarkMedia } from "../domain/bookmark-media";
 import { isFullReviewDue } from "../domain/review-schedule";
+import {
+  DEFAULT_QUICK_STOP_THRESHOLD,
+  MAX_QUICK_CHECKPOINTS,
+} from "../domain/quick-update";
 import type {
   ContentControlRequest,
   ContentEvent,
+  BookmarkListPage,
   ExportResult,
   PopupStatus,
   RuntimeResponse,
@@ -109,11 +114,15 @@ interface BackgroundDependencies {
   };
   tags: {
     list(): Promise<unknown>;
+    usage?(): Promise<Record<string, number>>;
     add(bookmarkId: string, name: string): Promise<unknown>;
     remove(bookmarkId: string, tagId: string): Promise<unknown>;
+    rename(id: string, name: string): Promise<unknown>;
+    delete(id: string): Promise<unknown>;
   };
   folders: {
     list(): Promise<unknown>;
+    usage?(): Promise<Record<string, number>>;
     create(input: { name: string; parentId: string | null }): Promise<unknown>;
     rename(id: string, name: string): Promise<unknown>;
     delete(id: string): Promise<unknown>;
@@ -162,7 +171,7 @@ function collectCheckpointCandidates(
     if (known.has(id)) continue;
     known.add(id);
     candidates.push(id);
-    if (candidates.length === 10) break;
+    if (candidates.length === MAX_QUICK_CHECKPOINTS) break;
   }
   return candidates;
 }
@@ -171,6 +180,7 @@ function collectCheckpointMatches(
   current: readonly string[],
   incoming: readonly string[],
   checkpoints: readonly string[],
+  stopThreshold: number,
 ): string[] {
   const known = new Set(checkpoints);
   let matches = [...current];
@@ -184,7 +194,7 @@ function collectCheckpointMatches(
       continue;
     }
     matches.push(id);
-    if (matches.length > 3) matches = matches.slice(-3);
+    if (matches.length > stopThreshold) matches = matches.slice(-stopThreshold);
   }
   return matches;
 }
@@ -325,6 +335,18 @@ function isUiRequest(value: unknown): value is UiRequest {
       isBookmarkId(value.payload.id) &&
       isLocalEntityId(value.payload.tagId)
     );
+  }
+  if (value.type === "RENAME_TAG") {
+    return (
+      isRecord(value.payload) &&
+      isLocalEntityId(value.payload.id) &&
+      typeof value.payload.name === "string" &&
+      value.payload.name.trim().length > 0 &&
+      value.payload.name.trim().normalize("NFKC").length <= 50
+    );
+  }
+  if (value.type === "DELETE_TAG") {
+    return isRecord(value.payload) && isLocalEntityId(value.payload.id);
   }
   if (value.type === "CREATE_FOLDER") {
     return (
@@ -632,8 +654,13 @@ export class BackgroundController {
           this.dependencies.search.invalidate();
           return success({ bookmark });
         }
-        case "LIST_TAGS":
-          return success({ tags: await this.dependencies.tags.list() });
+        case "LIST_TAGS": {
+          const [tags, usage] = await Promise.all([
+            this.dependencies.tags.list(),
+            this.dependencies.tags.usage?.() ?? Promise.resolve({}),
+          ]);
+          return success({ tags, usage });
+        }
         case "ADD_BOOKMARK_TAG": {
           const result = await this.dependencies.tags.add(
             request.payload.id,
@@ -650,8 +677,26 @@ export class BackgroundController {
           this.dependencies.search.invalidate();
           return success({ bookmark });
         }
-        case "LIST_FOLDERS":
-          return success({ folders: await this.dependencies.folders.list() });
+        case "RENAME_TAG": {
+          const tag = await this.dependencies.tags.rename(
+            request.payload.id,
+            request.payload.name,
+          );
+          this.dependencies.search.invalidate();
+          return success({ tag });
+        }
+        case "DELETE_TAG": {
+          const result = await this.dependencies.tags.delete(request.payload.id);
+          this.dependencies.search.invalidate();
+          return success(result);
+        }
+        case "LIST_FOLDERS": {
+          const [folders, usage] = await Promise.all([
+            this.dependencies.folders.list(),
+            this.dependencies.folders.usage?.() ?? Promise.resolve({}),
+          ]);
+          return success({ folders, usage });
+        }
         case "CREATE_FOLDER": {
           const folder = await this.dependencies.folders.create(request.payload);
           this.dependencies.search.invalidate();
@@ -745,18 +790,17 @@ export class BackgroundController {
   }
 
   private async getStatus(): Promise<PopupStatus> {
-    const [tab, stats, scrape, checkpoints] = await Promise.all([
+    const [tab, stats, scrape] = await Promise.all([
       this.dependencies.browser.getActiveTab(),
       this.dependencies.archive.getStats(),
       this.dependencies.state.getScrapeRun(),
-      this.dependencies.state.getScrapeCheckpoints(),
     ]);
     return {
       pageReady: isBookmarksUrl(tab?.url),
       stats,
       scrape,
       fullReviewDue: isFullReviewDue(stats.lastSuccessfulSyncAt, this.now()),
-      quickUpdateAvailable: (checkpoints?.ids.length ?? 0) >= 3,
+      quickUpdateAvailable: stats.lastSuccessfulSyncAt !== null && stats.current > 0,
     };
   }
 
@@ -778,12 +822,31 @@ export class BackgroundController {
     }
 
     const timestamp = this.now().toISOString();
-    const checkpoints =
+    const [settings, stats, storedCheckpoints] = await Promise.all([
+      this.dependencies.settings.get(),
+      this.dependencies.archive.getStats(),
       requestedMode === "quick"
-        ? await this.dependencies.state.getScrapeCheckpoints()
-        : null;
+        ? this.dependencies.state.getScrapeCheckpoints()
+        : Promise.resolve(null),
+    ]);
+    let checkpointIds = storedCheckpoints?.ids ?? [];
+    if (
+      requestedMode === "quick" &&
+      stats.lastSuccessfulSyncAt !== null &&
+      checkpointIds.length < settings.data.quickStopThreshold
+    ) {
+      const recent = (await this.dependencies.bookmarks.list({
+        view: "current",
+        limit: MAX_QUICK_CHECKPOINTS,
+      })) as BookmarkListPage;
+      checkpointIds = [
+        ...new Set([...checkpointIds, ...recent.items.map(({ id }) => id)]),
+      ].slice(0, MAX_QUICK_CHECKPOINTS);
+    }
     const mode =
-      requestedMode === "quick" && (checkpoints?.ids.length ?? 0) >= 3
+      requestedMode === "quick" &&
+      stats.lastSuccessfulSyncAt !== null &&
+      checkpointIds.length > 0
         ? "quick"
         : "full";
     const run: ScrapeRun = {
@@ -797,7 +860,8 @@ export class BackgroundController {
       updatedAt: timestamp,
       errorCode: null,
       mode,
-      checkpointIds: mode === "quick" ? (checkpoints?.ids ?? []) : [],
+      quickStopThreshold: settings.data.quickStopThreshold,
+      checkpointIds: mode === "quick" ? checkpointIds : [],
       checkpointCandidates: [],
       checkpointMatchIds: [],
       completionReason: null,
@@ -808,7 +872,8 @@ export class BackgroundController {
         type: "START_SCRAPE",
         runId: run.id,
         mode,
-        checkpointIds: mode === "quick" ? (checkpoints?.ids ?? []) : [],
+        quickStopThreshold: run.quickStopThreshold ?? DEFAULT_QUICK_STOP_THRESHOLD,
+        checkpointIds: mode === "quick" ? checkpointIds : [],
       });
       if (!isRecord(response) || response.accepted !== true) {
         throw new Error("The content script did not accept capture.");
@@ -878,6 +943,7 @@ export class BackgroundController {
       }
 
       const timestamp = this.now().toISOString();
+      const quickStopThreshold = run.quickStopThreshold ?? DEFAULT_QUICK_STOP_THRESHOLD;
       if (event.type === "SCRAPE_BATCH") {
         const merged = await this.dependencies.archive.mergeBookmarks(
           event.bookmarks,
@@ -899,6 +965,7 @@ export class BackgroundController {
             run.checkpointMatchIds,
             event.bookmarks.map(({ id }) => id),
             run.checkpointIds,
+            quickStopThreshold,
           ),
         };
         await this.dependencies.state.setScrapeRun(updated);
@@ -937,7 +1004,7 @@ export class BackgroundController {
             "A full review cannot stop at quick-update checkpoints.",
           );
         }
-        if (run.checkpointMatchIds.length < 3) {
+        if (run.checkpointMatchIds.length < quickStopThreshold) {
           throw new BookmarkXError(
             "invalid_capture_completion",
             "The quick-update checkpoint proof is incomplete.",

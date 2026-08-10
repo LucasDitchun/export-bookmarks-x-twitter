@@ -18,6 +18,8 @@ export type {
   SendMessage,
   UiRequest,
   TagAssignmentResult,
+  TagDeleteResult,
+  TagDetailResult,
   TagListResult,
   TagRemovalResult,
 } from "../shared/protocol";

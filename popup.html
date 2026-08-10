@@ -49,94 +49,104 @@
       </section>
 
       <div id="dashboard-view" class="dashboard" hidden>
-        <section
-          class="capture-card app-view"
-          data-app-view="home"
-          aria-labelledby="capture-heading"
-        >
-          <h2
-            id="capture-heading"
-            data-view-heading
-            tabindex="-1"
-            data-i18n="captureTitle"
-          >
-            Capture from the page
-          </h2>
-          <p id="page-guidance" class="guidance"></p>
-          <button
-            id="open-bookmarks-button"
-            class="button button-secondary page-action"
-            data-i18n="openBookmarksButton"
-          >
-            Open bookmarks
-          </button>
-
-          <div id="capture-mode-field" class="capture-mode-field">
-            <label for="capture-mode" data-i18n="captureModeLabel">Review mode</label>
-            <select
-              id="capture-mode"
-              class="capture-mode-select"
-              aria-describedby="capture-mode-help"
-            >
-              <option value="quick" data-i18n="captureModeQuick">Quick update</option>
-              <option value="full" data-i18n="captureModeFull">Full review</option>
-            </select>
-            <p id="capture-mode-help" class="capture-mode-help"></p>
-          </div>
-
-          <p id="full-review-reminder" class="full-review-reminder" hidden></p>
-
-          <div
-            id="capture-feedback"
-            class="capture-feedback"
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            <p id="capture-state" class="capture-state"></p>
-            <div id="capture-progress" class="capture-progress" hidden>
-              <span class="spinner spinner-small" aria-hidden="true"></span>
-              <p id="capture-progress-copy"></p>
-            </div>
-            <p id="duplicate-summary" class="duplicate-summary" hidden></p>
-          </div>
-
-          <button id="capture-button" class="button button-primary">
-            <span id="capture-button-label" data-i18n="captureButton">
-              Capture bookmarks
-            </span>
-            <span class="button-arrow" aria-hidden="true">↓</span>
-          </button>
-        </section>
-
         <section class="archive-card">
           <section
-            class="archive-summary app-view"
+            class="archive-summary home-dashboard app-view"
             data-app-view="home"
             aria-labelledby="archive-heading"
           >
-            <h2 id="archive-heading" data-i18n="archiveTitle">Your bookmarks</h2>
-
-            <div class="archive-total">
-              <strong id="total-count">0</strong>
-              <span data-i18n="totalLabel">Total saved</span>
+            <div class="home-dashboard-heading">
+              <h2
+                id="archive-heading"
+                data-view-heading
+                tabindex="-1"
+                data-i18n="archiveTitle"
+              >
+                Your bookmarks
+              </h2>
+              <div class="last-review">
+                <span class="last-review-label" data-i18n="lastReviewLabel">
+                  Last full review
+                </span>
+                <span id="last-sync" class="last-sync"></span>
+              </div>
             </div>
 
-            <p class="archive-breakdown">
-              <span
-                ><strong id="current-count">0</strong>
-                <span data-i18n="currentLabel">On X now</span></span
-              >
-              <span aria-hidden="true">·</span>
-              <span
-                ><strong id="archived-count">0</strong>
-                <span data-i18n="archivedLabel">Archived</span></span
-              >
-            </p>
-            <p id="last-sync" class="last-sync"></p>
+            <div class="home-current-total">
+              <strong id="current-count">0</strong>
+              <span data-i18n="currentLabel">Bookmarks on X</span>
+            </div>
+
             <p id="empty-note" class="empty-note" data-i18n="emptyArchive">
               No bookmarks captured yet.
             </p>
+          </section>
+
+          <section
+            class="capture-card app-view"
+            data-app-view="home"
+            aria-labelledby="capture-heading"
+          >
+            <div class="capture-heading-row">
+              <div>
+                <h2 id="capture-heading" data-i18n="captureTitle">
+                  Capture from the page
+                </h2>
+                <p id="page-guidance" class="guidance"></p>
+              </div>
+              <button
+                id="open-bookmarks-button"
+                class="button button-secondary page-action"
+                data-i18n="openBookmarksButton"
+              >
+                Open bookmarks
+              </button>
+            </div>
+
+            <div class="capture-action-row">
+              <div id="capture-mode-field" class="capture-mode-field">
+                <label
+                  class="visually-hidden"
+                  for="capture-mode"
+                  data-i18n="captureModeLabel"
+                  >Review mode</label
+                >
+                <select
+                  id="capture-mode"
+                  class="capture-mode-select"
+                  aria-describedby="capture-mode-help"
+                >
+                  <option value="quick" data-i18n="captureModeQuick">Recent</option>
+                  <option value="full" data-i18n="captureModeFull">
+                    All bookmarks
+                  </option>
+                </select>
+              </div>
+
+              <button id="capture-button" class="button button-primary">
+                <span id="capture-button-label" data-i18n="captureButton">
+                  Update
+                </span>
+              </button>
+            </div>
+            <p id="capture-mode-help" class="capture-mode-help"></p>
+
+            <p id="full-review-reminder" class="full-review-reminder" hidden></p>
+
+            <div
+              id="capture-feedback"
+              class="capture-feedback"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <p id="capture-state" class="capture-state"></p>
+              <div id="capture-progress" class="capture-progress" hidden>
+                <span class="spinner spinner-small" aria-hidden="true"></span>
+                <p id="capture-progress-copy"></p>
+              </div>
+              <p id="duplicate-summary" class="duplicate-summary" hidden></p>
+            </div>
           </section>
 
           <section
@@ -162,6 +172,59 @@
               <span id="library-status" class="quiet-status" role="status"></span>
             </div>
 
+            <details class="organization-panel">
+              <summary>
+                <span data-i18n="organizationTitle">Folders and tags</span>
+                <span id="organization-counts" class="organization-counts"></span>
+              </summary>
+              <p class="organization-help" data-i18n="organizationHelp">
+                See how your bookmarks are organized and manage folders.
+              </p>
+              <section aria-labelledby="folder-overview-heading">
+                <h3 id="folder-overview-heading" data-i18n="folderTitle">Folders</h3>
+                <ul id="folder-overview-list" class="organization-list"></ul>
+                <details id="folder-manager" class="folder-manager">
+                  <summary data-i18n="manageFolders">Manage folders</summary>
+                  <span
+                    id="folder-manager-status"
+                    class="quiet-status"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                  ></span>
+                  <form id="create-folder-form" class="folder-form">
+                    <label for="folder-name" data-i18n="newFolderName">Name</label>
+                    <input
+                      id="folder-name"
+                      name="folderName"
+                      maxlength="100"
+                      required
+                    />
+                    <label for="folder-parent" data-i18n="parentFolderLabel">
+                      Parent folder
+                    </label>
+                    <select id="folder-parent"></select>
+                    <button
+                      id="create-folder-button"
+                      class="button button-secondary compact-button"
+                      type="submit"
+                      data-i18n="createFolderButton"
+                    >
+                      Create folder
+                    </button>
+                  </form>
+                  <ul id="folder-list" class="folder-list"></ul>
+                </details>
+              </section>
+              <section aria-labelledby="tag-overview-heading">
+                <h3 id="tag-overview-heading" data-i18n="tagsLabel">Tags</h3>
+                <ul id="tag-overview-list" class="organization-list"></ul>
+                <p class="organization-help" data-i18n="tagsManageHelp">
+                  Open a bookmark to add or remove tags.
+                </p>
+              </section>
+            </details>
+
             <div class="library-search" role="search">
               <label for="library-search" data-i18n="searchLabel">
                 Search saved posts
@@ -178,9 +241,13 @@
                 <button
                   id="library-search-button"
                   type="button"
-                  data-i18n="searchButton"
+                  data-i18n-aria-label="searchButton"
+                  aria-label="Search"
                 >
-                  Search
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="10.5" cy="10.5" r="6.5" />
+                    <path d="m15.5 15.5 5 5" />
+                  </svg>
                 </button>
               </div>
               <p id="library-search-help" class="note-help" data-i18n="searchHelp">
@@ -391,32 +458,6 @@
                   Save in folder
                 </label>
                 <select id="folder-assignment" disabled></select>
-
-                <details id="folder-manager" class="folder-manager">
-                  <summary data-i18n="manageFolders">Manage folders</summary>
-                  <form id="create-folder-form" class="folder-form">
-                    <label for="folder-name" data-i18n="newFolderName">Name</label>
-                    <input
-                      id="folder-name"
-                      name="folderName"
-                      maxlength="100"
-                      required
-                    />
-                    <label for="folder-parent" data-i18n="parentFolderLabel">
-                      Parent folder
-                    </label>
-                    <select id="folder-parent"></select>
-                    <button
-                      id="create-folder-button"
-                      class="button button-secondary compact-button"
-                      type="submit"
-                      data-i18n="createFolderButton"
-                    >
-                      Create folder
-                    </button>
-                  </form>
-                  <ul id="folder-list" class="folder-list"></ul>
-                </details>
               </section>
             </section>
           </section>
@@ -553,14 +594,27 @@
                   <option value="it" lang="it">Italiano</option>
                 </select>
               </div>
-              <button
-                id="open-settings-button"
-                class="text-button"
-                type="button"
-                data-i18n="openSettingsButton"
+              <section
+                class="settings-launcher"
+                aria-labelledby="settings-launcher-heading"
               >
-                Open settings
-              </button>
+                <h3 id="settings-launcher-heading" data-i18n="openSettingsButton">
+                  Open settings
+                </h3>
+                <button
+                  id="open-settings-button"
+                  class="button button-secondary icon-launcher"
+                  type="button"
+                  data-i18n-aria-label="openSettingsButton"
+                  aria-label="Open settings"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M12 8.4a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2Zm0-5.1 1.1 2.1 2.3.6 2-1.1 1.7 1.7-1.1 2 .6 2.3 2.1 1.1v2.4l-2.1 1.1-.6 2.3 1.1 2-1.7 1.7-2-1.1-2.3.6-1.1 2.1H9.6l-1.1-2.1-2.3-.6-2 1.1-1.7-1.7 1.1-2-.6-2.3-2.1-1.1V12L3 10.9l.6-2.3-1.1-2 1.7-1.7 2 1.1 2.3-.6 1.1-2.1Z"
+                    />
+                  </svg>
+                </button>
+              </section>
               <section class="backup-tools" aria-labelledby="backup-heading">
                 <h3 id="backup-heading" data-i18n="backupTitle">
                   Backup &amp; restore

@@ -3,7 +3,8 @@ import type {
   BookmarkDecorationLookupResult,
 } from "../shared/protocol";
 import type { ExtensionSettings } from "../settings/settings-repository";
-import { isBookmarkCategorized } from "../domain/bookmark-categorization";
+import { DEFAULT_QUICK_STOP_THRESHOLD } from "../domain/quick-update";
+import { createIconButton } from "../ui/icons";
 
 export type {
   BookmarkDecorationItem,
@@ -40,7 +41,10 @@ const DEFAULT_DECORATION_SETTINGS = {
     includeLastSeenAt: true,
   },
   search: { filterAsYouType: true },
-  data: { keepArchived: true },
+  data: {
+    keepArchived: true,
+    quickStopThreshold: DEFAULT_QUICK_STOP_THRESHOLD,
+  },
 } as const satisfies ExtensionSettings;
 
 export interface BookmarkMetadataDecoratorOptions {
@@ -48,6 +52,11 @@ export interface BookmarkMetadataDecoratorOptions {
   lookup(ids: string[]): Promise<BookmarkDecorationLookupResult>;
   scheduleFrame?: (callback: FrameRequestCallback) => number;
   cancelFrame?: (handle: number) => void;
+  onOrganize?: (
+    item: BookmarkDecorationItem,
+    translate: Translate,
+    trigger: HTMLButtonElement,
+  ) => void;
 }
 
 export interface BookmarkMetadataDecoratorController {
@@ -65,34 +74,32 @@ type Translate = (key: string) => string;
 
 const componentStyles = String.raw`
   :host {
-    --bx-border: #cfd9de;
-    --bx-ink: #0f1419;
-    --bx-muted: #536471;
-    --bx-surface: #ffffff;
-    --bx-soft: #eff3f4;
-    color: var(--bx-ink);
+    color: inherit;
     display: block;
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: inherit;
     font-size: 14px;
     line-height: 1.4;
     min-width: 0;
+    width: 100%;
   }
 
   :host([data-large-text="true"]) { font-size: 15px; }
 
   .card {
-    background: var(--bx-surface);
-    border: 1px solid var(--bx-border);
-    border-radius: 12px;
+    background: transparent;
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+    border-radius: 0;
     box-sizing: border-box;
     display: grid;
-    gap: 6px;
-    margin: 6px 12px 4px;
-    max-width: calc(100% - 24px);
-    padding: 8px 10px;
+    gap: 5px;
+    margin: 8px 0 2px;
+    max-width: 100%;
+    padding: 6px 0 0;
+    width: 100%;
   }
 
-  .status-row, .tags, .breadcrumb {
+  .metadata-heading, .status-row, .tags, .breadcrumb, .metadata-field {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
@@ -100,36 +107,74 @@ const componentStyles = String.raw`
     min-width: 0;
   }
 
-  .status, .category, .tag {
+  .metadata-heading { flex-wrap: nowrap; justify-content: space-between; }
+  .metadata-line {
+    color: color-mix(in srgb, currentColor 78%, transparent);
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+  .metadata-field { align-items: baseline; }
+  .metadata-label {
+    color: inherit;
+    flex: 0 0 auto;
+    font-size: 0.75em;
+    font-weight: 700;
+  }
+
+  .status, .tag {
     border-radius: 999px;
-    font-size: 0.8125em;
+    font-size: 0.75em;
     font-weight: 650;
-    padding: 2px 7px;
+    padding: 2px 6px;
     max-width: 100%;
     overflow-wrap: anywhere;
     white-space: normal;
   }
 
-  .status::before { content: "✓ "; }
   .status[data-state="pending"]::before { content: "… "; }
   .status[data-state="archived"]::before { content: "↺ "; }
-  .category::before { content: "! "; }
-  .status { background: var(--bx-soft); color: var(--bx-muted); }
-  .category { background: #fff3c4; color: #6b4e00; }
-  .tag { background: var(--bx-soft); color: var(--bx-ink); }
+  .status, .tag {
+    background: color-mix(in srgb, currentColor 9%, transparent);
+    color: inherit;
+  }
+  .status[data-state="uncategorized"] {
+    background: color-mix(in srgb, #f4b400 18%, transparent);
+  }
 
-  .breadcrumb { color: var(--bx-muted); font-size: 0.875em; font-weight: 600; }
+  .breadcrumb { font-size: 0.8125em; font-weight: 600; }
   .crumb + .crumb::before { content: "›"; margin-inline-end: 6px; }
 
   .note {
-    color: var(--bx-muted);
+    color: color-mix(in srgb, currentColor 72%, transparent);
     display: -webkit-box;
+    font-size: 0.8125em;
     margin: 0;
     overflow: hidden;
     overflow-wrap: anywhere;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
   }
+
+  .organize {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 6px;
+    justify-content: center;
+    height: 34px;
+    margin-inline-start: auto;
+    padding: 0 10px;
+  }
+  .organize svg { display: block; height: 18px; width: 18px; }
+  .organize-label { font-size: 0.8125em; font-weight: 700; }
+  .organize:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+  .organize:focus-visible { outline: 2px solid #1d9bf0; outline-offset: 2px; }
 
   .visually-hidden {
     border: 0;
@@ -143,28 +188,12 @@ const componentStyles = String.raw`
     width: 1px;
   }
 
-  :host([data-high-contrast="true"]) {
-    --bx-border: #111;
-    --bx-ink: #000;
-    --bx-muted: #242424;
-    --bx-surface: #fff;
-    --bx-soft: #f1f1f1;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :host {
-      --bx-border: #536471;
-      --bx-ink: #e7e9ea;
-      --bx-muted: #8b98a5;
-      --bx-surface: #000;
-      --bx-soft: #16181c;
-    }
-    .category { background: #3a2b00; color: #ffe28a; }
-    .tag { background: #16181c; color: #e7e9ea; }
+  :host([data-high-contrast="true"]) .card {
+    border-top-color: color-mix(in srgb, currentColor 34%, transparent);
   }
 
   @media (forced-colors: active) {
-    .card, .status, .category, .tag { border-color: CanvasText; }
+    .card, .status, .tag { border-color: CanvasText; }
     .card { background: Canvas; color: CanvasText; }
   }
 
@@ -210,6 +239,7 @@ function renderDecoration(options: {
   settings: ExtensionSettings;
   translate: Translate;
   pending?: boolean;
+  onOrganize?: BookmarkMetadataDecoratorOptions["onOrganize"];
 }): void {
   const { document, host, item, settings, translate } = options;
   const shadow = host.shadowRoot ?? host.attachShadow({ mode: "open" });
@@ -217,83 +247,120 @@ function renderDecoration(options: {
   style.textContent = componentStyles;
   const card = document.createElement("section");
   card.className = "card";
+  const heading = document.createElement("div");
+  heading.className = "metadata-heading";
 
   host.dataset.bookmarkId = item.bookmark.id;
   host.dataset.largeText = String(settings.appearance.largeText);
   host.dataset.highContrast = String(settings.appearance.highContrast);
   host.dataset.reduceMotion = String(settings.appearance.reduceMotion);
+  const hasOrganization = item.breadcrumb.length > 0 || item.tags.length > 0;
   host.dataset.state = options.pending
     ? "pending"
     : item.bookmark.status === "archived"
       ? "archived"
-      : isBookmarkCategorized(item.bookmark, settings.behavior.metadata)
+      : hasOrganization
         ? "mapped"
         : "uncategorized";
   host.setAttribute("aria-label", translate("bookmarkMetadataLabel"));
   host.setAttribute("role", "group");
 
-  if (
-    settings.behavior.metadata.summary ||
-    (!options.pending && settings.behavior.metadata.categoryIndicator)
-  ) {
+  const showStatus = options.pending
+    ? settings.behavior.metadata.summary
+    : item.bookmark.status === "archived"
+      ? settings.behavior.metadata.summary
+      : settings.behavior.metadata.categoryIndicator && !hasOrganization;
+  if (showStatus) {
     const row = document.createElement("div");
     row.className = "status-row";
-    if (settings.behavior.metadata.summary) {
-      const status = appendTextElement(
-        document,
-        row,
-        "span",
-        "status",
-        options.pending
-          ? translate("liveBookmarkPending")
-          : item.bookmark.status === "archived"
-            ? translate("bookmarkMetadataArchived")
-            : translate("bookmarkMetadataMapped"),
-      );
-      status.dataset.state = options.pending
-        ? "pending"
+    const status = appendTextElement(
+      document,
+      row,
+      "span",
+      "status",
+      options.pending
+        ? translate("liveBookmarkPending")
         : item.bookmark.status === "archived"
-          ? "archived"
-          : "mapped";
-    }
-    if (
-      !options.pending &&
-      settings.behavior.metadata.categoryIndicator &&
-      !isBookmarkCategorized(item.bookmark, settings.behavior.metadata)
-    ) {
-      appendTextElement(
-        document,
-        row,
-        "span",
-        "category",
-        translate("bookmarkNeedsCategory"),
-      );
-    }
-    card.append(row);
+          ? translate("bookmarkMetadataArchived")
+          : translate("uncategorizedFolder"),
+    );
+    status.dataset.state = options.pending
+      ? "pending"
+      : item.bookmark.status === "archived"
+        ? "archived"
+        : "uncategorized";
+    heading.append(row);
   }
 
-  if (!options.pending && settings.behavior.metadata.breadcrumb) {
+  if (!options.pending && options.onOrganize) {
+    const organize = createIconButton({
+      document,
+      icon: "edit",
+      label: translate("bookmarkMetadataOrganize"),
+      className: "organize",
+    });
+    appendTextElement(
+      document,
+      organize,
+      "span",
+      "organize-label",
+      translate("bookmarkMetadataOrganize"),
+    );
+    organize.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      options.onOrganize?.(item, translate, organize);
+    });
+    heading.append(organize);
+  }
+  if (heading.childElementCount > 0) card.append(heading);
+
+  const metadataLine = document.createElement("div");
+  metadataLine.className = "metadata-line";
+  if (
+    !options.pending &&
+    settings.behavior.metadata.breadcrumb &&
+    item.breadcrumb.length > 0
+  ) {
+    const field = document.createElement("div");
+    field.className = "metadata-field metadata-folder";
+    appendTextElement(
+      document,
+      field,
+      "span",
+      "metadata-label",
+      `${translate("bookmarkPromptFolder")}:`,
+    );
     const breadcrumb = document.createElement("div");
     breadcrumb.className = "breadcrumb";
     breadcrumb.setAttribute("aria-label", translate("bookmarkPromptFolder"));
-    const names = item.breadcrumb.length
-      ? item.breadcrumb
-      : [translate("uncategorizedFolder")];
-    for (const name of names) {
+    for (const name of item.breadcrumb) {
       appendTextElement(document, breadcrumb, "span", "crumb", name);
     }
-    card.append(breadcrumb);
+    field.append(breadcrumb);
+    metadataLine.append(field);
   }
 
   if (!options.pending && settings.behavior.metadata.tags && item.tags.length > 0) {
+    const field = document.createElement("div");
+    field.className = "metadata-field metadata-tags";
+    appendTextElement(
+      document,
+      field,
+      "span",
+      "metadata-label",
+      `${translate("bookmarkPromptTags")}:`,
+    );
     const tags = document.createElement("div");
     tags.className = "tags";
     tags.setAttribute("aria-label", translate("bookmarkPromptTags"));
     for (const tag of item.tags) {
       appendTextElement(document, tags, "span", "tag", tag.name);
     }
-    card.append(tags);
+    field.append(tags);
+    metadataLine.append(field);
   }
+  if (metadataLine.childElementCount > 0) card.append(metadataLine);
 
   if (
     !options.pending &&
@@ -375,6 +442,9 @@ export function startBookmarkMetadataDecorator(
     }
     removeMounted(article);
     const host = options.document.createElement(HOST_TAG);
+    for (const eventName of ["click", "auxclick", "pointerdown", "mousedown"]) {
+      host.addEventListener(eventName, (event) => event.stopPropagation());
+    }
     target.insertAdjacentElement("afterend", host);
     mounted.set(article, { bookmarkId, host });
     return host;
@@ -440,6 +510,7 @@ export function startBookmarkMetadataDecorator(
               settings: result.settings,
               translate,
               pending: pending.get(article) === id,
+              onOrganize: options.onOrganize,
             });
           }
         }

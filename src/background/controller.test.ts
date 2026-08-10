@@ -95,6 +95,8 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       list: vi.fn(async (): Promise<BookmarkTag[]> => []),
       add: vi.fn(async (): Promise<unknown> => null),
       remove: vi.fn(async (): Promise<unknown> => null),
+      rename: vi.fn(async (): Promise<unknown> => null),
+      delete: vi.fn(async (): Promise<unknown> => null),
     },
     folders: {
       list: vi.fn(async (): Promise<FolderRecord[]> => []),
@@ -925,7 +927,7 @@ describe("BackgroundController", () => {
     expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
   });
 
-  it("lists, assigns, and removes validated bookmark tags", async () => {
+  it("lists, assigns, removes, renames, and soft-deletes validated bookmark tags", async () => {
     const dependencies = createDependencies();
     const tag = {
       id: "tag-research",
@@ -936,11 +938,16 @@ describe("BackgroundController", () => {
     dependencies.tags.list.mockResolvedValueOnce([tag]);
     dependencies.tags.add.mockResolvedValueOnce({ bookmark: taggedBookmark, tag });
     dependencies.tags.remove.mockResolvedValueOnce({ ...taggedBookmark, tagIds: [] });
+    dependencies.tags.rename.mockResolvedValueOnce({ ...tag, name: "References" });
+    dependencies.tags.delete.mockResolvedValueOnce({
+      deletedTagId: tag.id,
+      untaggedBookmarkCount: 2,
+    });
     const controller = new BackgroundController(dependencies);
 
     await expect(
       controller.handle({ type: "LIST_TAGS" }, POPUP_SENDER),
-    ).resolves.toEqual({ ok: true, data: { tags: [tag] } });
+    ).resolves.toEqual({ ok: true, data: { tags: [tag], usage: {} } });
     await expect(
       controller.handle(
         {
@@ -965,9 +972,29 @@ describe("BackgroundController", () => {
       ok: true,
       data: { bookmark: { ...taggedBookmark, tagIds: [] } },
     });
+    await expect(
+      controller.handle(
+        {
+          type: "RENAME_TAG",
+          payload: { id: tag.id, name: "References" },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      data: { tag: { ...tag, name: "References" } },
+    });
+    await expect(
+      controller.handle({ type: "DELETE_TAG", payload: { id: tag.id } }, POPUP_SENDER),
+    ).resolves.toEqual({
+      ok: true,
+      data: { deletedTagId: tag.id, untaggedBookmarkCount: 2 },
+    });
     expect(dependencies.tags.add).toHaveBeenCalledWith("123", " Research ");
     expect(dependencies.tags.remove).toHaveBeenCalledWith("123", "tag-research");
-    expect(dependencies.search.invalidate).toHaveBeenCalledTimes(2);
+    expect(dependencies.tags.rename).toHaveBeenCalledWith(tag.id, "References");
+    expect(dependencies.tags.delete).toHaveBeenCalledWith(tag.id);
+    expect(dependencies.search.invalidate).toHaveBeenCalledTimes(4);
   });
 
   it("rejects invalid tag requests at the extension boundary", async () => {
@@ -988,6 +1015,8 @@ describe("BackgroundController", () => {
         type: "REMOVE_BOOKMARK_TAG",
         payload: { id: "123", tagId: "<script>" },
       },
+      { type: "RENAME_TAG", payload: { id: "tag-1", name: "   " } },
+      { type: "DELETE_TAG", payload: { id: "<script>" } },
     ]) {
       await expect(controller.handle(request, POPUP_SENDER)).resolves.toMatchObject({
         ok: false,
@@ -996,6 +1025,8 @@ describe("BackgroundController", () => {
     }
     expect(dependencies.tags.add).not.toHaveBeenCalled();
     expect(dependencies.tags.remove).not.toHaveBeenCalled();
+    expect(dependencies.tags.rename).not.toHaveBeenCalled();
+    expect(dependencies.tags.delete).not.toHaveBeenCalled();
   });
 
   it("routes validated hierarchical folder operations", async () => {
@@ -1004,7 +1035,7 @@ describe("BackgroundController", () => {
 
     await expect(
       controller.handle({ type: "LIST_FOLDERS" }, POPUP_SENDER),
-    ).resolves.toEqual({ ok: true, data: { folders: [] } });
+    ).resolves.toEqual({ ok: true, data: { folders: [], usage: {} } });
     await controller.handle(
       {
         type: "CREATE_FOLDER",
@@ -1159,7 +1190,7 @@ describe("BackgroundController", () => {
         stats,
         scrape: null,
         fullReviewDue: false,
-        quickUpdateAvailable: false,
+        quickUpdateAvailable: true,
       },
     });
   });
@@ -1178,6 +1209,7 @@ describe("BackgroundController", () => {
       type: "START_SCRAPE",
       runId: "run-1",
       mode: "full",
+      quickStopThreshold: 15,
       checkpointIds: [],
     });
 
@@ -1194,6 +1226,10 @@ describe("BackgroundController", () => {
 
   it("runs quick only when saved checkpoints exist and ignores them for explicit full", async () => {
     const dependencies = createDependencies();
+    dependencies.settings.get.mockResolvedValue({
+      ...structuredClone(DEFAULT_SETTINGS),
+      data: { ...DEFAULT_SETTINGS.data, quickStopThreshold: 3 },
+    });
     await dependencies.state.setScrapeCheckpoints({
       ids: ["30", "29", "28"],
       updatedAt: "2026-07-28T12:00:00.000Z",
@@ -1210,6 +1246,7 @@ describe("BackgroundController", () => {
       type: "START_SCRAPE",
       runId: "run-1",
       mode: "quick",
+      quickStopThreshold: 3,
       checkpointIds: ["30", "29", "28"],
     });
 
@@ -1224,12 +1261,17 @@ describe("BackgroundController", () => {
       type: "START_SCRAPE",
       runId: "run-1",
       mode: "full",
+      quickStopThreshold: 3,
       checkpointIds: [],
     });
   });
 
   it("commits a checkpoint-stopped quick update without reconciling absences", async () => {
     const dependencies = createDependencies();
+    dependencies.settings.get.mockResolvedValue({
+      ...structuredClone(DEFAULT_SETTINGS),
+      data: { ...DEFAULT_SETTINGS.data, quickStopThreshold: 3 },
+    });
     await dependencies.state.setScrapeCheckpoints({
       ids: ["6", "5", "4"],
       updatedAt: "2026-07-28T12:00:00.000Z",
@@ -1271,7 +1313,7 @@ describe("BackgroundController", () => {
 
     expect(dependencies.archive.discardCapture).toHaveBeenCalledWith("run-1");
     expect(dependencies.archive.finalizeCapture).not.toHaveBeenCalled();
-    expect(dependencies.settings.get).not.toHaveBeenCalled();
+    expect(dependencies.settings.get).toHaveBeenCalledOnce();
     expect(dependencies.state.setScrapeCheckpoints).toHaveBeenLastCalledWith({
       ids: ["9", "8", "7", "6", "5", "4"],
       updatedAt: "2026-07-29T13:14:15.123Z",
@@ -1386,7 +1428,7 @@ describe("BackgroundController", () => {
     });
   });
 
-  it("keeps only the ten newest unique candidates after a full review", async () => {
+  it("keeps recent unique candidates for configurable quick updates", async () => {
     const dependencies = createDependencies();
     const controller = new BackgroundController(dependencies);
     await controller.handle(
@@ -1413,7 +1455,7 @@ describe("BackgroundController", () => {
     );
 
     expect(dependencies.state.setScrapeCheckpoints).toHaveBeenLastCalledWith({
-      ids: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+      ids: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
       updatedAt: "2026-07-29T13:14:15.123Z",
     });
   });
@@ -1480,7 +1522,10 @@ describe("BackgroundController", () => {
     const dependencies = createDependencies();
     dependencies.settings.get.mockResolvedValue({
       ...structuredClone(DEFAULT_SETTINGS),
-      data: { keepArchived: false },
+      data: {
+        keepArchived: false,
+        quickStopThreshold: DEFAULT_SETTINGS.data.quickStopThreshold,
+      },
     });
     const controller = new BackgroundController(dependencies);
     await controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER);
@@ -1498,7 +1543,7 @@ describe("BackgroundController", () => {
       ),
     ).resolves.toMatchObject({ ok: true, data: { status: "completed" } });
 
-    expect(dependencies.settings.get).toHaveBeenCalledOnce();
+    expect(dependencies.settings.get).toHaveBeenCalledTimes(2);
     expect(dependencies.archive.finalizeCapture).toHaveBeenCalledWith(
       "run-1",
       "2026-07-29T13:14:15.123Z",

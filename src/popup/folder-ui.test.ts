@@ -154,6 +154,9 @@ describe("folder UI", () => {
     const rename = document.querySelector<HTMLButtonElement>(
       '[data-folder-action="rename"][data-folder-id="models"]',
     );
+    expect(rename?.textContent).toBe("");
+    expect(rename?.getAttribute("aria-label")).toBe("renameFolder");
+    expect(rename?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
     rename?.click();
     const renameInput = document.querySelector<HTMLInputElement>(
       '[data-folder-rename-input="models"]',
@@ -172,6 +175,9 @@ describe("folder UI", () => {
     const remove = document.querySelector<HTMLButtonElement>(
       '[data-folder-action="delete"][data-folder-id="ai"]',
     );
+    expect(remove?.textContent).toBe("");
+    expect(remove?.getAttribute("aria-label")).toBe("deleteFolder");
+    expect(remove?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
     remove?.click();
     expect(document.querySelector('[data-folder-delete-confirm="ai"]')).not.toBeNull();
     document

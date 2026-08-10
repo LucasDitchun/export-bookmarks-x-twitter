@@ -1,4 +1,9 @@
 import type { ScrapeCheckpointState, ScrapeRun } from "../domain/types";
+import {
+  DEFAULT_QUICK_STOP_THRESHOLD,
+  MAX_QUICK_CHECKPOINTS,
+  sanitizeQuickStopThreshold,
+} from "../domain/quick-update";
 
 const SCRAPE_RUN_KEY = "scrapeRun";
 const SCRAPE_CHECKPOINTS_KEY = "scrapeCheckpoints";
@@ -35,6 +40,10 @@ function normalizeScrapeRun(value: unknown): ScrapeRun | null {
     (typeof value.errorCode === "string" || value.errorCode === null);
   if (!valid) return null;
   const mode = value.mode === "quick" || value.mode === "full" ? value.mode : "full";
+  const quickStopThreshold = sanitizeQuickStopThreshold(
+    value.quickStopThreshold,
+    DEFAULT_QUICK_STOP_THRESHOLD,
+  );
   const checkpointIds = Array.isArray(value.checkpointIds)
     ? value.checkpointIds.filter(
         (id): id is string => typeof id === "string" && /^\d+$/.test(id),
@@ -54,14 +63,16 @@ function normalizeScrapeRun(value: unknown): ScrapeRun | null {
     ...(value as unknown as Omit<
       ScrapeRun,
       | "mode"
+      | "quickStopThreshold"
       | "checkpointIds"
       | "checkpointCandidates"
       | "checkpointMatchIds"
       | "completionReason"
     >),
     mode,
-    checkpointIds: [...new Set(checkpointIds)].slice(0, 10),
-    checkpointCandidates: [...new Set(candidates)].slice(0, 10),
+    quickStopThreshold,
+    checkpointIds: [...new Set(checkpointIds)].slice(0, MAX_QUICK_CHECKPOINTS),
+    checkpointCandidates: [...new Set(candidates)].slice(0, MAX_QUICK_CHECKPOINTS),
     checkpointMatchIds: Array.isArray(value.checkpointMatchIds)
       ? [
           ...new Set(
@@ -69,7 +80,7 @@ function normalizeScrapeRun(value: unknown): ScrapeRun | null {
               (id): id is string => typeof id === "string" && /^\d+$/.test(id),
             ),
           ),
-        ].slice(-3)
+        ].slice(-quickStopThreshold)
       : [],
     completionReason,
   };
@@ -82,7 +93,7 @@ function isScrapeCheckpointState(value: unknown): value is ScrapeCheckpointState
   const ids = value.ids;
   return (
     ids.length >= 1 &&
-    ids.length <= 10 &&
+    ids.length <= MAX_QUICK_CHECKPOINTS &&
     ids.every((id) => typeof id === "string" && /^\d+$/.test(id)) &&
     new Set(ids).size === ids.length
   );

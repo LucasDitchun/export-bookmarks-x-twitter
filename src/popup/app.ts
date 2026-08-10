@@ -26,12 +26,22 @@ import type {
   RuntimeError,
   SendMessage,
   TagAssignmentResult,
+  TagDeleteResult,
+  TagDetailResult,
   TagListResult,
   TagRemovalResult,
   UiRequest,
 } from "./protocol";
 import { getTagBadgeColors } from "./tag-colors";
 import { createExportUi } from "./export-ui";
+import {
+  DEFAULT_DATE_TIME_PREFERENCES,
+  formatRegionalDate,
+  formatRegionalTime,
+  type DateTimePreferences,
+} from "../settings/date-time-preferences";
+import { DEFAULT_QUICK_STOP_THRESHOLD } from "../domain/quick-update";
+import { createIconButton } from "../ui/icons";
 
 interface PopupAppOptions {
   document: Document;
@@ -43,6 +53,8 @@ interface PopupAppOptions {
   cancelSchedule?: typeof window.clearTimeout;
   readBackupFile?: (file: File) => Promise<string>;
   confirmRestore?: (message: string) => boolean;
+  confirmDelete?: (message: string) => boolean;
+  promptTagName?: (message: string, value: string) => string | null;
   reload?: () => void;
   filterAsYouType?: boolean;
   onBookmarkOpened?: () => void;
@@ -52,11 +64,12 @@ interface PopupAppOptions {
     limit: number,
   ) => Promise<NotedBookmark[] | null>;
   categorizationFields?: BookmarkCategorizationFields;
+  dateTimePreferences?: DateTimePreferences;
+  quickStopThreshold?: number;
 }
 
 interface RequiredElements {
   alert: HTMLElement;
-  archivedCount: HTMLElement;
   captureButton: HTMLButtonElement;
   captureButtonLabel: HTMLElement;
   captureFeedback: HTMLElement;
@@ -89,6 +102,7 @@ interface RequiredElements {
   noteEditor: HTMLElement;
   noteSaveStatus: HTMLElement;
   noteTextarea: HTMLTextAreaElement;
+  organizationCounts: HTMLElement;
   openBookmarksButton: HTMLButtonElement;
   openClearDialogButton: HTMLButtonElement;
   pageBadge: HTMLElement;
@@ -101,7 +115,7 @@ interface RequiredElements {
   tagInput: HTMLInputElement;
   tagStatus: HTMLElement;
   tagSuggestions: HTMLDataListElement;
-  totalCount: HTMLElement;
+  tagOverviewList: HTMLUListElement;
 }
 
 interface PendingNoteSave {
@@ -126,7 +140,6 @@ function requireElement<T extends HTMLElement>(document: Document, id: string): 
 function getElements(document: Document): RequiredElements {
   return {
     alert: requireElement(document, "alert"),
-    archivedCount: requireElement(document, "archived-count"),
     captureButton: requireElement(document, "capture-button"),
     captureButtonLabel: requireElement(document, "capture-button-label"),
     captureFeedback: requireElement(document, "capture-feedback"),
@@ -159,6 +172,7 @@ function getElements(document: Document): RequiredElements {
     noteEditor: requireElement(document, "note-editor"),
     noteSaveStatus: requireElement(document, "note-save-status"),
     noteTextarea: requireElement(document, "note-textarea"),
+    organizationCounts: requireElement(document, "organization-counts"),
     openBookmarksButton: requireElement(document, "open-bookmarks-button"),
     openClearDialogButton: requireElement(document, "open-clear-dialog-button"),
     pageBadge: requireElement(document, "page-badge"),
@@ -171,7 +185,7 @@ function getElements(document: Document): RequiredElements {
     tagInput: requireElement(document, "tag-input"),
     tagStatus: requireElement(document, "tag-status"),
     tagSuggestions: requireElement(document, "tag-suggestions"),
-    totalCount: requireElement(document, "total-count"),
+    tagOverviewList: requireElement(document, "tag-overview-list"),
   };
 }
 
@@ -195,7 +209,9 @@ export function createPopupApp(options: PopupAppOptions): {
   handleLiveBookmarkContext: (context: LiveBookmarkContext) => Promise<void>;
   ready: Promise<void>;
   setCategorizationFields: (fields: BookmarkCategorizationFields) => void;
+  setDateTimePreferences: (preferences: DateTimePreferences) => void;
   setFilterAsYouType: (enabled: boolean) => void;
+  setQuickStopThreshold: (threshold: number) => void;
 } {
   const {
     document,
@@ -207,12 +223,16 @@ export function createPopupApp(options: PopupAppOptions): {
     cancelSchedule = window.clearTimeout.bind(window),
     readBackupFile = (file) => file.text(),
     confirmRestore = (message) => window.confirm(message),
+    confirmDelete = (message) => window.confirm(message),
+    promptTagName = (message, value) => window.prompt(message, value),
     reload = () => window.location.reload(),
     filterAsYouType: initialFilterAsYouType = true,
     onBookmarkOpened,
     semanticSearch,
     categorizationFields:
       initialCategorizationFields = DEFAULT_BOOKMARK_CATEGORIZATION_FIELDS,
+    dateTimePreferences: initialDateTimePreferences = DEFAULT_DATE_TIME_PREFERENCES,
+    quickStopThreshold: initialQuickStopThreshold = DEFAULT_QUICK_STOP_THRESHOLD,
   } = options;
   const elements = getElements(document);
   elements.tagInput.placeholder = translate("tagInputPlaceholder");
@@ -227,7 +247,12 @@ export function createPopupApp(options: PopupAppOptions): {
   let selectedBookmarkId: string | null = null;
   let selectedBookmark: NotedBookmark | null = null;
   let categorizationFields = initialCategorizationFields;
+  let dateTimePreferences = initialDateTimePreferences;
+  let quickStopThreshold = initialQuickStopThreshold;
   let tags: BookmarkTag[] = [];
+  const deletedTagIds = new Set<string>();
+  let tagUsage: Record<string, number> = {};
+  let folderCount = 0;
   let tagBusy = false;
   let selectionVersion = 0;
   let libraryGeneration = 0;
@@ -252,10 +277,11 @@ export function createPopupApp(options: PopupAppOptions): {
   const formatDate = (isoDate: string): string => {
     const date = new Date(isoDate);
     if (Number.isNaN(date.valueOf())) return translate("unknownDate");
-    return new Intl.DateTimeFormat(getLocaleTag(locale), {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(date);
+    const localeTag = getLocaleTag(locale);
+    return translate("dateTimePattern", [
+      formatRegionalDate(date, localeTag, dateTimePreferences.dateFormat),
+      formatRegionalTime(date, localeTag, dateTimePreferences.timeFormat),
+    ]);
   };
 
   const hideAlert = (): void => {
@@ -420,6 +446,7 @@ export function createPopupApp(options: PopupAppOptions): {
       const button = document.createElement("button");
       const title = document.createElement("span");
       const author = document.createElement("span");
+      const savedAt = document.createElement("span");
       const bookmarkTags = document.createElement("span");
       button.type = "button";
       button.className = "bookmark-option";
@@ -429,10 +456,15 @@ export function createPopupApp(options: PopupAppOptions): {
       title.textContent = bookmark.text || bookmark.url;
       author.className = "bookmark-option-author";
       author.textContent = `@${bookmark.author.username}`;
+      savedAt.className = "bookmark-option-date";
+      savedAt.textContent = translate(
+        "bookmarkSavedAt",
+        formatDate(bookmark.firstSavedAt),
+      );
       bookmarkTags.className = "tag-list bookmark-option-tags";
       bookmarkTags.setAttribute("role", "list");
       appendTags(bookmarkTags, bookmark.tagIds, false);
-      button.append(title, author, bookmarkTags);
+      button.append(title, author, savedAt, bookmarkTags);
       button.addEventListener("click", () => void selectBookmark(bookmark.id, true));
       item.append(button);
       elements.bookmarkList.append(item);
@@ -481,6 +513,7 @@ export function createPopupApp(options: PopupAppOptions): {
     } finally {
       tagBusy = false;
       renderSelectedTags();
+      void loadTags();
     }
   }
 
@@ -506,6 +539,117 @@ export function createPopupApp(options: PopupAppOptions): {
     } finally {
       tagBusy = false;
       renderSelectedTags();
+      void loadTags();
+    }
+  }
+
+  const filterLibraryByOrganization = (query: string): void => {
+    elements.librarySearch.value = query;
+    activateSearchQuery(query);
+  };
+
+  function renderOrganizationOverview(): void {
+    elements.organizationCounts.textContent = translate("organizationCounts", [
+      String(folderCount),
+      String(tags.length),
+    ]);
+    elements.tagOverviewList.replaceChildren();
+    for (const tag of tags) {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      const name = document.createElement("span");
+      const count = document.createElement("strong");
+      const actions = document.createElement("span");
+      const rename = createIconButton({
+        document,
+        icon: "edit",
+        label: translate("renameTag"),
+      });
+      const remove = createIconButton({
+        document,
+        icon: "trash",
+        label: translate("deleteTag"),
+        className: "danger",
+      });
+      button.type = "button";
+      button.className = "organization-item";
+      button.setAttribute(
+        "aria-label",
+        translate("tagUsageLabel", [tag.name, String(tagUsage[tag.id] ?? 0)]),
+      );
+      name.textContent = tag.name;
+      count.textContent = String(tagUsage[tag.id] ?? 0);
+      button.append(name, count);
+      button.addEventListener("click", () => filterLibraryByOrganization(tag.name));
+      actions.className = "organization-item-actions";
+      rename.addEventListener("click", () => void renameTag(tag));
+      remove.addEventListener("click", () => void deleteTag(tag));
+      actions.append(rename, remove);
+      item.append(button, actions);
+      elements.tagOverviewList.append(item);
+    }
+  }
+
+  async function renameTag(tag: BookmarkTag): Promise<void> {
+    const name = promptTagName(translate("renameTagPrompt"), tag.name);
+    if (name === null || name.trim() === tag.name || tagBusy) return;
+    tagBusy = true;
+    try {
+      const response = await sendMessage<TagDetailResult>({
+        type: "RENAME_TAG",
+        payload: { id: tag.id, name },
+      });
+      if (!response.ok) throw new Error("rename tag failed");
+      tags = tags.map((candidate) =>
+        candidate.id === tag.id ? response.data.tag : candidate,
+      );
+      renderOrganizationOverview();
+      renderTagSuggestions();
+      renderSelectedTags();
+    } catch {
+      setTagStatus("tagSaveError");
+    } finally {
+      tagBusy = false;
+    }
+  }
+
+  async function deleteTag(tag: BookmarkTag): Promise<void> {
+    if (
+      tagBusy ||
+      !confirmDelete(
+        translate("deleteTagConfirmation", [tag.name, String(tagUsage[tag.id] ?? 0)]),
+      )
+    ) {
+      return;
+    }
+    tagBusy = true;
+    try {
+      const response = await sendMessage<TagDeleteResult>({
+        type: "DELETE_TAG",
+        payload: { id: tag.id },
+      });
+      if (!response.ok) throw new Error("delete tag failed");
+      tags = tags.filter((candidate) => candidate.id !== tag.id);
+      deletedTagIds.add(tag.id);
+      delete tagUsage[tag.id];
+      bookmarks = bookmarks.map((bookmark) => ({
+        ...bookmark,
+        tagIds: bookmark.tagIds.filter((tagId) => tagId !== tag.id),
+      }));
+      if (selectedBookmark?.tagIds.includes(tag.id)) {
+        selectedBookmark = {
+          ...selectedBookmark,
+          tagIds: selectedBookmark.tagIds.filter((tagId) => tagId !== tag.id),
+        };
+      }
+      renderOrganizationOverview();
+      renderTagSuggestions();
+      renderBookmarkList();
+      renderSelectedTags();
+    } catch {
+      setTagStatus("tagSaveError");
+    } finally {
+      tagBusy = false;
     }
   }
 
@@ -522,8 +666,14 @@ export function createPopupApp(options: PopupAppOptions): {
     loadedTags: readonly BookmarkTag[],
     localTags: readonly BookmarkTag[],
   ): BookmarkTag[] {
-    const merged = new Map(loadedTags.map((tag) => [tag.id, tag]));
-    for (const tag of localTags) merged.set(tag.id, tag);
+    const merged = new Map(
+      loadedTags
+        .filter((tag) => !deletedTagIds.has(tag.id))
+        .map((tag) => [tag.id, tag]),
+    );
+    for (const tag of localTags) {
+      if (!deletedTagIds.has(tag.id)) merged.set(tag.id, tag);
+    }
     return [...merged.values()];
   }
 
@@ -532,10 +682,12 @@ export function createPopupApp(options: PopupAppOptions): {
       const response = await sendMessage<TagListResult>({ type: "LIST_TAGS" });
       if (response.ok && Array.isArray(response.data?.tags)) {
         tags = mergeTags(response.data.tags, tags);
+        tagUsage = response.data.usage ?? {};
         exportUi?.setTags(tags);
         renderTagSuggestions();
         renderBookmarkList();
         renderSelectedTags();
+        renderOrganizationOverview();
       }
     } catch {
       // The library and note editor remain usable if tags cannot be loaded.
@@ -998,13 +1150,12 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.pageGuidance.textContent = translate(
       pageReady ? "pageReadyGuidance" : "pageMissingGuidance",
     );
+    elements.pageGuidance.hidden = pageReady;
     elements.openBookmarksButton.hidden = pageReady;
 
-    elements.totalCount.textContent = String(stats.total);
     elements.currentCount.textContent = String(stats.current);
-    elements.archivedCount.textContent = String(stats.archived);
     elements.lastSync.textContent = stats.lastSuccessfulSyncAt
-      ? translate("lastCaptureAt", formatDate(stats.lastSuccessfulSyncAt))
+      ? formatDate(stats.lastSuccessfulSyncAt)
       : translate("neverCaptured");
     elements.emptyNote.hidden = stats.total > 0;
 
@@ -1026,14 +1177,18 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.captureModeField.hidden = !showCaptureControls;
     elements.captureModeHelp.textContent = !status.quickUpdateAvailable
       ? translate("captureModeFirstFullHelp")
-      : translate(
-          selectedMode === "quick" ? "captureModeQuickHelp" : "captureModeFullHelp",
-        );
+      : selectedMode === "quick"
+        ? translate("captureModeQuickHelp", String(quickStopThreshold))
+        : translate("captureModeFullHelp");
     elements.fullReviewReminder.hidden = !status.fullReviewDue || running;
     elements.fullReviewReminder.textContent = status.fullReviewDue
       ? translate("fullReviewReminder")
       : "";
-    elements.captureFeedback.hidden = !showCaptureControls;
+    elements.captureFeedback.hidden =
+      !showCaptureControls ||
+      scrape === null ||
+      scrape.status === "idle" ||
+      scrape.status === "cancelled";
     elements.captureFeedback.setAttribute("aria-busy", String(running));
     elements.captureButton.hidden = !showCaptureControls;
     elements.captureState.textContent = captureLabel(scrape);
@@ -1211,8 +1366,11 @@ export function createPopupApp(options: PopupAppOptions): {
       updateBookmark(updatedBookmark);
     },
     onFoldersChanged: (folders: readonly FolderRecord[]) => {
+      folderCount = folders.length;
       exportUi?.setFolders(folders);
+      renderOrganizationOverview();
     },
+    onFolderSelected: filterLibraryByOrganization,
   });
 
   renderLibraryView();
@@ -1230,8 +1388,18 @@ export function createPopupApp(options: PopupAppOptions): {
       categorizationFields = fields;
       renderSelectedCategoryIndicator();
     },
+    setDateTimePreferences: (preferences) => {
+      if (destroyed) return;
+      dateTimePreferences = preferences;
+      render();
+    },
     setFilterAsYouType: (enabled) => {
       if (!destroyed) setFilterAsYouType(enabled);
+    },
+    setQuickStopThreshold: (threshold) => {
+      if (destroyed) return;
+      quickStopThreshold = threshold;
+      render();
     },
     handleLiveBookmarkContext,
     destroy: () => {
