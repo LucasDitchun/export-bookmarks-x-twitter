@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { BookmarkRecord } from "../domain/types";
 import { BookmarkDatabase, transactionDone } from "./bookmark-database";
@@ -214,6 +214,43 @@ describe("TagRepository", () => {
     });
     expect(stored).not.toHaveProperty("deletedAt");
     database.close();
+  });
+
+  it("queries only matching bookmarks when soft-deleting a tag in a large library", async () => {
+    const databaseName = `indexed-tag-delete-${crypto.randomUUID()}`;
+    const targetTagId = "tag-target";
+    const matchingIds = new Set(["post-0000", "post-0250", "post-1004"]);
+    const database = await new BookmarkDatabase(databaseName).open();
+    const seedTransaction = database.transaction(
+      ["bookmarks", "tags"],
+      "readwrite",
+    );
+    seedTransaction.objectStore("tags").put({
+      id: targetTagId,
+      name: "Target",
+      normalizedName: "target",
+    });
+    for (let index = 0; index < 1_005; index += 1) {
+      const id = `post-${String(index).padStart(4, "0")}`;
+      seedTransaction.objectStore("bookmarks").put({
+        ...record(id),
+        tagIds: matchingIds.has(id) ? [targetTagId] : ["tag-other"],
+      });
+    }
+    await transactionDone(seedTransaction);
+    database.close();
+
+    const getAll = vi.spyOn(IDBObjectStore.prototype, "getAll");
+    const repository = new TagRepository(databaseName, {
+      now: () => new Date("2026-08-13T06:00:00.000Z"),
+    });
+
+    await expect(repository.delete(targetTagId)).resolves.toEqual({
+      deletedTagId: targetTagId,
+      preservedBookmarkCount: matchingIds.size,
+    });
+    expect(getAll).not.toHaveBeenCalled();
+    getAll.mockRestore();
   });
 
   it("keeps a deleted tag recoverable when a new active tag reuses its name", async () => {
