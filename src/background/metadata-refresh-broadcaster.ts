@@ -14,9 +14,17 @@ interface MetadataRefreshTab {
 interface MetadataRefreshBroadcasterDependencies {
   queryTabs(query: { url: readonly string[] }): Promise<MetadataRefreshTab[]>;
   sendToTab(tabId: number, request: MetadataRefreshRequest): Promise<unknown>;
+  waitBeforeQueryRetry?(attempt: number): Promise<void>;
 }
 
 type PendingRefresh = Set<string> | "full";
+const MAX_QUERY_ATTEMPTS = 2;
+
+function defaultRetryDelay(attempt: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 25 * attempt);
+  });
+}
 
 function mergeRefresh(
   current: PendingRefresh | null,
@@ -67,6 +75,7 @@ export function createMetadataRefreshBroadcaster(
   let running: Promise<void> | null = null;
 
   const drain = async (): Promise<void> => {
+    let queryAttempts = 0;
     while (pending) {
       await Promise.resolve();
       const current = pending;
@@ -76,11 +85,13 @@ export function createMetadataRefreshBroadcaster(
       try {
         tabs = await dependencies.queryTabs({ url: X_TAB_URL_PATTERNS });
       } catch (error) {
-        const queuedDuringQuery = pending;
-        pending = mergePending(current, queuedDuringQuery);
-        if (queuedDuringQuery === null) throw error;
+        pending = mergePending(current, pending);
+        queryAttempts += 1;
+        if (queryAttempts >= MAX_QUERY_ATTEMPTS) throw error;
+        await (dependencies.waitBeforeQueryRetry ?? defaultRetryDelay)(queryAttempts);
         continue;
       }
+      queryAttempts = 0;
       await Promise.allSettled(
         tabs.flatMap((tab) => {
           if (typeof tab.id !== "number" || !isXUrl(tab.url)) return [];
