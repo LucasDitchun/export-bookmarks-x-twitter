@@ -331,13 +331,10 @@
   "bookmarkPromptTags": { "message": "Tags" },
   "bookmarkPromptTagsHelp": { "message": "Separe várias tags com vírgulas." },
   "bookmarkPromptFolder": { "message": "Pasta" },
-  "bookmarkPromptChooseFolder": { "message": "Escolher pasta existente" },
-  "bookmarkPromptChooseTag": { "message": "Escolher tag existente" },
   "bookmarkPromptNote": { "message": "Nota privada" },
   "bookmarkCategorized": { "message": "Categorizado" },
   "bookmarkNeedsCategory": { "message": "Precisa de categoria" },
   "bookmarkMetadataLabel": { "message": "Detalhes da postagem salva no Bookmark X" },
-  "bookmarkMetadataMapped": { "message": "Mapeado pelo Bookmark X" },
   "bookmarkMetadataArchived": { "message": "Arquivado localmente" },
   "liveBookmarkPending": { "message": "Aguardando a confirmação do X…" },
   "liveBookmarkSaved": {

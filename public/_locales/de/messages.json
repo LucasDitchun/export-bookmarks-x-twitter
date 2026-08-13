@@ -405,16 +405,11 @@
   "bookmarkPromptTags": { "message": "Tags" },
   "bookmarkPromptTagsHelp": { "message": "Trenne mehrere Tags durch Kommas." },
   "bookmarkPromptFolder": { "message": "Ordner" },
-  "bookmarkPromptChooseFolder": { "message": "Vorhandenen Ordner auswählen" },
-  "bookmarkPromptChooseTag": { "message": "Vorhandenen Tag auswählen" },
   "bookmarkPromptNote": { "message": "Private Notiz" },
   "bookmarkCategorized": { "message": "Kategorisiert" },
   "bookmarkNeedsCategory": { "message": "Kategorie fehlt" },
   "bookmarkMetadataLabel": {
     "message": "Details zum mit Bookmark X gespeicherten Beitrag"
-  },
-  "bookmarkMetadataMapped": {
-    "message": "Von Bookmark X in der lokalen Sammlung erfasst"
   },
   "bookmarkMetadataArchived": { "message": "Lokal archiviert" },
   "liveBookmarkPending": { "message": "Warten auf die Bestätigung von X…" },

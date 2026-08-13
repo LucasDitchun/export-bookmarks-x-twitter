@@ -1,6 +1,5 @@
 import { ArchiveRepository } from "../storage/archive-repository";
 import { BookmarkRepository } from "../storage/bookmark-repository";
-import { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
 import { ExtensionStateRepository } from "../storage/extension-state";
 import { TagRepository } from "../storage/tag-repository";
 import { FolderRepository } from "../storage/folder-repository";
@@ -16,10 +15,7 @@ import { metadataRefreshRequest } from "./metadata-refresh";
 import { SemanticIndexRepository } from "../semantic/semantic-index-repository";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { createLocaleCatalogCache } from "./locale-catalog-cache";
-import {
-  createLocaleRefreshBroadcaster,
-  isLocaleStorageChange,
-} from "./locale-refresh";
+import { bookmarkMetadataMessagesFromCatalog } from "../shared/bookmark-metadata-messages";
 
 const state = new ExtensionStateRepository({
   get: (keys) => chrome.storage.local.get(keys),
@@ -28,7 +24,6 @@ const state = new ExtensionStateRepository({
 });
 const archive = new ArchiveRepository();
 const bookmarks = new BookmarkRepository();
-const metadata = new BookmarkMetadataRepository();
 const tags = new TagRepository();
 const folders = new FolderRepository();
 const search = new SearchRepository();
@@ -67,35 +62,12 @@ const backup = new BackupRepository("bookmark-x", {
   },
   settings,
 });
-const metadataMessageKeys = [
-  "bookmarkMetadataLabel",
-  "bookmarkMetadataMapped",
-  "bookmarkMetadataArchived",
-  "liveBookmarkPending",
-  "bookmarkNeedsCategory",
-  "bookmarkPromptFolder",
-  "bookmarkPromptTags",
-  "bookmarkPromptTagsHelp",
-  "bookmarkPromptNote",
-  "bookmarkPromptTitle",
-  "bookmarkPromptClose",
-  "bookmarkPromptSave",
-  "bookmarkMetadataOrganize",
-  "liveBookmarkSaved",
-  "liveBookmarkFailed",
-  "uncategorizedFolder",
-] as const;
 const loadMetadataMessages = createLocaleCatalogCache(async (localeName) => {
   const response = await fetch(
     chrome.runtime.getURL(`_locales/${localeName}/messages.json`),
   );
   if (!response.ok) throw new Error("Could not load metadata translations.");
-  const catalog = (await response.json()) as Record<string, { message?: unknown }>;
-  return Object.fromEntries(
-    metadataMessageKeys.flatMap((key) =>
-      typeof catalog[key]?.message === "string" ? [[key, catalog[key].message]] : [],
-    ),
-  );
+  return bookmarkMetadataMessagesFromCatalog(await response.json());
 });
 
 const locale = {
@@ -113,16 +85,10 @@ const locale = {
     return { locale: selectedLocale, messages: { ...english, ...selected } };
   },
 };
-const broadcastLocaleRefresh = createLocaleRefreshBroadcaster({
-  loadLocalization: () => locale.get(),
-  queryTabs: ({ url }) => chrome.tabs.query({ url: [...url] }),
-  sendToTab: (tabId, request) => chrome.tabs.sendMessage(tabId, request),
-});
 const controller = new BackgroundController({
   archive,
   exports,
   bookmarks,
-  metadata,
   tags,
   folders,
   search,
@@ -161,11 +127,6 @@ function scheduleSurfaceRestore(): void {
 scheduleSurfaceRestore();
 chrome.runtime.onInstalled.addListener(scheduleSurfaceRestore);
 chrome.runtime.onStartup.addListener(scheduleSurfaceRestore);
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (isLocaleStorageChange(changes, areaName, LOCALE_STORAGE_KEY)) {
-    void broadcastLocaleRefresh().catch(() => undefined);
-  }
-});
 
 void chrome.storage.local.setAccessLevel({
   accessLevel: "TRUSTED_CONTEXTS",
