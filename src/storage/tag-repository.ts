@@ -1,6 +1,7 @@
 import type { BookmarkRecord, BookmarkTag } from "../domain/types";
 import {
   BOOKMARKS_STORE,
+  BOOKMARK_TAG_INDEX,
   BookmarkDatabase,
   TAGS_STORE,
   requestAsPromise,
@@ -225,20 +226,17 @@ export class TagRepository {
     );
     const tagStore = transaction.objectStore(TAGS_STORE);
     const bookmarkStore = transaction.objectStore(BOOKMARKS_STORE);
-    const [tag, bookmarks] = await Promise.all([
+    const [tag, preservedBookmarkCount] = await Promise.all([
       requestAsPromise(tagStore.get(id) as IDBRequest<StoredBookmarkTag | undefined>),
-      requestAsPromise(bookmarkStore.getAll() as IDBRequest<BookmarkRecord[]>),
+      requestAsPromise(
+        bookmarkStore.index(BOOKMARK_TAG_INDEX).count(IDBKeyRange.only(id)),
+      ),
     ]);
     if (!tag || tag.deletedAt !== undefined) {
       transaction.abort();
       throw new Error(`Tag ${id} was not found.`);
     }
     const timestamp = this.now().toISOString();
-    let preservedBookmarkCount = 0;
-    for (const bookmark of bookmarks) {
-      if (!bookmark.tagIds.includes(id)) continue;
-      preservedBookmarkCount += 1;
-    }
     tagStore.put({ ...tag, deletedAt: timestamp });
     await transactionDone(transaction);
     return { deletedTagId: id, preservedBookmarkCount };

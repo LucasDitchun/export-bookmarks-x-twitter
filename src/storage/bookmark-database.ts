@@ -5,8 +5,9 @@ import type {
   FolderRecord,
 } from "../domain/types";
 
-export const BOOKMARK_DATABASE_VERSION = 4;
+export const BOOKMARK_DATABASE_VERSION = 5;
 export const BOOKMARK_FOLDERS_STORE = "bookmarkFolders";
+export const BOOKMARK_TAG_INDEX = "byTag";
 export const BOOKMARKS_STORE = "bookmarks";
 export const FOLDERS_STORE = "folders";
 export const META_STORE = "meta";
@@ -39,8 +40,11 @@ function createBookmarkIndexes(store: IDBObjectStore): void {
   if (!store.indexNames.contains("byFolder")) {
     store.createIndex("byFolder", "folderId", { unique: false });
   }
-  if (!store.indexNames.contains("byTag")) {
-    store.createIndex("byTag", "tagIds", { multiEntry: true, unique: false });
+  if (!store.indexNames.contains(BOOKMARK_TAG_INDEX)) {
+    store.createIndex(BOOKMARK_TAG_INDEX, "tagIds", {
+      multiEntry: true,
+      unique: false,
+    });
   }
 }
 
