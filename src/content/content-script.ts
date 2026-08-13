@@ -342,8 +342,12 @@ const liveBookmarkObserver = startLiveBookmarkObserver({
   document,
   send: (event) => chrome.runtime.sendMessage(event),
   translate: (key) => chrome.i18n.getMessage(key) || key,
-  onPending: (article, bookmarkId) => metadataDecorator.setPending(article, bookmarkId),
-  onChanged: (bookmarkId) => metadataDecorator.refresh(bookmarkId),
+  onPending: (article, bookmarkId) => {
+    void metadataDecorator.setPending(article, bookmarkId);
+  },
+  onChanged: (bookmarkId) => {
+    void metadataDecorator.refresh(bookmarkId);
+  },
 });
 
 window.addEventListener(
