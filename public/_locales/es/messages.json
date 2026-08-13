@@ -403,7 +403,7 @@
   "bookmarkPromptClose": { "message": "Cerrar" },
   "bookmarkPromptSave": { "message": "Guardar nota" },
   "bookmarkPromptTags": { "message": "Etiquetas" },
-  "bookmarkPromptTagsHelp": { "message": "Separa varias etiquetas con comas." },
+  "bookmarkPromptTagsHelp": { "message": "Pulsa Enter después de cada etiqueta." },
   "bookmarkPromptFolder": { "message": "Carpeta" },
   "bookmarkPromptNote": { "message": "Nota privada" },
   "bookmarkCategorized": { "message": "Categorizado" },

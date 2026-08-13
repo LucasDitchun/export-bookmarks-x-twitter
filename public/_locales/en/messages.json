@@ -317,7 +317,7 @@
   "bookmarkPromptClose": { "message": "Close" },
   "bookmarkPromptSave": { "message": "Save note" },
   "bookmarkPromptTags": { "message": "Tags" },
-  "bookmarkPromptTagsHelp": { "message": "Separate multiple tags with commas." },
+  "bookmarkPromptTagsHelp": { "message": "Press Enter after each tag." },
   "bookmarkPromptFolder": { "message": "Folder" },
   "bookmarkPromptNote": { "message": "Private note" },
   "bookmarkCategorized": { "message": "Categorized" },

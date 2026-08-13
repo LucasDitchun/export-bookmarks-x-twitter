@@ -403,7 +403,7 @@
   "bookmarkPromptClose": { "message": "閉じる" },
   "bookmarkPromptSave": { "message": "メモを保存" },
   "bookmarkPromptTags": { "message": "タグ" },
-  "bookmarkPromptTagsHelp": { "message": "複数のタグはカンマで区切ってください。" },
+  "bookmarkPromptTagsHelp": { "message": "タグごとに Enter キーを押してください。" },
   "bookmarkPromptFolder": { "message": "フォルダー" },
   "bookmarkPromptNote": { "message": "非公開メモ" },
   "bookmarkCategorized": { "message": "分類済み" },

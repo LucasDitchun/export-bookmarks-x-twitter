@@ -409,7 +409,7 @@
   "bookmarkPromptClose": { "message": "Fermer" },
   "bookmarkPromptSave": { "message": "Enregistrer la note" },
   "bookmarkPromptTags": { "message": "Tags" },
-  "bookmarkPromptTagsHelp": { "message": "Séparez plusieurs tags par des virgules." },
+  "bookmarkPromptTagsHelp": { "message": "Appuyez sur Entrée après chaque tag." },
   "bookmarkPromptFolder": { "message": "Dossier" },
   "bookmarkPromptNote": { "message": "Note privée" },
   "bookmarkCategorized": { "message": "Classé" },

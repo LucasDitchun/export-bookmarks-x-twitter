@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { BookmarkRecord } from "../domain/types";
 import type { RuntimeResponse, UiRequest } from "../shared/protocol";
-import { saveBookmarkMetadata } from "./bookmark-metadata";
+import { loadBookmarkMetadataDraft, saveBookmarkMetadata } from "./bookmark-metadata";
 
 const bookmark: BookmarkRecord = {
   id: "123",
@@ -22,7 +22,7 @@ const bookmark: BookmarkRecord = {
 };
 
 describe("saveBookmarkMetadata", () => {
-  it("reconciles a plain note, tags, and hierarchical folder from the modal", async () => {
+  it("round-trips delimiter characters through structured tag and folder tokens", async () => {
     const requests: UiRequest[] = [];
     const send = vi.fn(
       async (request: UiRequest): Promise<RuntimeResponse<unknown>> => {
@@ -35,8 +35,11 @@ describe("saveBookmarkMetadata", () => {
       bookmark,
       values: {
         description: "<b>Keep as plain text</b>",
-        tags: " Keep, New ",
-        folder: "Research / AI",
+        tags: [
+          { id: "tag-ai", name: "AI, ML" },
+          { id: null, name: "New, exact" },
+        ],
+        folder: { id: null, path: ["R&D/Video"] },
       },
       send,
     });
@@ -47,8 +50,8 @@ describe("saveBookmarkMetadata", () => {
         payload: {
           id: "123",
           note: "<b>Keep as plain text</b>",
-          tags: ["Keep", "New"],
-          folderPath: ["Research", "AI"],
+          tags: ["AI, ML", "New, exact"],
+          folderPath: ["R&D/Video"],
         },
       },
     ]);
@@ -66,12 +69,16 @@ describe("saveBookmarkMetadata", () => {
 
     await saveBookmarkMetadata({
       bookmark: original,
-      values: { description: "", tags: "Research", folder: "" },
+      values: {
+        description: "",
+        tags: [{ id: null, name: "Research" }],
+        folder: null,
+      },
       send,
     });
     await saveBookmarkMetadata({
       bookmark: original,
-      values: { description: "", tags: "", folder: "" },
+      values: { description: "", tags: [], folder: null },
       send,
     });
 
@@ -97,12 +104,56 @@ describe("saveBookmarkMetadata", () => {
         bookmark,
         values: {
           description: "x".repeat(20_001),
-          tags: "valid",
-          folder: "Research",
+          tags: [{ id: null, name: "valid" }],
+          folder: { id: null, path: ["Research"] },
         },
         send,
       }),
     ).rejects.toThrow("20,000");
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it("loads existing metadata as ID-backed tokens without serializing delimiters", async () => {
+    const send = vi.fn(
+      async (request: UiRequest): Promise<RuntimeResponse<unknown>> =>
+        request.type === "LIST_TAGS"
+          ? {
+              ok: true,
+              data: {
+                tags: [
+                  { id: "tag-ai", name: "AI, ML", normalizedName: "ai, ml" },
+                ],
+              },
+            }
+          : {
+              ok: true,
+              data: {
+                folders: [
+                  { id: "folder-video", name: "R&D/Video", parentId: null },
+                ],
+              },
+            },
+    );
+
+    await expect(
+      loadBookmarkMetadataDraft({
+        bookmark: {
+          ...bookmark,
+          tagIds: ["tag-ai"],
+          folderId: "folder-video",
+        },
+        send,
+      }),
+    ).resolves.toEqual({
+      values: {
+        description: "Old note",
+        tags: [{ id: "tag-ai", name: "AI, ML" }],
+        folder: { id: "folder-video", path: ["R&D/Video"] },
+      },
+      choices: {
+        tags: [{ id: "tag-ai", name: "AI, ML" }],
+        folders: [{ id: "folder-video", path: ["R&D/Video"] }],
+      },
+    });
   });
 });

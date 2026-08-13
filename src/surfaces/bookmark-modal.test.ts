@@ -20,7 +20,7 @@ describe("createBookmarkModal", () => {
         folder: "Folder",
         save: "Save note",
         tags: "Tags",
-        tagsHelp: "Separate multiple tags with commas.",
+        tagsHelp: "Press Enter after each tag.",
       },
     });
     modal.open();
@@ -40,8 +40,14 @@ describe("createBookmarkModal", () => {
     expect(styles).toContain("overflow-y: auto");
     expect(styles).not.toContain("font-family: Georgia");
     modal.setChoices({
-      folders: ["Reading / AI", "Reading / Design"],
-      tags: ["research", "accessibility"],
+      folders: [
+        { id: "folder-ai", path: ["Reading", "AI"] },
+        { id: "folder-design", path: ["Reading", "Design"] },
+      ],
+      tags: [
+        { id: "tag-research", name: "research" },
+        { id: "tag-accessibility", name: "accessibility" },
+      ],
     });
     expect(
       Array.from(
@@ -65,7 +71,7 @@ describe("createBookmarkModal", () => {
       shadow?.querySelector("#bookmark-x-modal-tags")?.getAttribute("aria-describedby"),
     ).toBe("bookmark-x-modal-tags-help");
     expect(shadow?.querySelector("#bookmark-x-modal-tags-help")?.textContent).toBe(
-      "Separate multiple tags with commas.",
+      "Press Enter after each tag.",
     );
     expect(shadow?.querySelectorAll(".choice-select")).toHaveLength(0);
     const description = shadow?.querySelector("#bookmark-x-modal-description");
@@ -145,7 +151,7 @@ describe("createBookmarkModal", () => {
         folder: "Folder",
         save: "Save note",
         tags: "Tags",
-        tagsHelp: "Separate multiple tags with commas.",
+        tagsHelp: "Press Enter after each tag.",
       },
     });
     modal.open();
@@ -164,7 +170,7 @@ describe("createBookmarkModal", () => {
         folder: "Pasta",
         save: "Salvar nota",
         tags: "Tags",
-        tagsHelp: "Separe várias tags com vírgulas.",
+        tagsHelp: "Pressione Enter após cada tag.",
       },
     });
 
@@ -180,7 +186,7 @@ describe("createBookmarkModal", () => {
     modal.destroy();
   });
 
-  it("submits plain values and keeps keyboard focus inside the dialog", async () => {
+  it("submits existing and new structured tokens without splitting delimiters", async () => {
     const onSave = vi.fn(async () => undefined);
     const modal = createBookmarkModal({
       document,
@@ -193,7 +199,16 @@ describe("createBookmarkModal", () => {
         save: "Save note",
         tags: "Tags",
       },
+      values: {
+        description: "",
+        tags: [{ id: "tag-ai", name: "AI, ML" }],
+        folder: { id: "folder-video", path: ["R&D/Video"] },
+      },
       onSave,
+    });
+    modal.setChoices({
+      tags: [{ id: "tag-ai", name: "AI, ML" }],
+      folders: [{ id: "folder-video", path: ["R&D/Video"] }],
     });
     modal.open();
     const shadow = modal.host.shadowRoot;
@@ -214,16 +229,22 @@ describe("createBookmarkModal", () => {
       "#bookmark-x-modal-description",
     );
     if (!tags || !folder || !description) throw new Error("Missing modal fields");
-    tags.value = "research, ai";
-    folder.value = "Reading / AI";
+    tags.value = "New, exact";
+    tags.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(shadow?.querySelector(".folder-token")?.textContent).toContain(
+      "R&D/Video",
+    );
     description.value = "Review the examples";
     shadow
       ?.querySelector("form")
       ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
     await vi.waitFor(() =>
       expect(onSave).toHaveBeenCalledWith({
-        tags: "research, ai",
-        folder: "Reading / AI",
+        tags: [
+          { id: "tag-ai", name: "AI, ML" },
+          { id: null, name: "New, exact" },
+        ],
+        folder: { id: "folder-video", path: ["R&D/Video"] },
         description: "Review the examples",
       }),
     );
@@ -257,6 +278,43 @@ describe("createBookmarkModal", () => {
       ).toBe(false),
     );
     expect(modal.host.hidden).toBe(false);
+    modal.destroy();
+  });
+
+  it("keeps a new folder name containing a slash as one structured segment", async () => {
+    const onSave = vi.fn(async () => undefined);
+    const modal = createBookmarkModal({
+      document,
+      title: "Bookmark note",
+      bookmarkTitle: "A useful post",
+      labels: {
+        close: "Close",
+        description: "Private note",
+        folder: "Folder",
+        save: "Save note",
+        tags: "Tags",
+      },
+      onSave,
+    });
+    modal.open();
+    const shadow = modal.host.shadowRoot;
+    const folder = shadow?.querySelector<HTMLInputElement>(
+      "#bookmark-x-modal-folder",
+    );
+    if (!folder) throw new Error("Missing folder field");
+    folder.value = "R&D/Video";
+    folder.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    shadow
+      ?.querySelector("form")
+      ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({
+        description: "",
+        tags: [],
+        folder: { id: null, path: ["R&D/Video"] },
+      }),
+    );
     modal.destroy();
   });
 });

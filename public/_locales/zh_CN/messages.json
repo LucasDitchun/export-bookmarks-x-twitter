@@ -381,7 +381,7 @@
   "bookmarkPromptClose": { "message": "关闭" },
   "bookmarkPromptSave": { "message": "保存笔记" },
   "bookmarkPromptTags": { "message": "标签" },
-  "bookmarkPromptTagsHelp": { "message": "多个标签请用逗号分隔。" },
+  "bookmarkPromptTagsHelp": { "message": "输入每个标签后按 Enter 键。" },
   "bookmarkPromptFolder": { "message": "文件夹" },
   "bookmarkPromptNote": { "message": "私人笔记" },
   "bookmarkCategorized": { "message": "已分类" },

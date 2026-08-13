@@ -7,6 +7,7 @@ import type {
 } from "../shared/protocol";
 import type {
   BookmarkModalChoices,
+  BookmarkModalFolderToken,
   BookmarkModalValues,
 } from "../surfaces/bookmark-modal";
 
@@ -62,9 +63,7 @@ function validateValues(values: BookmarkModalValues): ValidatedMetadata {
   const tags = [
     ...new Map(
       values.tags
-        .split(",")
-        .filter((value) => normalizeName(value).length > 0)
-        .map((value) => {
+        .map(({ name: value }) => {
           const name = validateName(value, "tag");
           return [comparableName(name), name] as const;
         }),
@@ -73,9 +72,7 @@ function validateValues(values: BookmarkModalValues): ValidatedMetadata {
   if (tags.length > MAX_TAGS)
     throw new Error(`A bookmark can have at most ${MAX_TAGS} tags.`);
 
-  const rawFolderPath = values.folder
-    .split("/")
-    .filter((value) => normalizeName(value).length > 0);
+  const rawFolderPath = values.folder?.path ?? [];
   if (rawFolderPath.length > MAX_FOLDER_DEPTH) {
     throw new Error(`A folder path can have at most ${MAX_FOLDER_DEPTH} levels.`);
   }
@@ -116,8 +113,11 @@ function isFolderListResult(value: unknown): value is FolderListResult {
   );
 }
 
-function folderPathFor(folderId: string | null, folders: FolderRecord[]): string {
-  if (!folderId) return "";
+function folderTokenFor(
+  folderId: string | null,
+  folders: FolderRecord[],
+): BookmarkModalFolderToken | null {
+  if (!folderId) return null;
   const byId = new Map(folders.map((folder) => [folder.id, folder]));
   const names: string[] = [];
   const visited = new Set<string>();
@@ -127,7 +127,7 @@ function folderPathFor(folderId: string | null, folders: FolderRecord[]): string
     names.unshift(current.name);
     current = current.parentId ? byId.get(current.parentId) : undefined;
   }
-  return names.join(" / ");
+  return names.length > 0 ? { id: folderId, path: names } : null;
 }
 
 export async function loadBookmarkMetadataValues(options: {
@@ -154,17 +154,18 @@ export async function loadBookmarkMetadataDraft(options: {
   return {
     values: {
       description: options.bookmark.note,
-      folder: folderPathFor(options.bookmark.folderId, folderData.folders),
+      folder: folderTokenFor(options.bookmark.folderId, folderData.folders),
       tags: options.bookmark.tagIds
-        .map((id) => tagsById.get(id)?.name)
-        .filter((name): name is string => typeof name === "string")
-        .join(", "),
+        .map((id) => tagsById.get(id))
+        .filter((tag): tag is NonNullable<typeof tag> => tag !== undefined)
+        .map((tag) => ({ id: tag.id, name: tag.name })),
     },
     choices: {
-      folders: folderData.folders.map((folder) =>
-        folderPathFor(folder.id, folderData.folders),
-      ),
-      tags: tagData.tags.map((tag) => tag.name),
+      folders: folderData.folders.flatMap((folder) => {
+        const token = folderTokenFor(folder.id, folderData.folders);
+        return token ? [{ ...token, id: folder.id }] : [];
+      }),
+      tags: tagData.tags.map((tag) => ({ id: tag.id, name: tag.name })),
     },
   };
 }

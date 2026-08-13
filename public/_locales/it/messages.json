@@ -401,7 +401,7 @@
   "bookmarkPromptClose": { "message": "Chiudi" },
   "bookmarkPromptSave": { "message": "Salva nota" },
   "bookmarkPromptTags": { "message": "Tag" },
-  "bookmarkPromptTagsHelp": { "message": "Separa più tag con le virgole." },
+  "bookmarkPromptTagsHelp": { "message": "Premi Invio dopo ogni tag." },
   "bookmarkPromptFolder": { "message": "Cartella" },
   "bookmarkPromptNote": { "message": "Nota privata" },
   "bookmarkCategorized": { "message": "Categorizzato" },
