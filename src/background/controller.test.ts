@@ -77,6 +77,22 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       getMany: vi.fn(async (): Promise<BookmarkRecord[]> => []),
       saveNote: vi.fn(async (): Promise<unknown> => null),
     },
+    metadata: {
+      save: vi.fn(
+        async (): Promise<BookmarkRecord> => ({
+          ...bookmark,
+          media: bookmark.media ?? { images: [], videos: [] },
+          note: "",
+          folderId: null,
+          tagIds: [],
+          firstSavedAt: "2026-07-29T11:00:01.000Z",
+          lastSeenAt: "2026-07-29T11:00:01.000Z",
+          archivedAt: null,
+          metadataUpdatedAt: "2026-07-29T11:00:01.000Z",
+          status: "current",
+        }),
+      ),
+    },
     search: {
       search: vi.fn(async (): Promise<unknown> => ({
         items: [],
@@ -965,6 +981,36 @@ describe("BackgroundController", () => {
     expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
   });
 
+  it("saves modal metadata through one atomic storage operation", async () => {
+    const dependencies = createDependencies();
+    const storedBookmark: BookmarkRecord = {
+      ...bookmark,
+      media: bookmark.media ?? { images: [], videos: [] },
+      note: "Context",
+      folderId: "folder-ai",
+      tagIds: ["tag-research"],
+      firstSavedAt: "2026-07-29T11:00:01.000Z",
+      lastSeenAt: "2026-07-29T11:00:01.000Z",
+      archivedAt: null,
+      metadataUpdatedAt: "2026-08-13T05:30:00.000Z",
+      status: "current",
+    };
+    dependencies.metadata.save.mockResolvedValueOnce(storedBookmark);
+    const controller = new BackgroundController(dependencies);
+    const payload = {
+      id: "123",
+      note: "Context",
+      tags: ["Research"],
+      folderPath: ["Topics", "AI"],
+    };
+
+    await expect(
+      controller.handle({ type: "SAVE_BOOKMARK_METADATA", payload }, POPUP_SENDER),
+    ).resolves.toEqual({ ok: true, data: { bookmark: storedBookmark } });
+    expect(dependencies.metadata.save).toHaveBeenCalledWith(payload);
+    expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
+  });
+
   it("lists, assigns, removes, renames, and soft-deletes validated bookmark tags", async () => {
     const dependencies = createDependencies();
     const tag = {
@@ -1225,8 +1271,23 @@ describe("BackgroundController", () => {
         POPUP_SENDER,
       ),
     ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
+    await expect(
+      controller.handle(
+        {
+          type: "SAVE_BOOKMARK_METADATA",
+          payload: {
+            id: "123",
+            note: "valid",
+            tags: ["\u0000unsafe"],
+            folderPath: [],
+          },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
     expect(dependencies.bookmarks.get).not.toHaveBeenCalled();
     expect(dependencies.bookmarks.saveNote).not.toHaveBeenCalled();
+    expect(dependencies.metadata.save).not.toHaveBeenCalled();
   });
 
   it("rejects unsafe or unbounded local search requests", async () => {

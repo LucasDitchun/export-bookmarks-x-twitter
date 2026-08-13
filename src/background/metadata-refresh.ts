@@ -24,6 +24,7 @@ export function metadataRefreshRequest(request: unknown): ContentControlRequest 
           : null;
   if (
     message.type === "SAVE_BOOKMARK_NOTE" ||
+    message.type === "SAVE_BOOKMARK_METADATA" ||
     message.type === "ADD_BOOKMARK_TAG" ||
     message.type === "REMOVE_BOOKMARK_TAG" ||
     message.type === "ASSIGN_BOOKMARK_FOLDER" ||
