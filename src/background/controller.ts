@@ -236,7 +236,12 @@ function isSaveBookmarkMetadataInput(
       (folder.id === null || isLocalEntityId(folder.id)) &&
       Array.isArray(folder.path) &&
       folder.path.length <= 32 &&
-      folder.path.every(isFolderName));
+      folder.path.every(isFolderName) &&
+      (folder.newSegments === undefined ||
+        (folder.id !== null &&
+          Array.isArray(folder.newSegments) &&
+          folder.newSegments.length <= 32 &&
+          folder.newSegments.every(isFolderName))));
   return (
     isRecord(value) &&
     isBookmarkId(value.id) &&

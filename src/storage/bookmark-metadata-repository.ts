@@ -104,11 +104,20 @@ function validateInput(input: SaveBookmarkMetadataInput): SaveBookmarkMetadataIn
   const folder = rawFolder && {
     id: rawFolder.id === null ? null : localEntityId(rawFolder.id),
     path: rawFolder.path.map(folderDisplayName),
+    ...(rawFolder.newSegments === undefined
+      ? {}
+      : { newSegments: rawFolder.newSegments.map(folderDisplayName) }),
   };
   if ((folder?.path.length ?? 0) > MAX_BOOKMARK_METADATA_FOLDER_DEPTH) {
     throw new RangeError(
       `A folder path can have at most ${MAX_BOOKMARK_METADATA_FOLDER_DEPTH} levels.`,
     );
+  }
+  if (
+    (folder?.newSegments?.length ?? 0) > MAX_BOOKMARK_METADATA_FOLDER_DEPTH ||
+    (folder?.id === null && folder.newSegments !== undefined)
+  ) {
+    throw new RangeError("The selected folder hierarchy is invalid.");
   }
   return { id: input.id, note: input.note, tags, folder };
 }
@@ -212,7 +221,11 @@ export class BookmarkMetadataRepository {
     ];
 
     let folderId: string | null = selectedFolderId;
-    for (const name of input.folder?.id === null ? input.folder.path : []) {
+    const newFolderSegments =
+      input.folder?.id === null
+        ? input.folder.path
+        : (input.folder?.newSegments ?? []);
+    for (const name of newFolderSegments) {
       let folder = activeFolders.find(
         (candidate) =>
           candidate.parentId === folderId && sameFolderName(candidate.name, name),

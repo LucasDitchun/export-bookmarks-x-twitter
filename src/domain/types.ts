@@ -79,6 +79,7 @@ export interface BookmarkMetadataTagSelection {
 export interface BookmarkMetadataFolderSelection {
   id: string | null;
   path: string[];
+  newSegments?: string[];
 }
 
 export interface SaveBookmarkMetadataInput {

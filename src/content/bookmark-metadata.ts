@@ -92,6 +92,13 @@ function validateValues(values: BookmarkModalValues): ValidatedMetadata {
   const folder = values.folder && {
     id: values.folder.id,
     path: rawFolderPath.map((value) => validateName(value, "folder")),
+    ...(values.folder.newSegments === undefined
+      ? {}
+      : {
+          newSegments: values.folder.newSegments.map((value) =>
+            validateName(value, "folder"),
+          ),
+        }),
   };
   return { note: values.description, tags, folder };
 }
