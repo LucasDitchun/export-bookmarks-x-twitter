@@ -177,6 +177,54 @@ describe("startLiveBookmarkObserver", () => {
     expect(events.some(({ type }) => type === "LIVE_BOOKMARK_CANCELLED")).toBe(false);
   });
 
+  it("uses the manually selected locale when opening the automatic modal", async () => {
+    const button = renderTweet();
+    const send = vi.fn(
+      async (event: ContentEvent | UiRequest): Promise<RuntimeResponse<unknown>> => {
+        if (event.type === "LIVE_BOOKMARK_PENDING") {
+          return {
+            ok: true,
+            data: {
+              prompt: true,
+              surface: "modal",
+              opened: false,
+              localization: {
+                locale: "pt_BR",
+                messages: {
+                  bookmarkPromptTitle: "Por que você está salvando isto?",
+                  bookmarkPromptClose: "Fechar",
+                  bookmarkPromptNote: "Nota privada",
+                  bookmarkPromptFolder: "Pasta",
+                  bookmarkPromptSave: "Salvar nota",
+                  bookmarkPromptTags: "Tags",
+                  bookmarkPromptTagsHelp: "Separe várias tags com vírgulas.",
+                  liveBookmarkPending: "Salvando…",
+                },
+              },
+            },
+          };
+        }
+        return { ok: true, data: null };
+      },
+    );
+    const observer = startLiveBookmarkObserver({
+      document,
+      stableForMs: 40,
+      timeoutMs: 500,
+      send,
+      translate: (key) => `chrome:${key}`,
+    });
+
+    button.click();
+    await settleMutation();
+
+    const title = document
+      .querySelector("bookmark-x-note-modal")
+      ?.shadowRoot?.querySelector("h2")?.textContent;
+    observer.stop();
+    expect(title).toBe("Por que você está salvando isto?");
+  });
+
   it("persists modal note, tags, and folder after X confirms the bookmark", async () => {
     const button = renderTweet();
     const metadataRequests: UiRequest[] = [];

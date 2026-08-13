@@ -1,5 +1,6 @@
 import type { BookmarkRecord, BookmarkSnapshot } from "../domain/types";
 import type {
+  BookmarkLocalizationResult,
   ContentEvent,
   LiveBookmarkAction,
   LiveBookmarkIntentResult,
@@ -148,6 +149,20 @@ function modalLabels(translate: Translate) {
   };
 }
 
+function selectedLocaleTranslator(
+  localization: Partial<BookmarkLocalizationResult> | undefined,
+  fallback: Translate,
+): Translate {
+  if (
+    !localization ||
+    typeof localization.messages !== "object" ||
+    localization.messages === null
+  ) {
+    return fallback;
+  }
+  return (key) => localization.messages?.[key] ?? fallback(key);
+}
+
 export function startLiveBookmarkObserver(
   options: LiveBookmarkObserverOptions,
 ): LiveBookmarkObserverController {
@@ -198,12 +213,17 @@ export function startLiveBookmarkObserver(
     const intentResult = response?.ok
       ? (response.data as LiveBookmarkIntentResult)
       : null;
+    let translate = options.translate;
     if (
       !stopped &&
       !active.controller.signal.aborted &&
       intentResult?.prompt &&
       intentResult.surface === "modal"
     ) {
+      translate = selectedLocaleTranslator(
+        intentResult.localization,
+        options.translate,
+      );
       let modal: BookmarkModalController | null = null;
       const metadataController = new AbortController();
       active.metadataController = metadataController;
@@ -236,19 +256,19 @@ export function startLiveBookmarkObserver(
       };
       modal = createBookmarkModal({
         document: options.document,
-        title: options.translate("bookmarkPromptTitle"),
+        title: translate("bookmarkPromptTitle"),
         bookmarkTitle: bookmark.text || bookmark.url,
-        labels: modalLabels(options.translate),
+        labels: modalLabels(translate),
         onSave: async (values) => {
-          active.modal?.setState("pending", options.translate("liveBookmarkPending"));
+          active.modal?.setState("pending", translate("liveBookmarkPending"));
           try {
             await persistValues(values);
             options.onChanged?.(bookmark.id);
-            active.modal?.setState("ready", options.translate("liveBookmarkSaved"));
+            active.modal?.setState("ready", translate("liveBookmarkSaved"));
             return true;
           } catch {
             if (!metadataController.signal.aborted) {
-              active.modal?.setState("ready", options.translate("liveBookmarkFailed"));
+              active.modal?.setState("ready", translate("liveBookmarkFailed"));
             }
             return false;
           }
@@ -289,7 +309,7 @@ export function startLiveBookmarkObserver(
       await options
         .send({ type: "LIVE_BOOKMARK_CANCELLED", intentId: active.intentId })
         .catch(() => undefined);
-      active.modal?.setState("error", options.translate("liveBookmarkFailed"));
+      active.modal?.setState("error", translate("liveBookmarkFailed"));
       options.onChanged?.(bookmark.id);
       activeByBookmark.delete(bookmark.id);
       return;
@@ -313,18 +333,18 @@ export function startLiveBookmarkObserver(
             await active.prepareMetadata?.(record);
           }
           if (!active.controller.signal.aborted) {
-            active.modal?.setState("ready", options.translate("liveBookmarkSaved"));
+            active.modal?.setState("ready", translate("liveBookmarkSaved"));
           }
         } catch {
           if (!active.controller.signal.aborted) {
-            active.modal?.setState("ready", options.translate("liveBookmarkFailed"));
+            active.modal?.setState("ready", translate("liveBookmarkFailed"));
           }
         }
       } else {
-        active.modal?.setState("success", options.translate("liveBookmarkArchived"));
+        active.modal?.setState("success", translate("liveBookmarkArchived"));
       }
     } else {
-      active.modal?.setState("error", options.translate("liveBookmarkFailed"));
+      active.modal?.setState("error", translate("liveBookmarkFailed"));
     }
     options.onChanged?.(bookmark.id);
     activeByBookmark.delete(bookmark.id);

@@ -206,6 +206,37 @@ describe("isBookmarksUrl", () => {
 });
 
 describe("BackgroundController", () => {
+  it("returns the selected locale with an automatic modal prompt", async () => {
+    const dependencies = createDependencies("https://x.com/home");
+    dependencies.locale.get.mockResolvedValue({
+      locale: "ja",
+      messages: { bookmarkPromptTitle: "なぜこれを保存しますか？" },
+    });
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        {
+          type: "LIVE_BOOKMARK_PENDING",
+          intentId: "localized-modal",
+          action: "save",
+          bookmark,
+        },
+        { id: EXTENSION_ID, tab: { id: 7, url: "https://x.com/home" } },
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: {
+        prompt: true,
+        surface: "modal",
+        localization: {
+          locale: "ja",
+          messages: { bookmarkPromptTitle: "なぜこれを保存しますか？" },
+        },
+      },
+    });
+  });
+
   it("opens the configured surface pending, then saves only after confirmation", async () => {
     const dependencies = createDependencies("https://x.com/home");
     dependencies.settings.get.mockResolvedValue({
