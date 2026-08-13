@@ -13,7 +13,7 @@ describe("metadataRefreshRequest", () => {
     expect(
       metadataRefreshRequest({
         type: "SAVE_BOOKMARK_METADATA",
-        payload: { id: "321", note: "", tags: [], folderPath: [] },
+        payload: { id: "321", note: "", tags: [], folder: null },
       }),
     ).toEqual({ type: "REFRESH_BOOKMARK_METADATA", bookmarkIds: ["321"] });
     expect(

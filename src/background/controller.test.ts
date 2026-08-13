@@ -654,7 +654,12 @@ describe("BackgroundController", () => {
     await controller.handle(
       {
         type: "SAVE_BOOKMARK_METADATA",
-        payload: { id: "123", note: "", tags: ["AI"], folderPath: [] },
+        payload: {
+          id: "123",
+          note: "",
+          tags: [{ id: null, name: "AI" }],
+          folder: null,
+        },
       },
       CONTENT_SENDER,
     );
@@ -1082,8 +1087,8 @@ describe("BackgroundController", () => {
     const payload = {
       id: "123",
       note: "Context",
-      tags: ["Research"],
-      folderPath: ["Topics", "AI"],
+      tags: [{ id: "tag-research", name: "Research" }],
+      folder: { id: "folder-ai", path: ["Topics", "AI"] },
     };
 
     await expect(
@@ -1360,8 +1365,22 @@ describe("BackgroundController", () => {
           payload: {
             id: "123",
             note: "valid",
-            tags: ["\u0000unsafe"],
-            folderPath: [],
+            tags: [{ id: null, name: "\u0000unsafe" }],
+            folder: null,
+          },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
+    await expect(
+      controller.handle(
+        {
+          type: "SAVE_BOOKMARK_METADATA",
+          payload: {
+            id: "123",
+            note: "valid",
+            tags: [{ id: "<script>", name: "Research" }],
+            folder: { id: "folder-safe", path: ["Research"] },
           },
         },
         POPUP_SENDER,

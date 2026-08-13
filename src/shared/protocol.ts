@@ -5,6 +5,7 @@ import type {
   BookmarkSnapshot,
   BookmarkTag,
   FolderRecord,
+  SaveBookmarkMetadataInput,
   ScrapeMode,
   ScrapeRun,
   SupportedLocale,
@@ -195,7 +196,7 @@ export type UiRequest =
   | { type: "SAVE_BOOKMARK_NOTE"; payload: { id: string; note: string } }
   | {
       type: "SAVE_BOOKMARK_METADATA";
-      payload: { id: string; note: string; tags: string[]; folderPath: string[] };
+      payload: SaveBookmarkMetadataInput;
     }
   | { type: "LIST_TAGS" }
   | { type: "LIST_ORGANIZATION_TRASH" }

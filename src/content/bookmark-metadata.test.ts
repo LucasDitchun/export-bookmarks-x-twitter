@@ -40,8 +40,11 @@ describe("saveBookmarkMetadata", () => {
         payload: {
           id: "123",
           note: "<b>Keep as plain text</b>",
-          tags: ["AI, ML", "New, exact"],
-          folderPath: ["R&D/Video"],
+          tags: [
+            { id: "tag-ai", name: "AI, ML" },
+            { id: null, name: "New, exact" },
+          ],
+          folder: { id: null, path: ["R&D/Video"] },
         },
       },
     ]);
@@ -75,11 +78,16 @@ describe("saveBookmarkMetadata", () => {
     expect(requests).toEqual([
       {
         type: "SAVE_BOOKMARK_METADATA",
-        payload: { id: "123", note: "", tags: ["Research"], folderPath: [] },
+        payload: {
+          id: "123",
+          note: "",
+          tags: [{ id: null, name: "Research" }],
+          folder: null,
+        },
       },
       {
         type: "SAVE_BOOKMARK_METADATA",
-        payload: { id: "123", note: "", tags: [], folderPath: [] },
+        payload: { id: "123", note: "", tags: [], folder: null },
       },
     ]);
   });
@@ -104,25 +112,20 @@ describe("saveBookmarkMetadata", () => {
   });
 
   it("loads existing metadata as ID-backed tokens without serializing delimiters", async () => {
-    const send = vi.fn(
-      async (request: UiRequest): Promise<RuntimeResponse<unknown>> =>
-        request.type === "LIST_TAGS"
-          ? {
-              ok: true,
-              data: {
-                tags: [
-                  { id: "tag-ai", name: "AI, ML", normalizedName: "ai, ml" },
-                ],
-              },
-            }
-          : {
-              ok: true,
-              data: {
-                folders: [
-                  { id: "folder-video", name: "R&D/Video", parentId: null },
-                ],
-              },
+    const send = vi.fn(async (request: UiRequest): Promise<RuntimeResponse<unknown>> =>
+      request.type === "LIST_TAGS"
+        ? {
+            ok: true,
+            data: {
+              tags: [{ id: "tag-ai", name: "AI, ML", normalizedName: "ai, ml" }],
             },
+          }
+        : {
+            ok: true,
+            data: {
+              folders: [{ id: "folder-video", name: "R&D/Video", parentId: null }],
+            },
+          },
     );
 
     await expect(

@@ -28,7 +28,7 @@ describe("KeyedTaskQueue", () => {
     const second = queue.run(
       messageSerializationKey({
         type: "SAVE_BOOKMARK_METADATA",
-        payload: { id: "100", note: "second", tags: [], folderPath: [] },
+        payload: { id: "100", note: "second", tags: [], folder: null },
       }),
       async () => {
         events.push("second:start");
