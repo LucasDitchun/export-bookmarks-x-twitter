@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  isGlobalSerializationBarrierAwareRead,
   isGlobalSerializationBarrier,
   KeyedTaskQueue,
   messageSerializationKey,
@@ -249,6 +250,68 @@ describe("KeyedTaskQueue", () => {
     await barrier;
   });
 
+  it("waits to export a backup until an active destructive barrier settles", async () => {
+    const queue = new KeyedTaskQueue();
+    const gate = deferred();
+    const events: string[] = [];
+    const barrierRequest = { type: "RESTORE_BACKUP" };
+    const barrier = queue.run(
+      messageSerializationKey(barrierRequest),
+      async () => {
+        events.push("restore:start");
+        await gate.promise;
+        events.push("restore:end");
+      },
+      { globalBarrier: true },
+    );
+    const exportRequest = { type: "EXPORT_BACKUP" };
+    const exported = queue.run(
+      messageSerializationKey(exportRequest),
+      async () => events.push("export"),
+      { waitForGlobalBarrier: isGlobalSerializationBarrierAwareRead(exportRequest) },
+    );
+    const status = queue.run(null, async () => events.push("status"));
+
+    await status;
+    expect(events).toEqual(["restore:start", "status"]);
+    gate.resolve();
+    await Promise.all([barrier, exported]);
+    expect(events).toEqual(["restore:start", "status", "restore:end", "export"]);
+  });
+
+  it("keeps backup exports free without a barrier and recovers after barrier errors", async () => {
+    const queue = new KeyedTaskQueue();
+    const mutationGate = deferred();
+    const mutation = queue.run("bookmark:100", () => mutationGate.promise);
+    const exportRequest = { type: "EXPORT_BACKUP" };
+
+    await expect(
+      queue.run(null, () => Promise.resolve("snapshot"), {
+        waitForGlobalBarrier: isGlobalSerializationBarrierAwareRead(exportRequest),
+      }),
+    ).resolves.toBe("snapshot");
+
+    const barrierRequest = { type: "RESTORE_BACKUP" };
+    mutationGate.resolve();
+    await mutation;
+    const failedBarrier = queue.run(
+      messageSerializationKey(barrierRequest),
+      () => Promise.reject(new Error("restore failed")),
+      { globalBarrier: true },
+    );
+    const exportAfterFailure = queue.run(null, () => Promise.resolve("recovered"), {
+      waitForGlobalBarrier: true,
+    });
+
+    await expect(failedBarrier).rejects.toThrow("restore failed");
+    await expect(exportAfterFailure).resolves.toBe("recovered");
+    await expect(
+      queue.run(null, () => Promise.resolve("next"), { waitForGlobalBarrier: true }),
+    ).resolves.toBe("next");
+    expect(queue.pendingKeyCount).toBe(0);
+    expect(queue.pendingMutationCount).toBe(0);
+  });
+
   it("removes settled keys instead of growing for the service worker lifetime", async () => {
     const queue = new KeyedTaskQueue();
     await Promise.all(
@@ -302,5 +365,7 @@ describe("messageSerializationKey", () => {
     expect(isGlobalSerializationBarrier({ type: "RESTORE_BACKUP" })).toBe(true);
     expect(isGlobalSerializationBarrier({ type: "CLEAR_ARCHIVE" })).toBe(true);
     expect(isGlobalSerializationBarrier({ type: "SAVE_SETTINGS" })).toBe(false);
+    expect(isGlobalSerializationBarrierAwareRead({ type: "EXPORT_BACKUP" })).toBe(true);
+    expect(isGlobalSerializationBarrierAwareRead({ type: "GET_STATUS" })).toBe(false);
   });
 });
