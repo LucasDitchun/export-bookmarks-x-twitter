@@ -495,8 +495,16 @@
     "message": "$NAME$, $COUNT$ marcadores",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "folderUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ marcador",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagUsageLabel": {
     "message": "$NAME$, $COUNT$ marcadores",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ marcador",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": { "message": "Abre un marcador para añadir o quitar etiquetas." },

@@ -8,6 +8,7 @@ import type {
   SendMessage,
 } from "./protocol";
 import type { Translator } from "./i18n";
+import { organizationUsageLabel } from "./organization-usage-label";
 import { createIconButton } from "../ui/icons";
 
 interface FolderUiOptions {
@@ -267,7 +268,12 @@ export function createFolderUi(options: FolderUiOptions): {
       button.className = "organization-item";
       button.setAttribute(
         "aria-label",
-        translate("folderUsageLabel", [label, String(usage[folder.id] ?? 0)]),
+        organizationUsageLabel(
+          translate,
+          "folderUsageLabel",
+          label,
+          usage[folder.id] ?? 0,
+        ),
       );
       name.textContent = label;
       count.textContent = String(usage[folder.id] ?? 0);

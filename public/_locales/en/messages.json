@@ -412,8 +412,16 @@
     "message": "$NAME$, $COUNT$ bookmarks",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "folderUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ bookmark",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagUsageLabel": {
     "message": "$NAME$, $COUNT$ bookmarks",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ bookmark",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": { "message": "Open a bookmark to add or remove tags." },

@@ -491,8 +491,16 @@
     "message": "$NAME$, $COUNT$ segnalibri",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "folderUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ segnalibro",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagUsageLabel": {
     "message": "$NAME$, $COUNT$ segnalibri",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ segnalibro",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": { "message": "Apri un segnalibro per aggiungere o rimuovere tag." },

@@ -501,7 +501,15 @@
     "message": "$NAME$, $COUNT$ Lesezeichen",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "folderUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ Lesezeichen",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ Lesezeichen",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabelOne": {
     "message": "$NAME$, $COUNT$ Lesezeichen",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
