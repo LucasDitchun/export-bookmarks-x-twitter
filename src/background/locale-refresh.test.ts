@@ -72,10 +72,7 @@ describe("createLocaleRefreshBroadcaster", () => {
     const queued = schedule();
     rejectFirst(new Error("transient catalog failure"));
 
-    await expect(Promise.all([first, queued])).resolves.toEqual([
-      undefined,
-      undefined,
-    ]);
+    await expect(Promise.all([first, queued])).resolves.toEqual([undefined, undefined]);
     expect(loadLocalization).toHaveBeenCalledTimes(2);
     expect(sendToTab).toHaveBeenCalledOnce();
     expect(sendToTab).toHaveBeenCalledWith(9, {

@@ -372,7 +372,9 @@ export function createBookmarkModal(
       (candidate) => comparable(candidate.name) === comparable(name),
     );
     const token: BookmarkModalTagToken = existing ?? { id: null, name };
-    if (!selectedTags.some((candidate) => comparable(candidate.name) === comparable(name))) {
+    if (
+      !selectedTags.some((candidate) => comparable(candidate.name) === comparable(name))
+    ) {
       selectedTags = [...selectedTags, token];
       renderSelectedTags();
     }
@@ -384,11 +386,10 @@ export function createBookmarkModal(
     const existing = availableFolders.find(
       (candidate) => formatFolderLabel(candidate) === label,
     );
-    selectedFolder =
-      existing ?? {
-        id: null,
-        path: [...(selectedFolder?.path ?? []), label],
-      };
+    selectedFolder = existing ?? {
+      id: null,
+      path: [...(selectedFolder?.path ?? []), label],
+    };
     folder.value = "";
     renderSelectedFolder();
   };
@@ -484,7 +485,7 @@ export function createBookmarkModal(
       if (values.description !== undefined) description.value = values.description;
     },
     setChoices(choices) {
-      const replaceOptions = <T,>(
+      const replaceOptions = <T>(
         target: HTMLDataListElement,
         values: readonly T[] | undefined,
         labelFor: (value: T) => string,

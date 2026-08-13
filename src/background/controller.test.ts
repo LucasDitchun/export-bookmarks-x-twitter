@@ -79,20 +79,18 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       saveNote: vi.fn(async (): Promise<unknown> => null),
     },
     metadata: {
-      save: vi.fn(
-        async (): Promise<BookmarkRecord> => ({
-          ...bookmark,
-          media: bookmark.media ?? { images: [], videos: [] },
-          note: "",
-          folderId: null,
-          tagIds: [],
-          firstSavedAt: "2026-07-29T11:00:01.000Z",
-          lastSeenAt: "2026-07-29T11:00:01.000Z",
-          archivedAt: null,
-          metadataUpdatedAt: "2026-07-29T11:00:01.000Z",
-          status: "current",
-        }),
-      ),
+      save: vi.fn(async (): Promise<BookmarkRecord> => ({
+        ...bookmark,
+        media: bookmark.media ?? { images: [], videos: [] },
+        note: "",
+        folderId: null,
+        tagIds: [],
+        firstSavedAt: "2026-07-29T11:00:01.000Z",
+        lastSeenAt: "2026-07-29T11:00:01.000Z",
+        archivedAt: null,
+        metadataUpdatedAt: "2026-07-29T11:00:01.000Z",
+        status: "current",
+      })),
     },
     search: {
       search: vi.fn(async (): Promise<unknown> => ({

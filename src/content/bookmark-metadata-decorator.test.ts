@@ -56,7 +56,10 @@ function result(): BookmarkDecorationLookupResult {
   };
 }
 
-function resultForIds(ids: readonly string[], note: string): BookmarkDecorationLookupResult {
+function resultForIds(
+  ids: readonly string[],
+  note: string,
+): BookmarkDecorationLookupResult {
   return {
     ...result(),
     items: ids.map((id) => ({
@@ -252,12 +255,12 @@ describe("startBookmarkMetadataDecorator", () => {
     resolveFirst(resultForIds(["123"], "latest-123"));
     await vi.waitFor(() => expect(lookup).toHaveBeenCalledTimes(2));
     await vi.waitFor(() => {
-      expect(first.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent).toContain(
-        "latest-123",
-      );
-      expect(second.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent).toContain(
-        "latest-456",
-      );
+      expect(
+        first.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+      ).toContain("latest-123");
+      expect(
+        second.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+      ).toContain("latest-456");
     });
     decorator.stop();
   });
@@ -273,7 +276,9 @@ describe("startBookmarkMetadataDecorator", () => {
     });
     const lookup = vi.fn((ids: string[]) => {
       if (refreshStarted && ids.length === 1 && ids[0] === "123") return targeted;
-      return Promise.resolve(resultForIds(ids, refreshStarted ? "full-latest" : "initial"));
+      return Promise.resolve(
+        resultForIds(ids, refreshStarted ? "full-latest" : "initial"),
+      );
     });
     const decorator = startBookmarkMetadataDecorator({
       document,
@@ -301,12 +306,12 @@ describe("startBookmarkMetadataDecorator", () => {
     await vi.waitFor(() => expect(lookup).toHaveBeenCalledTimes(2));
     expect(lookup.mock.calls[1]?.[0]).toEqual(["123", "456"]);
     await vi.waitFor(() => {
-      expect(first.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent).toContain(
-        "full-latest",
-      );
-      expect(second.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent).toContain(
-        "full-latest",
-      );
+      expect(
+        first.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+      ).toContain("full-latest");
+      expect(
+        second.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+      ).toContain("full-latest");
     });
     decorator.stop();
   });
@@ -349,14 +354,14 @@ describe("startBookmarkMetadataDecorator", () => {
     resolveOld(resultForIds(["123"], "stale-123"));
 
     await vi.waitFor(() => expect(lookup).toHaveBeenCalledTimes(2));
-    expect(article.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent).not.toContain(
-      "stale-123",
-    );
+    expect(
+      article.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+    ).not.toContain("stale-123");
     resolveNew(resultForIds(["456"], "latest-456"));
     await vi.waitFor(() =>
-      expect(article.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent).toContain(
-        "latest-456",
-      ),
+      expect(
+        article.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+      ).toContain("latest-456"),
     );
     decorator.stop();
   });
