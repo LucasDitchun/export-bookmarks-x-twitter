@@ -233,6 +233,10 @@ export type ContentControlRequest =
   | {
       type: "REFRESH_BOOKMARK_METADATA";
       bookmarkIds?: string[];
+    }
+  | {
+      type: "REFRESH_BOOKMARK_LOCALIZATION";
+      localization: BookmarkLocalizationResult;
     };
 
 export type ContentEvent =

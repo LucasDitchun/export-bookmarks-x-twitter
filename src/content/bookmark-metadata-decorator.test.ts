@@ -143,6 +143,29 @@ describe("startBookmarkMetadataDecorator", () => {
     decorator.stop();
   });
 
+  it("rerenders an injected card with the latest localization", async () => {
+    const article = renderArticle("123");
+    const current = uncategorizedResult({
+      messages: { uncategorizedFolder: "Uncategorized" },
+    });
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup: async () => current,
+    });
+    await settle();
+    const host = article.querySelector<HTMLElement>("bookmark-x-metadata");
+    expect(host?.shadowRoot?.textContent).toContain("Uncategorized");
+
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { uncategorizedFolder: "Sem categoria" },
+    });
+
+    expect(host?.shadowRoot?.textContent).toContain("Sem categoria");
+    expect(host?.shadowRoot?.textContent).not.toContain("Uncategorized");
+    decorator.stop();
+  });
+
   it("moves through pending, uncategorized, mapped, and archived states without duplicate hosts", async () => {
     const article = renderArticle("123");
     let current = uncategorizedResult();

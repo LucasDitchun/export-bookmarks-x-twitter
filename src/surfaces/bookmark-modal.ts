@@ -36,6 +36,7 @@ export interface BookmarkModalController {
   destroy(): void;
   setValues(values: Partial<BookmarkModalValues>): void;
   setChoices(choices: Partial<BookmarkModalChoices>): void;
+  setLabels(labels: { title: string; labels: BookmarkModalLabels }): void;
   setState(state: "pending" | "ready" | "success" | "error", message: string): void;
 }
 
@@ -262,17 +263,17 @@ export function createBookmarkModal(
     options.labels.tags,
     options.values?.tags ?? "",
   );
+  const tagsLabel = tags.parentElement?.querySelector("label");
   const tagChoices = document.createElement("datalist");
   tagChoices.id = "bookmark-x-modal-tag-choices";
   tags.setAttribute("list", tagChoices.id);
-  if (options.labels.tagsHelp) {
-    const tagsHelp = document.createElement("p");
-    tagsHelp.className = "field-help";
-    tagsHelp.id = "bookmark-x-modal-tags-help";
-    tagsHelp.textContent = options.labels.tagsHelp;
-    tags.setAttribute("aria-describedby", tagsHelp.id);
-    tags.parentElement?.append(tagsHelp);
-  }
+  const tagsHelp = document.createElement("p");
+  tagsHelp.className = "field-help";
+  tagsHelp.id = "bookmark-x-modal-tags-help";
+  tagsHelp.textContent = options.labels.tagsHelp ?? "";
+  tagsHelp.hidden = !options.labels.tagsHelp;
+  tags.setAttribute("aria-describedby", tagsHelp.id);
+  tags.parentElement?.append(tagsHelp);
   const folder = appendLabelledInput(
     document,
     metadataGrid,
@@ -280,6 +281,7 @@ export function createBookmarkModal(
     options.labels.folder,
     options.values?.folder ?? "",
   );
+  const folderLabel = folder.parentElement?.querySelector("label");
   const folderChoices = document.createElement("datalist");
   folderChoices.id = "bookmark-x-modal-folder-choices";
   folder.setAttribute("list", folderChoices.id);
@@ -380,6 +382,19 @@ export function createBookmarkModal(
       };
       replaceOptions(tagChoices, choices.tags);
       replaceOptions(folderChoices, choices.folders);
+    },
+    setLabels(next) {
+      title.textContent = next.title;
+      closeButton.textContent = next.labels.close;
+      descriptionLabel.textContent = next.labels.description;
+      if (tagsLabel) tagsLabel.textContent = next.labels.tags;
+      if (folderLabel) folderLabel.textContent = next.labels.folder;
+      tagsHelp.textContent = next.labels.tagsHelp ?? "";
+      tagsHelp.hidden = !next.labels.tagsHelp;
+      saveButton.textContent = next.labels.save;
+      if (status.dataset.state === "pending" && next.labels.pending) {
+        status.textContent = next.labels.pending;
+      }
     },
     setState(state, message) {
       status.dataset.state = state;
