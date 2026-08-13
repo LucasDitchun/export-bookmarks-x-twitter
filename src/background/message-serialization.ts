@@ -109,6 +109,7 @@ interface TaskQueueOptions {
 export class KeyedTaskQueue {
   private readonly tails = new Map<string, Promise<void>>();
   private readonly pendingMutations = new Set<Promise<void>>();
+  private readonly pendingBarrierAwareReads = new Set<Promise<void>>();
   private globalBarrierTail: Promise<void> | null = null;
 
   get pendingKeyCount(): number {
@@ -117,6 +118,10 @@ export class KeyedTaskQueue {
 
   get pendingMutationCount(): number {
     return this.pendingMutations.size;
+  }
+
+  get pendingBarrierAwareReadCount(): number {
+    return this.pendingBarrierAwareReads.size;
   }
 
   run<T>(
@@ -134,7 +139,7 @@ export class KeyedTaskQueue {
     }
 
     const dependencies = globalBarrier
-      ? [...this.pendingMutations]
+      ? [...this.pendingMutations, ...this.pendingBarrierAwareReads]
       : keys.flatMap((currentKey) => {
           const pending = this.tails.get(currentKey);
           return pending === undefined ? [] : [pending];
@@ -145,11 +150,15 @@ export class KeyedTaskQueue {
     const previous =
       dependencies.length === 0 ? Promise.resolve() : Promise.all(dependencies);
     const result = previous.then(task);
-    if (keys.length === 0 && !globalBarrier) return result;
     const settled = result.then(
       () => undefined,
       () => undefined,
     );
+    if (keys.length === 0 && !globalBarrier) {
+      this.pendingBarrierAwareReads.add(settled);
+      void settled.then(() => this.pendingBarrierAwareReads.delete(settled));
+      return result;
+    }
     for (const currentKey of keys) this.tails.set(currentKey, settled);
     this.pendingMutations.add(settled);
     if (globalBarrier) this.globalBarrierTail = settled;
