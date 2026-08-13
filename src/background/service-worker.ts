@@ -128,7 +128,7 @@ const controller = new BackgroundController({
 const broadcastLocaleRefresh = createLocaleRefreshBroadcaster({
   invalidateLocalization: () => controller.invalidateDecorationLocalization(),
   loadLocalization: () => locale.get(),
-  queryTabs: ({ url }) => chrome.tabs.query({ url: [...url] }),
+  queryTabs: () => chrome.tabs.query({}),
   sendToTab: (tabId, request) => chrome.tabs.sendMessage(tabId, request),
 });
 
@@ -158,7 +158,7 @@ void chrome.storage.local.setAccessLevel({
 
 const messageQueue = new KeyedTaskQueue();
 const broadcastMetadataRefresh = createMetadataRefreshBroadcaster({
-  queryTabs: ({ url }) => chrome.tabs.query({ url: [...url] }),
+  queryTabs: () => chrome.tabs.query({}),
   sendToTab: (tabId, request) => chrome.tabs.sendMessage(tabId, request),
 });
 

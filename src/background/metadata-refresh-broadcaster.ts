@@ -1,5 +1,4 @@
 import type { ContentControlRequest } from "../shared/protocol";
-import { X_TAB_URL_PATTERNS } from "./locale-refresh";
 
 type MetadataRefreshRequest = Extract<
   ContentControlRequest,
@@ -8,11 +7,10 @@ type MetadataRefreshRequest = Extract<
 
 interface MetadataRefreshTab {
   id?: number | undefined;
-  url?: string | undefined;
 }
 
 interface MetadataRefreshBroadcasterDependencies {
-  queryTabs(query: { url: readonly string[] }): Promise<MetadataRefreshTab[]>;
+  queryTabs(): Promise<MetadataRefreshTab[]>;
   sendToTab(tabId: number, request: MetadataRefreshRequest): Promise<unknown>;
   waitBeforeQueryRetry?(attempt: number): Promise<void>;
 }
@@ -55,19 +53,6 @@ function toRequests(pending: PendingRefresh): MetadataRefreshRequest[] {
   return requests;
 }
 
-function isXUrl(url: string | undefined): boolean {
-  if (!url) return false;
-  try {
-    const parsed = new URL(url);
-    return (
-      (parsed.protocol === "https:" || parsed.protocol === "http:") &&
-      (parsed.hostname === "x.com" || parsed.hostname === "www.x.com")
-    );
-  } catch {
-    return false;
-  }
-}
-
 export function createMetadataRefreshBroadcaster(
   dependencies: MetadataRefreshBroadcasterDependencies,
 ): (request: MetadataRefreshRequest) => Promise<void> {
@@ -83,7 +68,7 @@ export function createMetadataRefreshBroadcaster(
       const requests = toRequests(current);
       let tabs: MetadataRefreshTab[];
       try {
-        tabs = await dependencies.queryTabs({ url: X_TAB_URL_PATTERNS });
+        tabs = await dependencies.queryTabs();
       } catch (error) {
         pending = mergePending(current, pending);
         queryAttempts += 1;
@@ -94,7 +79,7 @@ export function createMetadataRefreshBroadcaster(
       queryAttempts = 0;
       await Promise.allSettled(
         tabs.flatMap((tab) => {
-          if (typeof tab.id !== "number" || !isXUrl(tab.url)) return [];
+          if (typeof tab.id !== "number") return [];
           const tabId = tab.id;
           return requests.map((request) => dependencies.sendToTab(tabId, request));
         }),
