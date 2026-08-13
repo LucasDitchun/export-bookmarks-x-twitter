@@ -158,15 +158,17 @@ describe("BookmarkDatabase", () => {
     const transaction = database.transaction("bookmarks", "readonly");
     const index = transaction.objectStore("bookmarks").index("byTag");
     expect(index.multiEntry).toBe(true);
-    expect(await new Promise<number>((resolve, reject) => {
-      const request = index.count(IDBKeyRange.only("tag-target"));
-      request.addEventListener("success", () => resolve(request.result), {
-        once: true,
-      });
-      request.addEventListener("error", () => reject(indexedDbError(request.error)), {
-        once: true,
-      });
-    })).toBe(1);
+    expect(
+      await new Promise<number>((resolve, reject) => {
+        const request = index.count(IDBKeyRange.only("tag-target"));
+        request.addEventListener("success", () => resolve(request.result), {
+          once: true,
+        });
+        request.addEventListener("error", () => reject(indexedDbError(request.error)), {
+          once: true,
+        });
+      }),
+    ).toBe(1);
     await transactionDone(transaction);
     database.close();
   });

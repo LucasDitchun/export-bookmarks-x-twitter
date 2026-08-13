@@ -221,10 +221,7 @@ describe("TagRepository", () => {
     const targetTagId = "tag-target";
     const matchingIds = new Set(["post-0000", "post-0250", "post-1004"]);
     const database = await new BookmarkDatabase(databaseName).open();
-    const seedTransaction = database.transaction(
-      ["bookmarks", "tags"],
-      "readwrite",
-    );
+    const seedTransaction = database.transaction(["bookmarks", "tags"], "readwrite");
     seedTransaction.objectStore("tags").put({
       id: targetTagId,
       name: "Target",

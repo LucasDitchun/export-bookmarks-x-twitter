@@ -339,10 +339,7 @@ function assertFolderGraph(folders: readonly FolderRecord[]): void {
       if (visited.has(cursor.id)) fail("folder cycle");
       visited.add(cursor.id);
       cursor = cursor.parentId === null ? undefined : byId.get(cursor.parentId);
-      if (
-        folder.deletedAt === undefined &&
-        cursor?.deletedAt !== undefined
-      ) {
+      if (folder.deletedAt === undefined && cursor?.deletedAt !== undefined) {
         fail("deleted folder ancestor");
       }
     }

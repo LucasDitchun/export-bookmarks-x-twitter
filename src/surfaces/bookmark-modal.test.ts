@@ -231,9 +231,7 @@ describe("createBookmarkModal", () => {
     if (!tags || !folder || !description) throw new Error("Missing modal fields");
     tags.value = "New, exact";
     tags.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-    expect(shadow?.querySelector(".folder-token")?.textContent).toContain(
-      "R&D/Video",
-    );
+    expect(shadow?.querySelector(".folder-token")?.textContent).toContain("R&D/Video");
     description.value = "Review the examples";
     shadow
       ?.querySelector("form")
@@ -298,9 +296,7 @@ describe("createBookmarkModal", () => {
     });
     modal.open();
     const shadow = modal.host.shadowRoot;
-    const folder = shadow?.querySelector<HTMLInputElement>(
-      "#bookmark-x-modal-folder",
-    );
+    const folder = shadow?.querySelector<HTMLInputElement>("#bookmark-x-modal-folder");
     if (!folder) throw new Error("Missing folder field");
     folder.value = "R&D/Video";
     folder.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
