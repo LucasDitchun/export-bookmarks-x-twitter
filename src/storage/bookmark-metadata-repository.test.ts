@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BookmarkRecord, FolderRecord } from "../domain/types";
-import {
-  BookmarkDatabase,
-  transactionDone,
-} from "./bookmark-database";
+import { BookmarkDatabase, transactionDone } from "./bookmark-database";
 import { BookmarkMetadataRepository } from "./bookmark-metadata-repository";
 import { BookmarkRepository } from "./bookmark-repository";
 import { FolderRepository } from "./folder-repository";
@@ -61,6 +58,93 @@ async function seedTags(
 }
 
 describe("BookmarkMetadataRepository", () => {
+  it("keeps selected tags and folders by ID after a concurrent rename", async () => {
+    const databaseName = `metadata-selected-id-${crypto.randomUUID()}`;
+    const original = bookmark();
+    await seed(databaseName, original, [
+      { id: "folder-old", name: "Old", parentId: null },
+      { id: "folder-selected", name: "Research", parentId: null },
+    ]);
+    await seedTags(databaseName, [
+      { id: "tag-selected", name: "Research", normalizedName: "research" },
+    ]);
+    await new TagRepository(databaseName).rename("tag-selected", "References");
+    await new FolderRepository(databaseName).rename("folder-selected", "References");
+
+    await expect(
+      new BookmarkMetadataRepository(databaseName).save({
+        id: "123",
+        note: "Keep the selected entities",
+        tags: [{ id: "tag-selected", name: "Research" }],
+        folder: { id: "folder-selected", path: ["Research"] },
+      }),
+    ).resolves.toMatchObject({
+      tagIds: ["tag-selected"],
+      folderId: "folder-selected",
+    });
+    await expect(new TagRepository(databaseName).list()).resolves.toEqual([
+      { id: "tag-selected", name: "References", normalizedName: "references" },
+    ]);
+    await expect(new FolderRepository(databaseName).list()).resolves.toContainEqual({
+      id: "folder-selected",
+      name: "References",
+      parentId: null,
+    });
+  });
+
+  it("rejects a concurrently deleted selected tag without recreating it", async () => {
+    const databaseName = `metadata-deleted-tag-${crypto.randomUUID()}`;
+    const original = { ...bookmark(), tagIds: ["tag-selected"] };
+    await seed(databaseName, original, [
+      { id: "folder-old", name: "Old", parentId: null },
+    ]);
+    await seedTags(databaseName, [
+      { id: "tag-selected", name: "Research", normalizedName: "research" },
+    ]);
+    await new TagRepository(databaseName).delete("tag-selected");
+
+    await expect(
+      new BookmarkMetadataRepository(databaseName).save({
+        id: "123",
+        note: "Must roll back",
+        tags: [{ id: "tag-selected", name: "Research" }],
+        folder: null,
+      }),
+    ).rejects.toThrow("no longer available");
+    await expect(new BookmarkRepository(databaseName).get("123")).resolves.toEqual(
+      original,
+    );
+    await expect(new TagRepository(databaseName).list()).resolves.toEqual([]);
+    await expect(new TagRepository(databaseName).listDeleted()).resolves.toEqual([
+      expect.objectContaining({ id: "tag-selected" }),
+    ]);
+  });
+
+  it("rejects a concurrently deleted selected folder without recreating it", async () => {
+    const databaseName = `metadata-deleted-folder-${crypto.randomUUID()}`;
+    const original = { ...bookmark(), folderId: "folder-selected" };
+    await seed(databaseName, original, [
+      { id: "folder-selected", name: "Research", parentId: null },
+    ]);
+    await new FolderRepository(databaseName).delete("folder-selected");
+
+    await expect(
+      new BookmarkMetadataRepository(databaseName).save({
+        id: "123",
+        note: "Must roll back",
+        tags: [],
+        folder: { id: "folder-selected", path: ["Research"] },
+      }),
+    ).rejects.toThrow("no longer available");
+    await expect(new BookmarkRepository(databaseName).get("123")).resolves.toEqual(
+      original,
+    );
+    await expect(new FolderRepository(databaseName).list()).resolves.toEqual([]);
+    await expect(new FolderRepository(databaseName).listDeleted()).resolves.toEqual([
+      expect.objectContaining({ id: "folder-selected" }),
+    ]);
+  });
+
   it("replaces note, tags, and folder hierarchy in one save", async () => {
     const databaseName = `metadata-save-${crypto.randomUUID()}`;
     const original = bookmark();
@@ -78,8 +162,8 @@ describe("BookmarkMetadataRepository", () => {
       repository.save({
         id: "123",
         note: "Why this matters",
-        tags: [" Research "],
-        folderPath: ["Topics", "AI"],
+        tags: [{ id: null, name: " Research " }],
+        folder: { id: null, path: ["Topics", "AI"] },
       }),
     ).resolves.toMatchObject({
       id: "123",
@@ -115,8 +199,8 @@ describe("BookmarkMetadataRepository", () => {
       repository.save({
         id: "123",
         note: "New note",
-        tags: ["New tag"],
-        folderPath: ["New folder"],
+        tags: [{ id: null, name: "New tag" }],
+        folder: { id: null, path: ["New folder"] },
       }),
     ).rejects.toThrow();
 
@@ -176,8 +260,8 @@ describe("BookmarkMetadataRepository", () => {
       repository.save({
         id: "123",
         note: "Updated",
-        tags: ["Research"],
-        folderPath: ["Research"],
+        tags: [{ id: null, name: "Research" }],
+        folder: { id: null, path: ["Research"] },
       }),
     ).resolves.toMatchObject({
       tagIds: ["tag-active"],

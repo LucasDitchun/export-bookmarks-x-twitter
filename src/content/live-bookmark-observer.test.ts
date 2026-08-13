@@ -324,9 +324,7 @@ describe("startLiveBookmarkObserver", () => {
           return {
             ok: true,
             data: {
-              tags: [
-                { id: "tag-existing", name: "AI, ML", normalizedName: "ai, ml" },
-              ],
+              tags: [{ id: "tag-existing", name: "AI, ML", normalizedName: "ai, ml" }],
             },
           };
         }
@@ -334,9 +332,7 @@ describe("startLiveBookmarkObserver", () => {
           return {
             ok: true,
             data: {
-              folders: [
-                { id: "folder-reading", name: "R&D/Video", parentId: null },
-              ],
+              folders: [{ id: "folder-reading", name: "R&D/Video", parentId: null }],
             },
           };
         }
@@ -380,9 +376,7 @@ describe("startLiveBookmarkObserver", () => {
     expect(tags?.value).toBe("");
     expect(shadow?.querySelector(".token")?.textContent).toContain("AI, ML");
     expect(folder?.value).toBe("");
-    expect(shadow?.querySelector(".folder-token")?.textContent).toContain(
-      "R&D/Video",
-    );
+    expect(shadow?.querySelector(".folder-token")?.textContent).toContain("R&D/Video");
     expect(description?.value).toBe("Existing note");
 
     tags!.value = "New, exact";
@@ -397,8 +391,11 @@ describe("startLiveBookmarkObserver", () => {
         payload: {
           id: "123",
           note: "Why this matters",
-          tags: ["AI, ML", "New, exact"],
-          folderPath: ["R&D/Video"],
+          tags: [
+            { id: "tag-existing", name: "AI, ML" },
+            { id: null, name: "New, exact" },
+          ],
+          folder: { id: "folder-reading", path: ["R&D/Video"] },
         },
       });
     });

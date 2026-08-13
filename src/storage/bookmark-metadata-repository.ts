@@ -3,6 +3,7 @@ import type {
   BookmarkRecord,
   BookmarkTag,
   FolderRecord,
+  SaveBookmarkMetadataInput,
 } from "../domain/types";
 import {
   BOOKMARK_FOLDERS_STORE,
@@ -19,13 +20,6 @@ import { MAX_TAG_NAME_LENGTH, normalizeTagName } from "./tag-repository";
 export const MAX_BOOKMARK_METADATA_TAGS = 50;
 export const MAX_BOOKMARK_METADATA_FOLDER_DEPTH = 32;
 export const MAX_BOOKMARK_METADATA_NOTE_LENGTH = 20_000;
-
-export interface SaveBookmarkMetadataInput {
-  id: string;
-  note: string;
-  tags: string[];
-  folderPath: string[];
-}
 
 export interface BookmarkMetadataRepositoryOptions {
   createId?: () => string;
@@ -75,6 +69,13 @@ function sameFolderName(left: string, right: string): boolean {
   return left.localeCompare(right, undefined, { sensitivity: "accent" }) === 0;
 }
 
+function localEntityId(value: string): string {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(value)) {
+    throw new RangeError("The selected organization ID is invalid.");
+  }
+  return value;
+}
+
 function validateInput(input: SaveBookmarkMetadataInput): SaveBookmarkMetadataInput {
   if (input.note.length > MAX_BOOKMARK_METADATA_NOTE_LENGTH) {
     throw new RangeError("Bookmark notes cannot exceed 20,000 characters.");
@@ -84,21 +85,32 @@ function validateInput(input: SaveBookmarkMetadataInput): SaveBookmarkMetadataIn
       `A bookmark can have at most ${MAX_BOOKMARK_METADATA_TAGS} tags.`,
     );
   }
-  if (input.folderPath.length > MAX_BOOKMARK_METADATA_FOLDER_DEPTH) {
+  const tags = [
+    ...new Map(
+      input.tags.map((tag) => {
+        const name = tagDisplayName(tag.name);
+        const id = tag.id === null ? null : localEntityId(tag.id);
+        return [
+          id === null ? `name:${normalizeTagName(name)}` : `id:${id}`,
+          {
+            id,
+            name,
+          },
+        ] as const;
+      }),
+    ).values(),
+  ];
+  const rawFolder = input.folder;
+  const folder = rawFolder && {
+    id: rawFolder.id === null ? null : localEntityId(rawFolder.id),
+    path: rawFolder.path.map(folderDisplayName),
+  };
+  if ((folder?.path.length ?? 0) > MAX_BOOKMARK_METADATA_FOLDER_DEPTH) {
     throw new RangeError(
       `A folder path can have at most ${MAX_BOOKMARK_METADATA_FOLDER_DEPTH} levels.`,
     );
   }
-  const tags = [
-    ...new Map(
-      input.tags.map((value) => {
-        const name = tagDisplayName(value);
-        return [normalizeTagName(name), name] as const;
-      }),
-    ).values(),
-  ];
-  const folderPath = input.folderPath.map(folderDisplayName);
-  return { ...input, tags, folderPath };
+  return { id: input.id, note: input.note, tags, folder };
 }
 
 export class BookmarkMetadataRepository {
@@ -143,36 +155,64 @@ export class BookmarkMetadataRepository {
     }
 
     const activeTags = storedTags.filter((tag) => tag.deletedAt === undefined);
-    const tagIds = input.tags.map((name) => {
-      const normalizedName = normalizeTagName(name);
-      const existing = activeTags.find(
-        (tag) => normalizeTagName(tag.name) === normalizedName,
-      );
-      if (existing !== undefined) {
-        const hydrated: BookmarkTag = {
-          ...existing,
-          name: tagDisplayName(existing.name),
-          normalizedName,
-        };
-        if (
-          existing.name !== hydrated.name ||
-          existing.normalizedName !== hydrated.normalizedName
-        ) {
-          tags.put(hydrated);
-        }
-        return hydrated.id;
-      }
-      const tag: BookmarkTag = { id: this.createId(), name, normalizedName };
-      tags.add(tag);
-      activeTags.push(tag);
-      return tag.id;
-    });
-
+    const missingTag = input.tags.find(
+      (selection) =>
+        selection.id !== null && !activeTags.some((tag) => tag.id === selection.id),
+    );
     const activeFolders = storedFolders.filter(
       (folder) => folder.deletedAt === undefined,
     );
-    let folderId: string | null = null;
-    for (const name of input.folderPath) {
+    const selectedFolderId = input.folder?.id ?? null;
+    if (
+      missingTag?.id !== undefined ||
+      (selectedFolderId !== null &&
+        !activeFolders.some((folder) => folder.id === selectedFolderId))
+    ) {
+      transaction.abort();
+      await transactionDone(transaction).catch(() => undefined);
+      if (missingTag?.id) {
+        throw new Error(`Selected tag ${missingTag.id} is no longer available.`);
+      }
+      throw new Error(`Selected folder ${selectedFolderId} is no longer available.`);
+    }
+    const tagIds = [
+      ...new Set(
+        input.tags.map((selection) => {
+          if (selection.id !== null) {
+            return selection.id;
+          }
+          const normalizedName = normalizeTagName(selection.name);
+          const existing = activeTags.find(
+            (tag) => normalizeTagName(tag.name) === normalizedName,
+          );
+          if (existing !== undefined) {
+            const hydrated: BookmarkTag = {
+              ...existing,
+              name: tagDisplayName(existing.name),
+              normalizedName,
+            };
+            if (
+              existing.name !== hydrated.name ||
+              existing.normalizedName !== hydrated.normalizedName
+            ) {
+              tags.put(hydrated);
+            }
+            return hydrated.id;
+          }
+          const tag: BookmarkTag = {
+            id: this.createId(),
+            name: selection.name,
+            normalizedName,
+          };
+          tags.add(tag);
+          activeTags.push(tag);
+          return tag.id;
+        }),
+      ),
+    ];
+
+    let folderId: string | null = selectedFolderId;
+    for (const name of input.folder?.id === null ? input.folder.path : []) {
       let folder = activeFolders.find(
         (candidate) =>
           candidate.parentId === folderId && sameFolderName(candidate.name, name),

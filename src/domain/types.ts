@@ -71,6 +71,23 @@ export type BookmarkDecorationReadModel = BookmarkMetadataReadModel &
 /** Read model required by the popup folder assignment control. */
 export type BookmarkFolderReadModel = Pick<BookmarkRecord, "id" | "folderId">;
 
+export interface BookmarkMetadataTagSelection {
+  id: string | null;
+  name: string;
+}
+
+export interface BookmarkMetadataFolderSelection {
+  id: string | null;
+  path: string[];
+}
+
+export interface SaveBookmarkMetadataInput {
+  id: string;
+  note: string;
+  tags: BookmarkMetadataTagSelection[];
+  folder: BookmarkMetadataFolderSelection | null;
+}
+
 export interface HydratedBookmarkRecord extends BookmarkRecord {
   folders: BookmarkFolder[];
 }

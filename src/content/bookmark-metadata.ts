@@ -28,8 +28,8 @@ interface SaveBookmarkMetadataOptions {
 
 interface ValidatedMetadata {
   note: string;
-  tags: string[];
-  folderPath: string[];
+  tags: BookmarkModalValues["tags"];
+  folder: BookmarkModalValues["folder"];
 }
 
 function normalizeName(value: string): string {
@@ -62,22 +62,38 @@ function validateValues(values: BookmarkModalValues): ValidatedMetadata {
   }
   const tags = [
     ...new Map(
-      values.tags
-        .map(({ name: value }) => {
-          const name = validateName(value, "tag");
-          return [comparableName(name), name] as const;
-        }),
+      values.tags.map(({ id, name: value }) => {
+        const name = validateName(value, "tag");
+        if (id !== null && !/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
+          throw new Error("Invalid tag ID.");
+        }
+        const tag = { id, name };
+        return [
+          id === null ? `name:${comparableName(name)}` : `id:${id}`,
+          tag,
+        ] as const;
+      }),
     ).values(),
   ];
   if (tags.length > MAX_TAGS)
     throw new Error(`A bookmark can have at most ${MAX_TAGS} tags.`);
 
+  if (
+    values.folder?.id !== null &&
+    values.folder?.id !== undefined &&
+    !/^[A-Za-z0-9_-]{1,128}$/.test(values.folder.id)
+  ) {
+    throw new Error("Invalid folder ID.");
+  }
   const rawFolderPath = values.folder?.path ?? [];
   if (rawFolderPath.length > MAX_FOLDER_DEPTH) {
     throw new Error(`A folder path can have at most ${MAX_FOLDER_DEPTH} levels.`);
   }
-  const folderPath = rawFolderPath.map((value) => validateName(value, "folder"));
-  return { note: values.description, tags, folderPath };
+  const folder = values.folder && {
+    id: values.folder.id,
+    path: rawFolderPath.map((value) => validateName(value, "folder")),
+  };
+  return { note: values.description, tags, folder };
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
@@ -183,7 +199,7 @@ export async function saveBookmarkMetadata(
         id: options.bookmark.id,
         note: validated.note,
         tags: validated.tags,
-        folderPath: validated.folderPath,
+        folder: validated.folder,
       },
     },
     options.signal,

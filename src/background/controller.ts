@@ -12,6 +12,7 @@ import {
   type BookmarkRecord,
   type BookmarkSnapshot,
   type FolderRecord,
+  type SaveBookmarkMetadataInput,
   type ScrapeRun,
   type SupportedLocale,
 } from "../domain/types";
@@ -43,10 +44,7 @@ import {
   type SettingsPatch,
 } from "../settings/settings-repository";
 import type { ArchiveRepository } from "../storage/archive-repository";
-import type {
-  BookmarkMetadataRepository,
-  SaveBookmarkMetadataInput,
-} from "../storage/bookmark-metadata-repository";
+import type { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
 import type { ExtensionStateRepository } from "../storage/extension-state";
 import {
   BackupSettingsWriteError,
@@ -228,6 +226,17 @@ function collectCheckpointMatches(
 function isSaveBookmarkMetadataInput(
   value: unknown,
 ): value is SaveBookmarkMetadataInput {
+  const isTagSelection = (tag: unknown): boolean =>
+    isRecord(tag) &&
+    (tag.id === null || isLocalEntityId(tag.id)) &&
+    isTagName(tag.name);
+  const isFolderSelection = (folder: unknown): boolean =>
+    folder === null ||
+    (isRecord(folder) &&
+      (folder.id === null || isLocalEntityId(folder.id)) &&
+      Array.isArray(folder.path) &&
+      folder.path.length <= 32 &&
+      folder.path.every(isFolderName));
   return (
     isRecord(value) &&
     isBookmarkId(value.id) &&
@@ -235,10 +244,8 @@ function isSaveBookmarkMetadataInput(
     value.note.length <= 20_000 &&
     Array.isArray(value.tags) &&
     value.tags.length <= 50 &&
-    value.tags.every(isTagName) &&
-    Array.isArray(value.folderPath) &&
-    value.folderPath.length <= 32 &&
-    value.folderPath.every(isFolderName)
+    value.tags.every(isTagSelection) &&
+    isFolderSelection(value.folder)
   );
 }
 
