@@ -26,6 +26,14 @@ function mergeRefresh(
   return new Set([...(current ?? []), ...request.bookmarkIds]);
 }
 
+function mergePending(
+  current: PendingRefresh,
+  queued: PendingRefresh | null,
+): PendingRefresh {
+  if (current === "full" || queued === "full") return "full";
+  return new Set([...current, ...(queued ?? [])]);
+}
+
 function toRequests(pending: PendingRefresh): MetadataRefreshRequest[] {
   if (pending === "full") return [{ type: "REFRESH_BOOKMARK_METADATA" }];
   const ids = [...pending];
@@ -64,7 +72,15 @@ export function createMetadataRefreshBroadcaster(
       const current = pending;
       pending = null;
       const requests = toRequests(current);
-      const tabs = await dependencies.queryTabs({ url: X_TAB_URL_PATTERNS });
+      let tabs: MetadataRefreshTab[];
+      try {
+        tabs = await dependencies.queryTabs({ url: X_TAB_URL_PATTERNS });
+      } catch (error) {
+        const queuedDuringQuery = pending;
+        pending = mergePending(current, queuedDuringQuery);
+        if (queuedDuringQuery === null) throw error;
+        continue;
+      }
       await Promise.allSettled(
         tabs.flatMap((tab) => {
           if (typeof tab.id !== "number" || !isXUrl(tab.url)) return [];
