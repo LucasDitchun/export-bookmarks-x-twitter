@@ -468,6 +468,23 @@
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": { "message": "打开一个书签以添加或移除标签。" },
+  "organizationTrashTitle": { "message": "回收站" },
+  "organizationTrashHelp": {
+    "message": "恢复已删除的文件夹和标签，并保留它们与书签的关联。"
+  },
+  "organizationTrashEmpty": { "message": "回收站为空。" },
+  "organizationTrashError": { "message": "无法加载回收站。" },
+  "organizationRestoring": { "message": "正在恢复…" },
+  "organizationRestored": { "message": "已恢复。" },
+  "organizationRestoreError": { "message": "无法恢复此项目。" },
+  "restoreTag": {
+    "message": "恢复标签 $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "恢复文件夹 $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "返回收藏库" },
   "settingsViewHelp": { "message": "导出、备份、语言和偏好设置。" }
 }

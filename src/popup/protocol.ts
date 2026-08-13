@@ -1,6 +1,7 @@
 export type {
   ExportResult,
   FolderDeleteResult,
+  FolderRestoreResult,
   FolderDetailResult,
   FolderListResult,
   JsonBackupExportResult,
@@ -11,6 +12,7 @@ export type {
   BookmarkSearchPage,
   BookmarkView,
   NotedBookmark,
+  OrganizationTrashResult,
   PopupRequest,
   PopupStatus,
   RuntimeError,

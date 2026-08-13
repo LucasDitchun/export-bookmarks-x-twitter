@@ -81,6 +81,18 @@ export class TagRepository {
     );
   }
 
+  async listDeleted(): Promise<BookmarkTag[]> {
+    const database = await this.connection.open();
+    const transaction = database.transaction(TAGS_STORE, "readonly");
+    const storedTags = await requestAsPromise(
+      transaction.objectStore(TAGS_STORE).getAll() as IDBRequest<StoredBookmarkTag[]>,
+    );
+    await transactionDone(transaction);
+    return sortedTags(
+      storedTags.filter((tag) => tag.deletedAt !== undefined).map(hydrateTag),
+    );
+  }
+
   async usage(): Promise<Record<string, number>> {
     const database = await this.connection.open();
     const transaction = database.transaction(BOOKMARKS_STORE, "readonly");
@@ -204,7 +216,7 @@ export class TagRepository {
 
   async delete(id: string): Promise<{
     deletedTagId: string;
-    untaggedBookmarkCount: number;
+    preservedBookmarkCount: number;
   }> {
     const database = await this.connection.open();
     const transaction = database.transaction(
@@ -222,18 +234,47 @@ export class TagRepository {
       throw new Error(`Tag ${id} was not found.`);
     }
     const timestamp = this.now().toISOString();
-    let untaggedBookmarkCount = 0;
+    let preservedBookmarkCount = 0;
     for (const bookmark of bookmarks) {
       if (!bookmark.tagIds.includes(id)) continue;
-      untaggedBookmarkCount += 1;
-      bookmarkStore.put({
-        ...bookmark,
-        tagIds: bookmark.tagIds.filter((tagId) => tagId !== id),
-        metadataUpdatedAt: timestamp,
-      } satisfies BookmarkRecord);
+      preservedBookmarkCount += 1;
     }
     tagStore.put({ ...tag, deletedAt: timestamp });
     await transactionDone(transaction);
-    return { deletedTagId: id, untaggedBookmarkCount };
+    return { deletedTagId: id, preservedBookmarkCount };
+  }
+
+  async restore(id: string): Promise<BookmarkTag> {
+    const database = await this.connection.open();
+    const transaction = database.transaction(TAGS_STORE, "readwrite");
+    const store = transaction.objectStore(TAGS_STORE);
+    const tags = await requestAsPromise(
+      store.getAll() as IDBRequest<StoredBookmarkTag[]>,
+    );
+    const deleted = tags.find((tag) => tag.id === id && tag.deletedAt !== undefined);
+    if (!deleted) {
+      transaction.abort();
+      throw new Error(`Deleted tag ${id} was not found.`);
+    }
+    const restored = hydrateTag(deleted);
+    if (
+      tags.some(
+        (tag) =>
+          tag.id !== id &&
+          tag.deletedAt === undefined &&
+          normalizeTagName(tag.name) === restored.normalizedName,
+      )
+    ) {
+      transaction.abort();
+      throw new Error("An active tag with this name already exists.");
+    }
+    const active: BookmarkTag = {
+      id: restored.id,
+      name: restored.name,
+      normalizedName: restored.normalizedName,
+    };
+    store.put(active);
+    await transactionDone(transaction);
+    return active;
   }
 }

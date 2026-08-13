@@ -11,8 +11,10 @@ import {
 } from "../settings/settings-repository";
 import { emptyBookmarkMedia, isBookmarkMedia } from "./bookmark-media";
 
-export const BACKUP_SCHEMA_VERSION = 2 as const;
-const LEGACY_BACKUP_SCHEMA_VERSION = 1 as const;
+export const BACKUP_SCHEMA_VERSION = 3 as const;
+const LEGACY_BACKUP_SCHEMA_VERSIONS = [1, 2] as const;
+type BackupSchemaVersion =
+  typeof BACKUP_SCHEMA_VERSION | (typeof LEGACY_BACKUP_SCHEMA_VERSIONS)[number];
 export const MAX_BACKUP_BYTES = 50 * 1024 * 1024;
 export const MAX_BACKUP_BOOKMARKS = 100_000;
 export const MAX_BACKUP_FOLDERS = 10_000;
@@ -63,6 +65,26 @@ function record(
   if (
     actual.length !== expected.length ||
     actual.some((key, index) => key !== expected[index])
+  ) {
+    fail(field);
+  }
+  return value;
+}
+
+function recordWithOptional(
+  value: unknown,
+  keys: readonly string[],
+  optionalKeys: readonly string[],
+  field: string,
+): Record<string, unknown> {
+  if (!isRecord(value)) fail(field);
+  const actual = Object.keys(value).sort();
+  const required = new Set(keys);
+  const allowed = new Set([...keys, ...optionalKeys]);
+  if (
+    keys.some((key) => !(key in value)) ||
+    actual.some((key) => !allowed.has(key)) ||
+    [...required].length > actual.length
   ) {
     fail(field);
   }
@@ -150,7 +172,7 @@ function parseStatusUrl(value: unknown, bookmarkId: string): string {
 
 function parseBookmark(
   value: unknown,
-  schemaVersion: typeof BACKUP_SCHEMA_VERSION | typeof LEGACY_BACKUP_SCHEMA_VERSION,
+  schemaVersion: BackupSchemaVersion,
 ): BookmarkRecord {
   const item = record(
     value,
@@ -160,7 +182,7 @@ function parseBookmark(
       "url",
       "author",
       "postCreatedAt",
-      ...(schemaVersion === BACKUP_SCHEMA_VERSION ? ["media"] : []),
+      ...(schemaVersion >= 2 ? ["media"] : []),
       "note",
       "folderId",
       "tagIds",
@@ -195,7 +217,7 @@ function parseBookmark(
   }
   const url = parseStatusUrl(item.url, id);
   const media =
-    schemaVersion === LEGACY_BACKUP_SCHEMA_VERSION
+    schemaVersion === 1
       ? emptyBookmarkMedia()
       : isBookmarkMedia(item.media, url)
         ? structuredClone(item.media)
@@ -229,8 +251,16 @@ function parseBookmark(
   return bookmark;
 }
 
-function parseFolder(value: unknown): FolderRecord {
-  const item = record(value, ["id", "name", "parentId"], "folder record");
+function parseFolder(value: unknown, schemaVersion: BackupSchemaVersion): FolderRecord {
+  const item =
+    schemaVersion >= 3
+      ? recordWithOptional(
+          value,
+          ["id", "name", "parentId"],
+          ["deletedAt"],
+          "folder record",
+        )
+      : record(value, ["id", "name", "parentId"], "folder record");
   const name = safeString(item.name, "folder name", 100);
   const hasControlCharacters = Array.from(name).some((character) => {
     const codePoint = character.codePointAt(0) ?? 0;
@@ -239,16 +269,28 @@ function parseFolder(value: unknown): FolderRecord {
   if (name.trim() !== name || hasControlCharacters) {
     fail("folder name");
   }
-  return {
+  const folder: FolderRecord = {
     id: localId(item.id, "folder ID"),
     name,
     parentId:
       item.parentId === null ? null : localId(item.parentId, "parent folder ID"),
   };
+  if (item.deletedAt !== undefined) {
+    folder.deletedAt = canonicalDate(item.deletedAt, "folder deletion date")!;
+  }
+  return folder;
 }
 
-function parseTag(value: unknown): BookmarkTag {
-  const item = record(value, ["id", "name", "normalizedName"], "tag record");
+function parseTag(value: unknown, schemaVersion: BackupSchemaVersion): BookmarkTag {
+  const item =
+    schemaVersion >= 3
+      ? recordWithOptional(
+          value,
+          ["id", "name", "normalizedName"],
+          ["deletedAt"],
+          "tag record",
+        )
+      : record(value, ["id", "name", "normalizedName"], "tag record");
   const name = safeString(item.name, "tag name", 50);
   const normalizedName = safeString(item.normalizedName, "normalized tag name", 50);
   if (
@@ -257,7 +299,11 @@ function parseTag(value: unknown): BookmarkTag {
   ) {
     fail("normalized tag name");
   }
-  return { id: localId(item.id, "tag ID"), name, normalizedName };
+  const tag: BookmarkTag = { id: localId(item.id, "tag ID"), name, normalizedName };
+  if (item.deletedAt !== undefined) {
+    tag.deletedAt = canonicalDate(item.deletedAt, "tag deletion date")!;
+  }
+  return tag;
 }
 
 function assertUnique<T>(
@@ -277,11 +323,13 @@ function assertFolderGraph(folders: readonly FolderRecord[]): void {
   const byId = new Map(folders.map((folder) => [folder.id, folder]));
   const siblingNames = new Set<string>();
   for (const folder of folders) {
-    const siblingKey = `${folder.parentId ?? ""}\u0000${folder.name
-      .normalize("NFKC")
-      .toLocaleLowerCase("und")}`;
-    if (siblingNames.has(siblingKey)) fail("duplicate sibling folder");
-    siblingNames.add(siblingKey);
+    if (folder.deletedAt === undefined) {
+      const siblingKey = `${folder.parentId ?? ""}\u0000${folder.name
+        .normalize("NFKC")
+        .toLocaleLowerCase("und")}`;
+      if (siblingNames.has(siblingKey)) fail("duplicate sibling folder");
+      siblingNames.add(siblingKey);
+    }
     if (folder.parentId !== null && !byId.has(folder.parentId)) {
       fail("orphan folder");
     }
@@ -300,7 +348,12 @@ function validateBackupValue(value: unknown, allowLegacy: boolean): BookmarkXBac
   const schemaVersion = root.schemaVersion;
   if (
     schemaVersion !== BACKUP_SCHEMA_VERSION &&
-    !(allowLegacy && schemaVersion === LEGACY_BACKUP_SCHEMA_VERSION)
+    !(
+      allowLegacy &&
+      LEGACY_BACKUP_SCHEMA_VERSIONS.includes(
+        schemaVersion as (typeof LEGACY_BACKUP_SCHEMA_VERSIONS)[number],
+      )
+    )
   ) {
     fail("backup schema version");
   }
@@ -320,14 +373,22 @@ function validateBackupValue(value: unknown, allowLegacy: boolean): BookmarkXBac
     fail("backup collection size");
   }
   const bookmarks = data.bookmarks.map((bookmark) =>
-    parseBookmark(bookmark, schemaVersion),
+    parseBookmark(bookmark, schemaVersion as BackupSchemaVersion),
   );
-  const folders = data.folders.map(parseFolder);
-  const tags = data.tags.map(parseTag);
+  const folders = data.folders.map((folder) =>
+    parseFolder(folder, schemaVersion as BackupSchemaVersion),
+  );
+  const tags = data.tags.map((tag) =>
+    parseTag(tag, schemaVersion as BackupSchemaVersion),
+  );
   assertUnique(bookmarks, ({ id }) => id, "duplicate bookmark ID");
   assertUnique(folders, ({ id }) => id, "duplicate folder ID");
   assertUnique(tags, ({ id }) => id, "duplicate tag ID");
-  assertUnique(tags, ({ normalizedName }) => normalizedName, "duplicate tag name");
+  assertUnique(
+    tags.filter((tag) => tag.deletedAt === undefined),
+    ({ normalizedName }) => normalizedName,
+    "duplicate tag name",
+  );
   assertFolderGraph(folders);
 
   const folderIds = new Set(folders.map(({ id }) => id));

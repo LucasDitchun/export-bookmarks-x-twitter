@@ -1,12 +1,13 @@
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
-export type InterfaceIcon = "edit" | "trash";
+export type InterfaceIcon = "edit" | "restore" | "trash";
 
 const ICON_PATHS: Record<InterfaceIcon, readonly string[]> = {
   edit: [
     "M13.5 6.5l4 4",
     "M4 20l3.75-.75L18.5 8.5a2.83 2.83 0 0 0-4-4L3.75 15.25 3 19a.83.83 0 0 0 1 1Z",
   ],
+  restore: ["M4 9V4l3 3", "M5 6a8 8 0 1 1-1 8"],
   trash: ["M4 7h16", "M9 7V4h6v3", "M7 7l1 13h8l1-13", "M10 11v5", "M14 11v5"],
 };
 

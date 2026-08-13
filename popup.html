@@ -223,6 +223,36 @@
                   Open a bookmark to add or remove tags.
                 </p>
               </section>
+              <details id="organization-trash" class="organization-trash">
+                <summary>
+                  <span data-i18n="organizationTrashTitle">Trash</span>
+                  <span
+                    id="organization-trash-count"
+                    class="organization-counts"
+                    aria-live="polite"
+                    >0</span
+                  >
+                </summary>
+                <p class="organization-help" data-i18n="organizationTrashHelp">
+                  Restore deleted folders and tags with their saved-post relationships.
+                </p>
+                <span
+                  id="organization-trash-status"
+                  class="quiet-status"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                ></span>
+                <section aria-labelledby="trash-folder-heading">
+                  <h3 id="trash-folder-heading" data-i18n="folderTitle">Folders</h3>
+                  <ul id="trash-folder-list" class="organization-list"></ul>
+                </section>
+                <section aria-labelledby="trash-tag-heading">
+                  <h3 id="trash-tag-heading" data-i18n="tagsLabel">Tags</h3>
+                  <ul id="trash-tag-list" class="organization-list"></ul>
+                </section>
+                <p id="organization-trash-empty" class="organization-help" hidden></p>
+              </details>
             </details>
 
             <div class="library-search" role="search">

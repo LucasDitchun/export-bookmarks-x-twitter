@@ -510,6 +510,23 @@
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": { "message": "ブックマークを開いてタグを追加または削除します。" },
+  "organizationTrashTitle": { "message": "ゴミ箱" },
+  "organizationTrashHelp": {
+    "message": "削除したフォルダーとタグをブックマークとの関連付けごと復元します。"
+  },
+  "organizationTrashEmpty": { "message": "ゴミ箱は空です。" },
+  "organizationTrashError": { "message": "ゴミ箱を読み込めませんでした。" },
+  "organizationRestoring": { "message": "復元しています…" },
+  "organizationRestored": { "message": "復元しました。" },
+  "organizationRestoreError": { "message": "この項目を復元できませんでした。" },
+  "restoreTag": {
+    "message": "タグ「$NAME$」を復元",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "フォルダー「$NAME$」を復元",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "ライブラリに戻る" },
   "settingsViewHelp": { "message": "エクスポート、バックアップ、言語、環境設定。" }
 }

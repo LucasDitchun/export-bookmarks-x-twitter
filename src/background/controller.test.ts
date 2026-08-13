@@ -93,13 +93,16 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
     },
     tags: {
       list: vi.fn(async (): Promise<BookmarkTag[]> => []),
+      listDeleted: vi.fn(async (): Promise<BookmarkTag[]> => []),
       add: vi.fn(async (): Promise<unknown> => null),
       remove: vi.fn(async (): Promise<unknown> => null),
       rename: vi.fn(async (): Promise<unknown> => null),
       delete: vi.fn(async (): Promise<unknown> => null),
+      restore: vi.fn(async (): Promise<unknown> => null),
     },
     folders: {
       list: vi.fn(async (): Promise<FolderRecord[]> => []),
+      listDeleted: vi.fn(async (): Promise<FolderRecord[]> => []),
       create: vi.fn(async () => ({
         id: "folder-1",
         name: "Research",
@@ -112,7 +115,11 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       })),
       delete: vi.fn(async () => ({
         deletedFolderIds: ["folder-1"],
-        uncategorizedBookmarkCount: 1,
+        preservedBookmarkCount: 1,
+      })),
+      restore: vi.fn(async () => ({
+        restoredFolderIds: ["folder-1"],
+        restoredBookmarkCount: 1,
       })),
       assignBookmark: vi.fn(async () => ({
         ...bookmark,
@@ -972,7 +979,7 @@ describe("BackgroundController", () => {
     dependencies.tags.rename.mockResolvedValueOnce({ ...tag, name: "References" });
     dependencies.tags.delete.mockResolvedValueOnce({
       deletedTagId: tag.id,
-      untaggedBookmarkCount: 2,
+      preservedBookmarkCount: 2,
     });
     const controller = new BackgroundController(dependencies);
 
@@ -1019,13 +1026,55 @@ describe("BackgroundController", () => {
       controller.handle({ type: "DELETE_TAG", payload: { id: tag.id } }, POPUP_SENDER),
     ).resolves.toEqual({
       ok: true,
-      data: { deletedTagId: tag.id, untaggedBookmarkCount: 2 },
+      data: { deletedTagId: tag.id, preservedBookmarkCount: 2 },
     });
     expect(dependencies.tags.add).toHaveBeenCalledWith("123", " Research ");
     expect(dependencies.tags.remove).toHaveBeenCalledWith("123", "tag-research");
     expect(dependencies.tags.rename).toHaveBeenCalledWith(tag.id, "References");
     expect(dependencies.tags.delete).toHaveBeenCalledWith(tag.id);
     expect(dependencies.search.invalidate).toHaveBeenCalledTimes(4);
+  });
+
+  it("lists and restores recoverable organization trash", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    const deletedTag: BookmarkTag = {
+      id: "tag-deleted",
+      name: "Research",
+      normalizedName: "research",
+      deletedAt: "2026-08-13T00:00:00.000Z",
+    };
+    const deletedFolder: FolderRecord = {
+      id: "folder-deleted",
+      name: "Research",
+      parentId: null,
+      deletedAt: "2026-08-13T00:00:00.000Z",
+    };
+    dependencies.tags.listDeleted.mockResolvedValue([deletedTag]);
+    dependencies.folders.listDeleted.mockResolvedValue([deletedFolder]);
+    dependencies.tags.restore.mockResolvedValue({
+      ...deletedTag,
+      deletedAt: undefined,
+    });
+
+    await expect(
+      controller.handle({ type: "LIST_ORGANIZATION_TRASH" }, POPUP_SENDER),
+    ).resolves.toEqual({
+      ok: true,
+      data: { tags: [deletedTag], folders: [deletedFolder] },
+    });
+    await controller.handle(
+      { type: "RESTORE_TAG", payload: { id: deletedTag.id } },
+      POPUP_SENDER,
+    );
+    await controller.handle(
+      { type: "RESTORE_FOLDER", payload: { id: deletedFolder.id } },
+      POPUP_SENDER,
+    );
+
+    expect(dependencies.tags.restore).toHaveBeenCalledWith(deletedTag.id);
+    expect(dependencies.folders.restore).toHaveBeenCalledWith(deletedFolder.id);
+    expect(dependencies.search.invalidate).toHaveBeenCalledTimes(2);
   });
 
   it("rejects invalid tag requests at the extension boundary", async () => {
@@ -1048,6 +1097,7 @@ describe("BackgroundController", () => {
       },
       { type: "RENAME_TAG", payload: { id: "tag-1", name: "   " } },
       { type: "DELETE_TAG", payload: { id: "<script>" } },
+      { type: "RESTORE_TAG", payload: { id: "<script>" } },
     ]) {
       await expect(controller.handle(request, POPUP_SENDER)).resolves.toMatchObject({
         ok: false,
@@ -1137,6 +1187,7 @@ describe("BackgroundController", () => {
       },
       { type: "RENAME_FOLDER", payload: { id: "folder-1", name: "x".repeat(101) } },
       { type: "DELETE_FOLDER", payload: { id: "<script>" } },
+      { type: "RESTORE_FOLDER", payload: { id: "<script>" } },
       {
         type: "ASSIGN_BOOKMARK_FOLDER",
         payload: { bookmarkId: "123", folderId: "<script>" },

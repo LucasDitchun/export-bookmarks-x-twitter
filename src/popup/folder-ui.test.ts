@@ -125,7 +125,7 @@ describe("folder UI", () => {
           ok: true as const,
           data: {
             deletedFolderIds: ["ai", "models"],
-            uncategorizedBookmarkCount: 1,
+            preservedBookmarkCount: 1,
           },
         });
       }

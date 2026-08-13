@@ -90,7 +90,7 @@ describe("backup schema", () => {
     const content = serializeBackup(backup);
 
     expect(parseBackup(content)).toEqual(backup);
-    expect(content).toContain('"schemaVersion": 2');
+    expect(content).toContain(`"schemaVersion": ${BACKUP_SCHEMA_VERSION}`);
     expect(content).not.toContain("scrapeRun");
     expect(content).not.toContain("bookmarkFolders");
   });
@@ -107,6 +107,13 @@ describe("backup schema", () => {
 
     expect(restored.schemaVersion).toBe(BACKUP_SCHEMA_VERSION);
     expect(restored.data.bookmarks[0]?.media).toEqual({ images: [], videos: [] });
+  });
+
+  it("migrates schema version 2 backups without organization tombstones", () => {
+    const legacy = structuredClone(backup) as unknown as { schemaVersion: number };
+    legacy.schemaVersion = 2;
+
+    expect(parseBackup(JSON.stringify(legacy))).toEqual(backup);
   });
 
   it("preserves the established missing post-date sentinel for media cards", () => {

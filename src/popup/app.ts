@@ -23,6 +23,7 @@ import type {
   ExportResult,
   LiveBookmarkContext,
   NotedBookmark,
+  OrganizationTrashResult,
   PopupStatus,
   RuntimeError,
   SendMessage,
@@ -104,6 +105,9 @@ interface RequiredElements {
   noteSaveStatus: HTMLElement;
   noteTextarea: HTMLTextAreaElement;
   organizationCounts: HTMLElement;
+  organizationTrashCount: HTMLElement;
+  organizationTrashEmpty: HTMLElement;
+  organizationTrashStatus: HTMLElement;
   openBookmarksButton: HTMLButtonElement;
   openClearDialogButton: HTMLButtonElement;
   pageBadge: HTMLElement;
@@ -117,6 +121,8 @@ interface RequiredElements {
   tagStatus: HTMLElement;
   tagSuggestions: HTMLDataListElement;
   tagOverviewList: HTMLUListElement;
+  trashFolderList: HTMLUListElement;
+  trashTagList: HTMLUListElement;
 }
 
 interface PendingNoteSave {
@@ -174,6 +180,9 @@ function getElements(document: Document): RequiredElements {
     noteSaveStatus: requireElement(document, "note-save-status"),
     noteTextarea: requireElement(document, "note-textarea"),
     organizationCounts: requireElement(document, "organization-counts"),
+    organizationTrashCount: requireElement(document, "organization-trash-count"),
+    organizationTrashEmpty: requireElement(document, "organization-trash-empty"),
+    organizationTrashStatus: requireElement(document, "organization-trash-status"),
     openBookmarksButton: requireElement(document, "open-bookmarks-button"),
     openClearDialogButton: requireElement(document, "open-clear-dialog-button"),
     pageBadge: requireElement(document, "page-badge"),
@@ -187,6 +196,8 @@ function getElements(document: Document): RequiredElements {
     tagStatus: requireElement(document, "tag-status"),
     tagSuggestions: requireElement(document, "tag-suggestions"),
     tagOverviewList: requireElement(document, "tag-overview-list"),
+    trashFolderList: requireElement(document, "trash-folder-list"),
+    trashTagList: requireElement(document, "trash-tag-list"),
   };
 }
 
@@ -251,10 +262,14 @@ export function createPopupApp(options: PopupAppOptions): {
   let dateTimePreferences = initialDateTimePreferences;
   let quickStopThreshold = initialQuickStopThreshold;
   let tags: BookmarkTag[] = [];
+  let deletedTags: BookmarkTag[] = [];
+  let deletedFolders: FolderRecord[] = [];
   const deletedTagIds = new Set<string>();
   let tagUsage: Record<string, number> = {};
   let folderCount = 0;
+  let activeFolderIds = new Set<string>();
   let tagBusy = false;
+  let trashBusy = false;
   let selectionVersion = 0;
   let libraryGeneration = 0;
   let libraryBusy = false;
@@ -414,7 +429,19 @@ export function createPopupApp(options: PopupAppOptions): {
       elements.selectedCategoryIndicator.dataset.state = "empty";
       return;
     }
-    const categorized = isBookmarkCategorized(selectedBookmark, categorizationFields);
+    const activeTagIds = new Set(tags.map(({ id }) => id));
+    const categorized = isBookmarkCategorized(
+      {
+        ...selectedBookmark,
+        folderId:
+          selectedBookmark.folderId !== null &&
+          activeFolderIds.has(selectedBookmark.folderId)
+            ? selectedBookmark.folderId
+            : null,
+        tagIds: selectedBookmark.tagIds.filter((id) => activeTagIds.has(id)),
+      },
+      categorizationFields,
+    );
     elements.selectedCategoryIndicator.textContent = translate(
       categorized ? "bookmarkCategorized" : "bookmarkNeedsCategory",
     );
@@ -549,6 +576,92 @@ export function createPopupApp(options: PopupAppOptions): {
     activateSearchQuery(query);
   };
 
+  function renderOrganizationTrash(): void {
+    const count = deletedTags.length + deletedFolders.length;
+    elements.organizationTrashCount.textContent = String(count);
+    elements.organizationTrashEmpty.hidden = count > 0;
+    elements.organizationTrashEmpty.textContent = translate("organizationTrashEmpty");
+    elements.trashTagList.replaceChildren();
+    elements.trashFolderList.replaceChildren();
+
+    const appendTrashItem = (
+      list: HTMLUListElement,
+      kind: "tag" | "folder",
+      id: string,
+      name: string,
+    ): void => {
+      const item = document.createElement("li");
+      const label = document.createElement("span");
+      const restore = createIconButton({
+        document,
+        icon: "restore",
+        label: translate(kind === "tag" ? "restoreTag" : "restoreFolder", name),
+      });
+      item.className = "trash-item";
+      label.textContent = name;
+      restore.dataset.trashKind = kind;
+      restore.dataset.trashId = id;
+      restore.disabled = trashBusy;
+      restore.addEventListener("click", () => void restoreTrashItem(kind, id));
+      item.append(label, restore);
+      list.append(item);
+    };
+    for (const folder of deletedFolders) {
+      appendTrashItem(elements.trashFolderList, "folder", folder.id, folder.name);
+    }
+    for (const tag of deletedTags) {
+      appendTrashItem(elements.trashTagList, "tag", tag.id, tag.name);
+    }
+  }
+
+  async function loadOrganizationTrash(): Promise<void> {
+    try {
+      const response = await sendMessage<OrganizationTrashResult>({
+        type: "LIST_ORGANIZATION_TRASH",
+      });
+      if (!response.ok) throw new Error("trash list failed");
+      deletedTags = Array.isArray(response.data?.tags) ? response.data.tags : [];
+      deletedFolders = Array.isArray(response.data?.folders)
+        ? response.data.folders
+        : [];
+      elements.organizationTrashStatus.textContent = "";
+    } catch {
+      elements.organizationTrashStatus.textContent = translate(
+        "organizationTrashError",
+      );
+    } finally {
+      renderOrganizationTrash();
+    }
+  }
+
+  async function restoreTrashItem(kind: "tag" | "folder", id: string): Promise<void> {
+    if (trashBusy) return;
+    trashBusy = true;
+    elements.organizationTrashStatus.textContent = translate("organizationRestoring");
+    renderOrganizationTrash();
+    try {
+      const response = await sendMessage<unknown>({
+        type: kind === "tag" ? "RESTORE_TAG" : "RESTORE_FOLDER",
+        payload: { id },
+      });
+      if (!response.ok) throw new Error("restore failed");
+      if (kind === "tag") deletedTagIds.delete(id);
+      await Promise.all([
+        loadOrganizationTrash(),
+        kind === "tag" ? loadTags() : folderUi?.refresh(),
+      ]);
+      elements.organizationTrashStatus.textContent = translate("organizationRestored");
+      renderSelectedCategoryIndicator();
+    } catch {
+      elements.organizationTrashStatus.textContent = translate(
+        "organizationRestoreError",
+      );
+    } finally {
+      trashBusy = false;
+      renderOrganizationTrash();
+    }
+  }
+
   function renderOrganizationOverview(): void {
     elements.organizationCounts.textContent = translate("organizationCounts", [
       String(folderCount),
@@ -638,20 +751,12 @@ export function createPopupApp(options: PopupAppOptions): {
       tags = tags.filter((candidate) => candidate.id !== tag.id);
       deletedTagIds.add(tag.id);
       delete tagUsage[tag.id];
-      bookmarks = bookmarks.map((bookmark) => ({
-        ...bookmark,
-        tagIds: bookmark.tagIds.filter((tagId) => tagId !== tag.id),
-      }));
-      if (selectedBookmark?.tagIds.includes(tag.id)) {
-        selectedBookmark = {
-          ...selectedBookmark,
-          tagIds: selectedBookmark.tagIds.filter((tagId) => tagId !== tag.id),
-        };
-      }
       renderOrganizationOverview();
       renderTagSuggestions();
       renderBookmarkList();
       renderSelectedTags();
+      renderSelectedCategoryIndicator();
+      void loadOrganizationTrash();
     } catch {
       setTagStatus("tagSaveError");
     } finally {
@@ -1373,9 +1478,12 @@ export function createPopupApp(options: PopupAppOptions): {
     },
     onFoldersChanged: (folders: readonly FolderRecord[]) => {
       folderCount = folders.length;
+      activeFolderIds = new Set(folders.map(({ id }) => id));
       exportUi?.setFolders(folders);
       renderOrganizationOverview();
+      renderSelectedCategoryIndicator();
     },
+    onTrashChanged: () => void loadOrganizationTrash(),
     onFolderSelected: filterLibraryByOrganization,
   });
 
@@ -1385,6 +1493,7 @@ export function createPopupApp(options: PopupAppOptions): {
     loadStatus(),
     loadLibrary(),
     loadTags(),
+    loadOrganizationTrash(),
     folderUi.ready,
   ]).then(() => undefined);
   return {

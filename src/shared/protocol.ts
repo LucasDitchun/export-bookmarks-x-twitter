@@ -83,7 +83,7 @@ export interface TagRemovalResult {
 
 export interface TagDeleteResult {
   deletedTagId: string;
-  untaggedBookmarkCount: number;
+  preservedBookmarkCount: number;
 }
 
 export interface FolderListResult {
@@ -97,7 +97,17 @@ export interface FolderDetailResult {
 
 export interface FolderDeleteResult {
   deletedFolderIds: string[];
-  uncategorizedBookmarkCount: number;
+  preservedBookmarkCount: number;
+}
+
+export interface OrganizationTrashResult {
+  tags: BookmarkTag[];
+  folders: FolderRecord[];
+}
+
+export interface FolderRestoreResult {
+  restoredFolderIds: string[];
+  restoredBookmarkCount: number;
 }
 
 export interface SettingsResult {
@@ -182,9 +192,11 @@ export type UiRequest =
   | { type: "GET_BOOKMARK_DECORATIONS"; payload: { ids: string[] } }
   | { type: "SAVE_BOOKMARK_NOTE"; payload: { id: string; note: string } }
   | { type: "LIST_TAGS" }
+  | { type: "LIST_ORGANIZATION_TRASH" }
   | { type: "ADD_BOOKMARK_TAG"; payload: { id: string; name: string } }
   | { type: "RENAME_TAG"; payload: { id: string; name: string } }
   | { type: "DELETE_TAG"; payload: { id: string } }
+  | { type: "RESTORE_TAG"; payload: { id: string } }
   | {
       type: "REMOVE_BOOKMARK_TAG";
       payload: { id: string; tagId: string };
@@ -196,6 +208,7 @@ export type UiRequest =
     }
   | { type: "RENAME_FOLDER"; payload: { id: string; name: string } }
   | { type: "DELETE_FOLDER"; payload: { id: string } }
+  | { type: "RESTORE_FOLDER"; payload: { id: string } }
   | {
       type: "ASSIGN_BOOKMARK_FOLDER";
       payload: { bookmarkId: string; folderId: string | null };

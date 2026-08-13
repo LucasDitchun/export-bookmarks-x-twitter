@@ -516,6 +516,27 @@
   "tagsManageHelp": {
     "message": "Öffne ein Lesezeichen, um Tags hinzuzufügen oder zu entfernen."
   },
+  "organizationTrashTitle": { "message": "Papierkorb" },
+  "organizationTrashHelp": {
+    "message": "Gelöschte Ordner und Tags mit ihren Lesezeichen-Zuordnungen wiederherstellen."
+  },
+  "organizationTrashEmpty": { "message": "Der Papierkorb ist leer." },
+  "organizationTrashError": {
+    "message": "Der Papierkorb konnte nicht geladen werden."
+  },
+  "organizationRestoring": { "message": "Wird wiederhergestellt…" },
+  "organizationRestored": { "message": "Wiederhergestellt." },
+  "organizationRestoreError": {
+    "message": "Dieses Element konnte nicht wiederhergestellt werden."
+  },
+  "restoreTag": {
+    "message": "Tag $NAME$ wiederherstellen",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "Ordner $NAME$ wiederherstellen",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "Zurück zur Bibliothek" },
   "settingsViewHelp": { "message": "Export, Sicherung, Sprache und Einstellungen." }
 }

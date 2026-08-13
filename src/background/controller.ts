@@ -114,18 +114,22 @@ interface BackgroundDependencies {
   };
   tags: {
     list(): Promise<unknown>;
+    listDeleted(): Promise<unknown>;
     usage?(): Promise<Record<string, number>>;
     add(bookmarkId: string, name: string): Promise<unknown>;
     remove(bookmarkId: string, tagId: string): Promise<unknown>;
     rename(id: string, name: string): Promise<unknown>;
     delete(id: string): Promise<unknown>;
+    restore(id: string): Promise<unknown>;
   };
   folders: {
     list(): Promise<unknown>;
+    listDeleted(): Promise<unknown>;
     usage?(): Promise<Record<string, number>>;
     create(input: { name: string; parentId: string | null }): Promise<unknown>;
     rename(id: string, name: string): Promise<unknown>;
     delete(id: string): Promise<unknown>;
+    restore(id: string): Promise<unknown>;
     assignBookmark(bookmarkId: string, folderId: string | null): Promise<unknown>;
   };
   settings: {
@@ -249,6 +253,7 @@ function isUiRequest(value: unknown): value is UiRequest {
     value.type === "CLEAR_ARCHIVE" ||
     value.type === "EXPORT_BACKUP" ||
     value.type === "LIST_TAGS" ||
+    value.type === "LIST_ORGANIZATION_TRASH" ||
     value.type === "LIST_FOLDERS"
   ) {
     return true;
@@ -345,7 +350,7 @@ function isUiRequest(value: unknown): value is UiRequest {
       value.payload.name.trim().normalize("NFKC").length <= 50
     );
   }
-  if (value.type === "DELETE_TAG") {
+  if (value.type === "DELETE_TAG" || value.type === "RESTORE_TAG") {
     return isRecord(value.payload) && isLocalEntityId(value.payload.id);
   }
   if (value.type === "CREATE_FOLDER") {
@@ -362,7 +367,7 @@ function isUiRequest(value: unknown): value is UiRequest {
       isFolderName(value.payload.name)
     );
   }
-  if (value.type === "DELETE_FOLDER") {
+  if (value.type === "DELETE_FOLDER" || value.type === "RESTORE_FOLDER") {
     return isRecord(value.payload) && isLocalEntityId(value.payload.id);
   }
   if (value.type === "ASSIGN_BOOKMARK_FOLDER") {
@@ -661,6 +666,13 @@ export class BackgroundController {
           ]);
           return success({ tags, usage });
         }
+        case "LIST_ORGANIZATION_TRASH": {
+          const [tags, folders] = await Promise.all([
+            this.dependencies.tags.listDeleted(),
+            this.dependencies.folders.listDeleted(),
+          ]);
+          return success({ tags, folders });
+        }
         case "ADD_BOOKMARK_TAG": {
           const result = await this.dependencies.tags.add(
             request.payload.id,
@@ -690,6 +702,11 @@ export class BackgroundController {
           this.dependencies.search.invalidate();
           return success(result);
         }
+        case "RESTORE_TAG": {
+          const tag = await this.dependencies.tags.restore(request.payload.id);
+          this.dependencies.search.invalidate();
+          return success({ tag });
+        }
         case "LIST_FOLDERS": {
           const [folders, usage] = await Promise.all([
             this.dependencies.folders.list(),
@@ -712,6 +729,11 @@ export class BackgroundController {
         }
         case "DELETE_FOLDER": {
           const result = await this.dependencies.folders.delete(request.payload.id);
+          this.dependencies.search.invalidate();
+          return success(result);
+        }
+        case "RESTORE_FOLDER": {
+          const result = await this.dependencies.folders.restore(request.payload.id);
           this.dependencies.search.invalidate();
           return success(result);
         }
