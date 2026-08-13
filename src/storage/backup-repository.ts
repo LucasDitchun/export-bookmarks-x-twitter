@@ -164,6 +164,21 @@ function mergeBackup(
   const folders = new Map(local.folders.map((folder) => [folder.id, folder]));
   for (const folder of backup.data.folders) folders.set(folder.id, folder);
 
+  // Folder deletion is recursive in the live application. A merge can introduce
+  // a tombstoned backup parent above a local-only active descendant, so close the
+  // merged subtree before validating/persisting it.
+  let folderDeletionChanged = true;
+  while (folderDeletionChanged) {
+    folderDeletionChanged = false;
+    for (const [id, folder] of folders) {
+      if (folder.deletedAt !== undefined || folder.parentId === null) continue;
+      const parent = folders.get(folder.parentId);
+      if (parent?.deletedAt === undefined) continue;
+      folders.set(id, { ...folder, deletedAt: parent.deletedAt });
+      folderDeletionChanged = true;
+    }
+  }
+
   const bookmarks = new Map(
     local.bookmarks.map((bookmark) => [
       bookmark.id,

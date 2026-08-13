@@ -348,6 +348,36 @@ describe("BackupRepository", () => {
     ]);
   });
 
+  it("soft-deletes local-only descendants when a backup tombstones their ancestor", async () => {
+    const sourceName = `backup-folder-source-${crypto.randomUUID()}`;
+    const targetName = `backup-folder-target-${crypto.randomUUID()}`;
+    const storage = new MemoryStorage();
+    await seed(sourceName);
+    await new FolderRepository(sourceName).delete("folder-root");
+    const content = (await repository(sourceName, storage).export()).content;
+
+    await seed(targetName);
+    const database = await new BookmarkDatabase(targetName).open();
+    const transaction = database.transaction("folders", "readwrite");
+    transaction.objectStore("folders").put({
+      id: "folder-local",
+      name: "Local child",
+      parentId: "folder-root",
+    });
+    await transactionDone(transaction);
+    database.close();
+
+    await repository(targetName, storage).restore(content, "merge");
+
+    await expect(new FolderRepository(targetName).list()).resolves.not.toContainEqual(
+      expect.objectContaining({ id: "folder-local" }),
+    );
+    const deleted = await new FolderRepository(targetName).listDeleted();
+    expect(deleted.find(({ id }) => id === "folder-local")?.deletedAt).toMatch(
+      /^\d{4}-\d{2}-\d{2}T/,
+    );
+  });
+
   it("resolves a local semantic tag duplicate to the backup tag ID", async () => {
     const sourceName = `backup-tag-source-${crypto.randomUUID()}`;
     const targetName = `backup-tag-target-${crypto.randomUUID()}`;

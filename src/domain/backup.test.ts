@@ -95,6 +95,19 @@ describe("backup schema", () => {
     expect(content).not.toContain("bookmarkFolders");
   });
 
+  it("rejects an active folder below a deleted ancestor", () => {
+    expect(() =>
+      parseBackup(
+        changed((draft) => {
+          draft.data.folders[0] = {
+            ...draft.data.folders[0]!,
+            deletedAt: "2026-08-09T08:01:00.000Z",
+          };
+        }),
+      ),
+    ).toThrow(/deleted folder ancestor/i);
+  });
+
   it("migrates schema version 1 backups by adding empty media", () => {
     const legacy = structuredClone(backup) as unknown as {
       schemaVersion: number;
