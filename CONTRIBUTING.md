@@ -39,9 +39,8 @@ coverage. The complete coverage, audit, package, semantic-model, and Chrome
 smoke gate runs once when a maintainer promotes a batch to `staging`.
 
 Record the exact commit and result in the pull request. If the local profile was
-not run, ask a maintainer to launch the manual **On-demand validation** workflow
-for that commit instead. Pull requests to `develop` intentionally start no
-automatic GitHub Actions.
+not run, keep the pull request in draft until it can be verified locally. Pull
+requests to `develop` intentionally start no GitHub Actions.
 
 ## Commits and pull requests
 

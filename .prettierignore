@@ -2,18 +2,12 @@ node_modules/
 dist/
 coverage/
 release/
+download/*.zip
 chrome-smoke-profile-*/
-.env
-.env.local
-.env.*.local
-*.pem
-*.crx
-.DS_Store
 
 # Local AI/agent tooling and generated analysis
 graphify-out/
 .graphify*/
-.graphify*.json
 .ai/
 .agent/
 .agents/
@@ -25,12 +19,6 @@ graphify-out/
 .gemini/
 .roo/
 .windsurf/
-.mcp.json
-AGENTS.md
-CLAUDE.md
-GEMINI.md
-RTK.md
 .github/agents/
-.github/copilot-instructions.md
 .github/instructions/
 .github/prompts/

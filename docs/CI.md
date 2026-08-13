@@ -1,23 +1,22 @@
-# Continuous integration and staging architecture
+# Local-first validation and release automation
 
-Bookmark X deliberately runs GitHub Actions only when a remote runner adds new
-confidence. Feature work is verified locally, while one manually selected
-`develop` snapshot receives the complete remote gate before it becomes
+Bookmark X spends no GitHub Actions runner time on ordinary contributions.
+Feature work is verified locally, while one manually selected `develop` snapshot
+receives the complete remote release gate only after a batch is ready for
 `staging`.
 
 ## Branch and event matrix
 
-| Source           | Destination | Trigger                         | Validation                                             | GitHub-hosted minutes               |
-| ---------------- | ----------- | ------------------------------- | ------------------------------------------------------ | ----------------------------------- |
-| feature/fix      | `develop`   | pull request                    | `pnpm verify:local`, recorded in the PR                | none by default                     |
-| any exact commit | none        | manual **On-demand validation** | the same `verify:local` profile                        | only when local evidence is missing |
-| `develop`        | `staging`   | manual **Stage candidate**      | complete staging profile, build, ZIP, and Chrome smoke | once per selected batch             |
-| `staging`        | `main`      | reviewed pull request           | provenance, version, and committed ZIP only            | seconds; no rebuild                 |
+| Source      | Destination | Trigger                    | Validation                                             | GitHub-hosted minutes   |
+| ----------- | ----------- | -------------------------- | ------------------------------------------------------ | ----------------------- |
+| feature/fix | `develop`   | pull request               | `pnpm verify:local`, recorded in the PR                | none                    |
+| `develop`   | `staging`   | manual **Stage candidate** | complete staging profile, build, ZIP, and Chrome smoke | once per selected batch |
+| `staging`   | `main`      | reviewed pull request      | provenance, version, and committed ZIP only            | seconds; no rebuild     |
 
-No workflow listens to pushes or pull requests targeting `develop`. This is
-intentional: a skipped workflow cannot safely be a required check, and rerunning
-the same suite after a contributor already ran it locally wastes both time and
-Actions quota.
+No workflow listens to pushes or pull requests targeting `develop`, and there is
+no manual contribution-validation workflow. This is intentional: the exact
+commit must pass locally before review, and rerunning the same suite remotely
+wastes both time and Actions quota.
 
 ## Canonical verification profiles
 
@@ -42,11 +41,9 @@ Each profile prints the duration of every material step. Those measurements are
 the source for future estimates and make slow regressions visible without
 splitting work across multiple runners.
 
-## When local checks were not run
-
-Use **Actions → On-demand validation → Run workflow** and provide the full
-40-character commit SHA. The workflow checks out exactly that commit and runs
-`pnpm verify:local`. It never runs automatically and cannot publish anything.
+If local checks cannot be run, keep the pull request in draft. Do not substitute
+an unverified commit or consume a hosted runner for the ordinary contribution
+loop.
 
 ## Creating a staging candidate
 
@@ -77,7 +74,7 @@ staging cycle.
 ## Caching and maintenance
 
 - `actions/setup-node` restores the pnpm store from `pnpm-lock.yaml`.
-- The frozen install happens once in each intentionally requested runner.
+- The frozen install happens once in the intentionally requested staging runner.
 - Build, package, semantic-model validation, and Chrome smoke each happen once
   per staging batch.
 - Third-party actions remain pinned to immutable commit SHAs and are updated by
@@ -85,9 +82,9 @@ staging cycle.
 - Workflow-policy tests protect the event matrix, permissions, action pins, and
   absence of duplicate expensive commands.
 
-No CI configuration can literally remain unchanged forever: GitHub Actions,
+No automation configuration can literally remain unchanged forever: GitHub Actions,
 Node.js, Chrome, and security advisories evolve. Keeping one command plan and
-three small workflows minimizes that maintenance surface without weakening the
+two release-only workflows minimizes that maintenance surface without weakening the
 release boundary.
 
 ## Official references

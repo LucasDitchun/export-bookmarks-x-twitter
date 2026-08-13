@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -18,16 +18,31 @@ function workflowEvents(workflow) {
 }
 
 describe("lean CI and staging policy", () => {
-  it("keeps develop free from automatic GitHub Actions", async () => {
-    const ci = await readWorkflow("ci.yml");
-    const events = workflowEvents(ci);
+  it("keeps contribution validation entirely local", async () => {
+    const workflowNames = (
+      await readdir(resolve(rootDirectory, ".github", "workflows"))
+    )
+      .filter((name) => name.endsWith(".yml"))
+      .sort();
 
-    expect(events).toContain("workflow_dispatch:");
-    expect(events).not.toContain("pull_request:");
-    expect(events).not.toContain("push:");
-    expect(ci).toContain("expected_sha:");
-    expect(ci).toContain("pnpm verify:local");
-    expect(ci).not.toContain("pnpm verify:staging");
+    expect(workflowNames).toEqual(["promote-release.yml", "release-train.yml"]);
+  });
+
+  it("keeps generated AI and Graphify artifacts local", async () => {
+    const ignoreFile = await readFile(resolve(rootDirectory, ".gitignore"), "utf8");
+
+    for (const localArtifact of [
+      "graphify-out/",
+      ".agents/",
+      ".claude/",
+      ".codex/",
+      ".cursor/",
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+    ]) {
+      expect(ignoreFile).toContain(localArtifact);
+    }
   });
 
   it("runs the complete remote gate once when a develop batch is staged", async () => {
@@ -106,7 +121,7 @@ describe("lean CI and staging policy", () => {
 
   it("pins third-party actions and starts every workflow with minimum permissions", async () => {
     const workflows = await Promise.all(
-      ["ci.yml", "release-train.yml", "promote-release.yml"].map(readWorkflow),
+      ["release-train.yml", "promote-release.yml"].map(readWorkflow),
     );
 
     for (const workflow of workflows) {
