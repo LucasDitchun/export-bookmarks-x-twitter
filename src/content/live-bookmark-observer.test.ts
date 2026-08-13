@@ -325,7 +325,7 @@ describe("startLiveBookmarkObserver", () => {
             ok: true,
             data: {
               tags: [
-                { id: "tag-existing", name: "Existing", normalizedName: "existing" },
+                { id: "tag-existing", name: "AI, ML", normalizedName: "ai, ml" },
               ],
             },
           };
@@ -334,7 +334,9 @@ describe("startLiveBookmarkObserver", () => {
           return {
             ok: true,
             data: {
-              folders: [{ id: "folder-reading", name: "Reading", parentId: null }],
+              folders: [
+                { id: "folder-reading", name: "R&D/Video", parentId: null },
+              ],
             },
           };
         }
@@ -375,12 +377,16 @@ describe("startLiveBookmarkObserver", () => {
     const description = shadow?.querySelector<HTMLTextAreaElement>(
       "#bookmark-x-modal-description",
     );
-    expect(tags?.value).toBe("Existing");
-    expect(folder?.value).toBe("Reading");
+    expect(tags?.value).toBe("");
+    expect(shadow?.querySelector(".token")?.textContent).toContain("AI, ML");
+    expect(folder?.value).toBe("");
+    expect(shadow?.querySelector(".folder-token")?.textContent).toContain(
+      "R&D/Video",
+    );
     expect(description?.value).toBe("Existing note");
 
-    tags!.value = "Existing, New";
-    folder!.value = "Reading / AI";
+    tags!.value = "New, exact";
+    tags!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     description!.value = "Why this matters";
     shadow
       ?.querySelector("form")
@@ -391,8 +397,8 @@ describe("startLiveBookmarkObserver", () => {
         payload: {
           id: "123",
           note: "Why this matters",
-          tags: ["Existing", "New"],
-          folderPath: ["Reading", "AI"],
+          tags: ["AI, ML", "New, exact"],
+          folderPath: ["R&D/Video"],
         },
       });
     });

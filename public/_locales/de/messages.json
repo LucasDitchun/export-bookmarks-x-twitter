@@ -403,7 +403,7 @@
   "bookmarkPromptClose": { "message": "Schließen" },
   "bookmarkPromptSave": { "message": "Notiz speichern" },
   "bookmarkPromptTags": { "message": "Tags" },
-  "bookmarkPromptTagsHelp": { "message": "Trenne mehrere Tags durch Kommas." },
+  "bookmarkPromptTagsHelp": { "message": "Drücke nach jedem Tag die Eingabetaste." },
   "bookmarkPromptFolder": { "message": "Ordner" },
   "bookmarkPromptNote": { "message": "Private Notiz" },
   "bookmarkCategorized": { "message": "Kategorisiert" },

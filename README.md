@@ -144,7 +144,7 @@ is enabled by default and can be disabled in **Settings → Behavior**; the same
 setting chooses the in-page modal or Chrome Side Panel.
 
 The modal accepts new values or suggestions from existing folders and tags.
-Separate multiple tags with commas. A successful save closes the modal; an
+Press Enter after each tag. Commas remain part of the tag name. A successful save closes the modal; an
 error keeps it open so the draft is not lost.
 
 ## Organize notes, folders, and tags

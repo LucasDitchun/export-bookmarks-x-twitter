@@ -329,7 +329,7 @@
   "bookmarkPromptClose": { "message": "Fechar" },
   "bookmarkPromptSave": { "message": "Salvar nota" },
   "bookmarkPromptTags": { "message": "Tags" },
-  "bookmarkPromptTagsHelp": { "message": "Separe várias tags com vírgulas." },
+  "bookmarkPromptTagsHelp": { "message": "Pressione Enter após cada tag." },
   "bookmarkPromptFolder": { "message": "Pasta" },
   "bookmarkPromptNote": { "message": "Nota privada" },
   "bookmarkCategorized": { "message": "Categorizado" },
