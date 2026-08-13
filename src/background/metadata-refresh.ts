@@ -11,7 +11,9 @@ function validBookmarkId(value: unknown): value is string {
   return typeof value === "string" && /^\d+$/.test(value);
 }
 
-export function metadataRefreshRequest(request: unknown): ContentControlRequest | null {
+export function metadataRefreshRequest(
+  request: unknown,
+): Extract<ContentControlRequest, { type: "REFRESH_BOOKMARK_METADATA" }> | null {
   if (typeof request !== "object" || request === null) return null;
   const message = request as MetadataMutationMessage;
   const id =

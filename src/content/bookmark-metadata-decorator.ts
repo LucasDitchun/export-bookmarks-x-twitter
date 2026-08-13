@@ -28,7 +28,7 @@ export interface BookmarkMetadataDecoratorOptions {
 }
 
 export interface BookmarkMetadataDecoratorController {
-  refresh(bookmarkId?: string): void;
+  refresh(bookmarkIds?: string | readonly string[]): void;
   setLocalization(localization: BookmarkLocalizationResult): void;
   setPending(article: Element, bookmarkId: string): Promise<void>;
   stop(): void;
@@ -564,14 +564,21 @@ export function startBookmarkMetadataDecorator(
   }
 
   return {
-    refresh(bookmarkId) {
+    refresh(bookmarkIds) {
+      const targetedIds =
+        typeof bookmarkIds === "string"
+          ? new Set([bookmarkIds])
+          : bookmarkIds
+            ? new Set(bookmarkIds)
+            : null;
       for (const [article, pendingId] of pending) {
-        if (!bookmarkId || pendingId === bookmarkId) pending.delete(article);
+        if (!targetedIds || targetedIds.has(pendingId)) pending.delete(article);
       }
       for (const article of Array.from(
         options.document.querySelectorAll(ARTICLE_SELECTOR),
       )) {
-        if (!bookmarkId || bookmarkIdFromArticle(article) === bookmarkId) {
+        const articleId = targetedIds ? bookmarkIdFromArticle(article) : null;
+        if (!targetedIds || (articleId !== null && targetedIds.has(articleId))) {
           queueArticle(article);
         }
       }
