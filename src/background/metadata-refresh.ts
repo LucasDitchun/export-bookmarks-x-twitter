@@ -1,4 +1,4 @@
-import type { ContentControlRequest } from "../shared/protocol";
+import type { ContentControlRequest, RuntimeResponse } from "../shared/protocol";
 
 interface MetadataMutationMessage {
   type?: unknown;
@@ -63,4 +63,11 @@ export function metadataRefreshRequest(
     return { type: "REFRESH_BOOKMARK_METADATA" };
   }
   return null;
+}
+
+export function metadataRefreshAfterResponse(
+  request: unknown,
+  response: RuntimeResponse<unknown>,
+): Extract<ContentControlRequest, { type: "REFRESH_BOOKMARK_METADATA" }> | null {
+  return response.ok ? metadataRefreshRequest(request) : null;
 }
