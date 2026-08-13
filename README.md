@@ -4,6 +4,11 @@
 
 # Export Bookmarks X (Twitter) — Bookmark X
 
+User guide: **English** · [Português](docs/i18n/pt-BR/USER_GUIDE.md) ·
+[日本語](docs/i18n/ja/USER_GUIDE.md) · [Español](docs/i18n/es/USER_GUIDE.md) ·
+[简体中文](docs/i18n/zh-CN/USER_GUIDE.md) · [Deutsch](docs/i18n/de/USER_GUIDE.md) ·
+[Français](docs/i18n/fr/USER_GUIDE.md) · [Italiano](docs/i18n/it/USER_GUIDE.md)
+
 Bookmark X is an open-source Chrome extension for saving X bookmarks (formerly
 Twitter bookmarks) and exporting them to local, private TXT or Markdown files. It captures
 bookmarks from your signed-in X bookmarks page, removes duplicates, preserves
