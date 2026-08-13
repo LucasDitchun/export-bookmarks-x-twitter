@@ -18,6 +18,10 @@ import { createLocaleCatalogCache } from "./locale-catalog-cache";
 import { bookmarkMetadataMessagesFromCatalog } from "../shared/bookmark-metadata-messages";
 import { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
 import { KeyedTaskQueue, messageSerializationKey } from "./message-serialization";
+import {
+  createLocaleRefreshBroadcaster,
+  isLocaleStorageChange,
+} from "./locale-refresh";
 
 const state = new ExtensionStateRepository({
   get: (keys) => chrome.storage.local.get(keys),
@@ -116,6 +120,12 @@ const controller = new BackgroundController({
     openSidePanel: (tabId) => chrome.sidePanel.open({ tabId }),
   },
 });
+const broadcastLocaleRefresh = createLocaleRefreshBroadcaster({
+  invalidateLocalization: () => controller.invalidateDecorationLocalization(),
+  loadLocalization: () => locale.get(),
+  queryTabs: ({ url }) => chrome.tabs.query({ url: [...url] }),
+  sendToTab: (tabId, request) => chrome.tabs.sendMessage(tabId, request),
+});
 
 async function restoreSurfacePreference(): Promise<void> {
   const current = await settings.get();
@@ -131,6 +141,11 @@ function scheduleSurfaceRestore(): void {
 scheduleSurfaceRestore();
 chrome.runtime.onInstalled.addListener(scheduleSurfaceRestore);
 chrome.runtime.onStartup.addListener(scheduleSurfaceRestore);
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (isLocaleStorageChange(changes, areaName, LOCALE_STORAGE_KEY)) {
+    void broadcastLocaleRefresh().catch(() => undefined);
+  }
+});
 
 void chrome.storage.local.setAccessLevel({
   accessLevel: "TRUSTED_CONTEXTS",

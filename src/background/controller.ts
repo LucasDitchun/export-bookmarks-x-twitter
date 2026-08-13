@@ -72,6 +72,24 @@ interface MessageSender {
   tab?: { id?: number | undefined; url?: string | undefined } | undefined;
 }
 
+class AsyncSnapshot<T> {
+  private current: Promise<T> | null = null;
+
+  get(load: () => Promise<T>): Promise<T> {
+    if (this.current) return this.current;
+    const loading = load();
+    this.current = loading;
+    void loading.catch(() => {
+      if (this.current === loading) this.current = null;
+    });
+    return loading;
+  }
+
+  invalidate(): void {
+    this.current = null;
+  }
+}
+
 interface BackgroundDependencies {
   archive: Pick<
     ArchiveRepository,
@@ -583,10 +601,49 @@ function exportFields(settings: ExtensionSettings): BookmarkExportFields {
 export class BackgroundController {
   private readonly now: () => Date;
   private readonly createId: () => string;
+  private readonly decorationOrganization = new AsyncSnapshot<{
+    tags: BookmarkTag[];
+    folders: FolderRecord[];
+  }>();
+  private readonly decorationSettings = new AsyncSnapshot<ExtensionSettings>();
+  private readonly decorationLocalization = new AsyncSnapshot<{
+    locale: SupportedLocale;
+    messages: BookmarkMetadataMessages;
+  }>();
 
   constructor(private readonly dependencies: BackgroundDependencies) {
     this.now = dependencies.now ?? (() => new Date());
     this.createId = dependencies.createId ?? (() => crypto.randomUUID());
+  }
+
+  invalidateDecorationLocalization(): void {
+    this.decorationLocalization.invalidate();
+  }
+
+  private invalidateDecorationOrganization(): void {
+    this.decorationOrganization.invalidate();
+  }
+
+  private invalidateAllDecorationContext(): void {
+    this.invalidateDecorationOrganization();
+    this.decorationSettings.invalidate();
+    this.invalidateDecorationLocalization();
+  }
+
+  private getDecorationOrganization(): Promise<{
+    tags: BookmarkTag[];
+    folders: FolderRecord[];
+  }> {
+    return this.decorationOrganization.get(async () => {
+      const [rawTags, rawFolders] = await Promise.all([
+        this.dependencies.tags.list(),
+        this.dependencies.folders.list(),
+      ]);
+      return {
+        tags: rawTags as BookmarkTag[],
+        folders: rawFolders as FolderRecord[],
+      };
+    });
   }
 
   async handle(
@@ -614,6 +671,7 @@ export class BackgroundController {
           const settings = await this.dependencies.settings.save(
             request.payload.settings,
           );
+          this.decorationSettings.invalidate();
           await this.dependencies.browser.configureSurface(settings.behavior.surface);
           return success({ settings });
         }
@@ -665,16 +723,14 @@ export class BackgroundController {
           });
         case "GET_BOOKMARK_DECORATIONS": {
           const ids = [...new Set(request.payload.ids)];
-          const [bookmarks, rawTags, rawFolders, settings, localization] =
+          const [bookmarks, organization, settings, localization] =
             await Promise.all([
               this.dependencies.bookmarks.getMany(ids),
-              this.dependencies.tags.list(),
-              this.dependencies.folders.list(),
-              this.dependencies.settings.get(),
-              this.dependencies.locale.get(),
+              this.getDecorationOrganization(),
+              this.decorationSettings.get(() => this.dependencies.settings.get()),
+              this.decorationLocalization.get(() => this.dependencies.locale.get()),
             ]);
-          const tags = rawTags as BookmarkTag[];
-          const folders = rawFolders as FolderRecord[];
+          const { tags, folders } = organization;
           const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
           return success({
             ...localization,
@@ -700,6 +756,7 @@ export class BackgroundController {
         }
         case "SAVE_BOOKMARK_METADATA": {
           const bookmark = await this.dependencies.metadata.save(request.payload);
+          this.invalidateDecorationOrganization();
           this.dependencies.search.invalidate();
           return success({ bookmark });
         }
@@ -722,6 +779,7 @@ export class BackgroundController {
             request.payload.id,
             request.payload.name,
           );
+          this.invalidateDecorationOrganization();
           this.dependencies.search.invalidate();
           return success(result);
         }
@@ -738,16 +796,19 @@ export class BackgroundController {
             request.payload.id,
             request.payload.name,
           );
+          this.invalidateDecorationOrganization();
           this.dependencies.search.invalidate();
           return success({ tag });
         }
         case "DELETE_TAG": {
           const result = await this.dependencies.tags.delete(request.payload.id);
+          this.invalidateDecorationOrganization();
           this.dependencies.search.invalidate();
           return success(result);
         }
         case "RESTORE_TAG": {
           const tag = await this.dependencies.tags.restore(request.payload.id);
+          this.invalidateDecorationOrganization();
           this.dependencies.search.invalidate();
           return success({ tag });
         }
@@ -760,6 +821,7 @@ export class BackgroundController {
         }
         case "CREATE_FOLDER": {
           const folder = await this.dependencies.folders.create(request.payload);
+          this.invalidateDecorationOrganization();
           this.dependencies.search.invalidate();
           return success({ folder });
         }
@@ -768,16 +830,19 @@ export class BackgroundController {
             request.payload.id,
             request.payload.name,
           );
+          this.invalidateDecorationOrganization();
           this.dependencies.search.invalidate();
           return success({ folder });
         }
         case "DELETE_FOLDER": {
           const result = await this.dependencies.folders.delete(request.payload.id);
+          this.invalidateDecorationOrganization();
           this.dependencies.search.invalidate();
           return success(result);
         }
         case "RESTORE_FOLDER": {
           const result = await this.dependencies.folders.restore(request.payload.id);
+          this.invalidateDecorationOrganization();
           this.dependencies.search.invalidate();
           return success(result);
         }
@@ -804,6 +869,7 @@ export class BackgroundController {
             this.dependencies.state.clearScrapeCheckpoints(),
           ]);
           this.dependencies.search.invalidate();
+          this.invalidateAllDecorationContext();
           return success(null);
         case "EXPORT_BACKUP":
           return success(await this.dependencies.backup.export());
@@ -820,6 +886,7 @@ export class BackgroundController {
               request.payload.content,
               request.payload.mode,
             );
+            this.invalidateAllDecorationContext();
             this.dependencies.search.invalidate();
             await Promise.all([
               this.dependencies.state.clearScrapeRun(),
@@ -838,6 +905,7 @@ export class BackgroundController {
             return success(restored);
           } catch (error) {
             if (error instanceof BackupSettingsWriteError) {
+              this.invalidateAllDecorationContext();
               this.dependencies.search.invalidate();
               await Promise.all([
                 this.dependencies.state.clearScrapeRun(),
