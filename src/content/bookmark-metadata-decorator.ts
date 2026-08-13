@@ -390,6 +390,7 @@ export function startBookmarkMetadataDecorator(
   const queued = new Set<Element>();
   let stopped = false;
   let frame: number | null = null;
+  let flushing = false;
   let generation = 0;
   let lastResult: BookmarkDecorationLookupResult | null = null;
   let lastTranslator: BookmarkMetadataTranslator = (key) => key;
@@ -443,71 +444,89 @@ export function startBookmarkMetadataDecorator(
 
   const flush = async (): Promise<void> => {
     frame = null;
-    if (stopped) return;
-    const run = ++generation;
-    for (const article of [...mounted.keys()]) {
-      if (!article.isConnected) removeMounted(article);
-    }
-    const articles = [...queued].filter((article) => article.isConnected);
-    queued.clear();
-    const byId = new Map<string, Element[]>();
-    for (const article of articles) {
-      const id = bookmarkIdFromArticle(article);
-      if (!id) {
-        removeMounted(article);
-        continue;
-      }
-      const group = byId.get(id) ?? [];
-      group.push(article);
-      byId.set(id, group);
-    }
-    if (byId.size === 0) return;
-
+    if (stopped || flushing) return;
+    flushing = true;
+    const run = generation;
     try {
-      const ids = [...byId.keys()];
-      let result: BookmarkDecorationLookupResult | null = null;
-      const collectedItems: BookmarkDecorationItem[] = [];
-      for (let offset = 0; offset < ids.length; offset += 100) {
-        const page = await options.lookup(ids.slice(offset, offset + 100));
-        if (stopped || run !== generation) return;
-        result = page;
-        collectedItems.push(...page.items);
-      }
-      if (!result) return;
-      result = { ...result, items: collectedItems };
-      const translate: BookmarkMetadataTranslator = (key) =>
-        result.messages[key] ?? key;
-      if (stopped || run !== generation) return;
-      rememberPresentationContext(result);
-      const itemsById = new Map(result.items.map((item) => [item.bookmark.id, item]));
-      for (const [id, matchingArticles] of byId) {
-        const item = itemsById.get(id);
-        for (const article of matchingArticles) {
-          if (!item) {
-            if (pending.get(article) === id) continue;
+      while (!stopped && run === generation && queued.size > 0) {
+        for (const article of [...mounted.keys()]) {
+          if (!article.isConnected) removeMounted(article);
+        }
+        const articles = [...queued].filter((article) => article.isConnected);
+        queued.clear();
+        const byId = new Map<string, Element[]>();
+        for (const article of articles) {
+          const id = bookmarkIdFromArticle(article);
+          if (!id) {
             removeMounted(article);
             continue;
           }
-          if (!hasVisibleMetadataSetting(result.settings)) {
-            removeMounted(article);
-            continue;
+          const group = byId.get(id) ?? [];
+          group.push(article);
+          byId.set(id, group);
+        }
+        if (byId.size === 0) continue;
+
+        try {
+          const ids = [...byId.keys()];
+          let result: BookmarkDecorationLookupResult | null = null;
+          const collectedItems: BookmarkDecorationItem[] = [];
+          for (let offset = 0; offset < ids.length; offset += 100) {
+            const page = await options.lookup(ids.slice(offset, offset + 100));
+            if (stopped || run !== generation) return;
+            result = page;
+            collectedItems.push(...page.items);
           }
-          const host = ensureHost(article, id);
-          if (host) {
-            renderDecoration({
-              document: options.document,
-              host,
-              item,
-              settings: result.settings,
-              translate,
-              pending: pending.get(article) === id,
-              onOrganize: options.onOrganize,
-            });
+          if (!result) continue;
+          result = { ...result, items: collectedItems };
+          const translate: BookmarkMetadataTranslator = (key) =>
+            result.messages[key] ?? key;
+          if (stopped || run !== generation) return;
+          rememberPresentationContext(result);
+          const itemsById = new Map(
+            result.items.map((item) => [item.bookmark.id, item]),
+          );
+          for (const [id, matchingArticles] of byId) {
+            const item = itemsById.get(id);
+            for (const article of matchingArticles) {
+              if (!article.isConnected) {
+                removeMounted(article);
+                continue;
+              }
+              if (bookmarkIdFromArticle(article) !== id) {
+                queued.add(article);
+                continue;
+              }
+              if (!item) {
+                if (pending.get(article) === id) continue;
+                removeMounted(article);
+                continue;
+              }
+              if (!hasVisibleMetadataSetting(result.settings)) {
+                removeMounted(article);
+                continue;
+              }
+              const host = ensureHost(article, id);
+              if (host) {
+                renderDecoration({
+                  document: options.document,
+                  host,
+                  item,
+                  settings: result.settings,
+                  translate,
+                  pending: pending.get(article) === id,
+                  onOrganize: options.onOrganize,
+                });
+              }
+            }
           }
+        } catch {
+          // Host-page decoration is supplementary; X must remain fully usable if lookup fails.
         }
       }
-    } catch {
-      // Host-page decoration is supplementary; X must remain fully usable if lookup fails.
+    } finally {
+      flushing = false;
+      if (!stopped && queued.size > 0) schedule();
     }
   };
 
