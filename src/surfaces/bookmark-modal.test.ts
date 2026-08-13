@@ -313,4 +313,51 @@ describe("createBookmarkModal", () => {
     );
     modal.destroy();
   });
+
+  it("keeps an existing folder ID when appending a new child segment", async () => {
+    const onSave = vi.fn(async () => undefined);
+    const modal = createBookmarkModal({
+      document,
+      title: "Bookmark note",
+      bookmarkTitle: "A useful post",
+      labels: {
+        close: "Close",
+        description: "Private note",
+        folder: "Folder",
+        save: "Save note",
+        tags: "Tags",
+      },
+      onSave,
+    });
+    modal.setChoices({
+      folders: [{ id: "folder-ai", path: ["Reading", "AI"] }],
+    });
+    modal.open();
+    const shadow = modal.host.shadowRoot;
+    const folder = shadow?.querySelector<HTMLInputElement>(
+      "#bookmark-x-modal-folder",
+    );
+    if (!folder) throw new Error("Missing folder field");
+
+    folder.value = "Reading / AI";
+    folder.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    folder.value = "Deep learning";
+    folder.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    shadow
+      ?.querySelector("form")
+      ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({
+        description: "",
+        tags: [],
+        folder: {
+          id: "folder-ai",
+          path: ["Reading", "AI", "Deep learning"],
+          newSegments: ["Deep learning"],
+        },
+      }),
+    );
+    modal.destroy();
+  });
 });

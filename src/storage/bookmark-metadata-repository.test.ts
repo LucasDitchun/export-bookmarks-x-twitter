@@ -92,6 +92,39 @@ describe("BookmarkMetadataRepository", () => {
     });
   });
 
+  it("creates child segments below a renamed folder by its canonical ID", async () => {
+    const databaseName = `metadata-folder-base-${crypto.randomUUID()}`;
+    await seed(databaseName, bookmark(), [
+      { id: "folder-old", name: "Old", parentId: null },
+      { id: "folder-selected", name: "Research", parentId: null },
+    ]);
+    await new FolderRepository(databaseName).rename("folder-selected", "References");
+    const repository = new BookmarkMetadataRepository(databaseName, {
+      createId: () => "folder-child",
+    });
+
+    await expect(
+      repository.save({
+        id: "123",
+        note: "Use the canonical parent",
+        tags: [],
+        folder: {
+          id: "folder-selected",
+          path: ["Research", "Deep learning"],
+          newSegments: ["Deep learning"],
+        },
+      }),
+    ).resolves.toMatchObject({ folderId: "folder-child" });
+    await expect(new FolderRepository(databaseName).list()).resolves.toContainEqual({
+      id: "folder-child",
+      name: "Deep learning",
+      parentId: "folder-selected",
+    });
+    await expect(new FolderRepository(databaseName).list()).resolves.not.toContainEqual(
+      expect.objectContaining({ name: "Research" }),
+    );
+  });
+
   it("rejects a concurrently deleted selected tag without recreating it", async () => {
     const databaseName = `metadata-deleted-tag-${crypto.randomUUID()}`;
     const original = { ...bookmark(), tagIds: ["tag-selected"] };
@@ -133,7 +166,11 @@ describe("BookmarkMetadataRepository", () => {
         id: "123",
         note: "Must roll back",
         tags: [],
-        folder: { id: "folder-selected", path: ["Research"] },
+        folder: {
+          id: "folder-selected",
+          path: ["Research", "Child"],
+          newSegments: ["Child"],
+        },
       }),
     ).rejects.toThrow("no longer available");
     await expect(new BookmarkRepository(databaseName).get("123")).resolves.toEqual(

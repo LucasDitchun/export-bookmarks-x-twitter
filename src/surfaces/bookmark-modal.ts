@@ -22,6 +22,8 @@ export interface BookmarkModalTagToken {
 export interface BookmarkModalFolderToken {
   id: string | null;
   path: string[];
+  /** Segments to create below an existing ID-backed folder. */
+  newSegments?: string[];
 }
 
 export interface BookmarkModalChoices {
@@ -386,9 +388,13 @@ export function createBookmarkModal(
     const existing = availableFolders.find(
       (candidate) => formatFolderLabel(candidate) === label,
     );
+    const baseFolderId = selectedFolder?.id ?? null;
     selectedFolder = existing ?? {
-      id: null,
+      id: baseFolderId,
       path: [...(selectedFolder?.path ?? []), label],
+      ...(baseFolderId === null
+        ? {}
+        : { newSegments: [...(selectedFolder?.newSegments ?? []), label] }),
     };
     folder.value = "";
     renderSelectedFolder();
