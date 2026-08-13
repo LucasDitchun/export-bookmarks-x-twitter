@@ -17,6 +17,7 @@ import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { createLocaleCatalogCache } from "./locale-catalog-cache";
 import { bookmarkMetadataMessagesFromCatalog } from "../shared/bookmark-metadata-messages";
 import { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
+import { KeyedTaskQueue, messageSerializationKey } from "./message-serialization";
 
 const state = new ExtensionStateRepository({
   get: (keys) => chrome.storage.local.get(keys),
@@ -135,7 +136,7 @@ void chrome.storage.local.setAccessLevel({
   accessLevel: "TRUSTED_CONTEXTS",
 });
 
-let messageQueue: Promise<void> = Promise.resolve();
+const messageQueue = new KeyedTaskQueue();
 
 async function broadcastMetadataRefresh(request: ContentControlRequest): Promise<void> {
   const tabs = await chrome.tabs.query({});
@@ -147,8 +148,8 @@ async function broadcastMetadataRefresh(request: ContentControlRequest): Promise
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  messageQueue = messageQueue
-    .then(async () => {
+  void messageQueue
+    .run(messageSerializationKey(request), async () => {
       const response = await controller.handle(request, sender);
       sendResponse(response);
       const refresh = response.ok ? metadataRefreshRequest(request) : null;
