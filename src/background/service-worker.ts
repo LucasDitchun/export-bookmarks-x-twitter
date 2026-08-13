@@ -10,7 +10,6 @@ import { LiveBookmarkStateRepository } from "../storage/live-bookmark-state";
 import { LOCALE_STORAGE_KEY, resolvePreferredLocale } from "../popup/i18n";
 import { ExportRepository } from "../storage/export-repository";
 import { BackgroundController } from "./controller";
-import type { ContentControlRequest } from "../shared/protocol";
 import { metadataRefreshRequest } from "./metadata-refresh";
 import { SemanticIndexRepository } from "../semantic/semantic-index-repository";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
@@ -18,6 +17,7 @@ import { createLocaleCatalogCache } from "./locale-catalog-cache";
 import { bookmarkMetadataMessagesFromCatalog } from "../shared/bookmark-metadata-messages";
 import { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
 import { KeyedTaskQueue, messageSerializationKey } from "./message-serialization";
+import { createMetadataRefreshBroadcaster } from "./metadata-refresh-broadcaster";
 import {
   createLocaleRefreshBroadcaster,
   isLocaleStorageChange,
@@ -152,15 +152,10 @@ void chrome.storage.local.setAccessLevel({
 });
 
 const messageQueue = new KeyedTaskQueue();
-
-async function broadcastMetadataRefresh(request: ContentControlRequest): Promise<void> {
-  const tabs = await chrome.tabs.query({});
-  await Promise.allSettled(
-    tabs.flatMap((tab) =>
-      typeof tab.id === "number" ? [chrome.tabs.sendMessage(tab.id, request)] : [],
-    ),
-  );
-}
+const broadcastMetadataRefresh = createMetadataRefreshBroadcaster({
+  queryTabs: ({ url }) => chrome.tabs.query({ url: [...url] }),
+  sendToTab: (tabId, request) => chrome.tabs.sendMessage(tabId, request),
+});
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   void messageQueue

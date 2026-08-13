@@ -182,6 +182,21 @@ describe("startBookmarkMetadataDecorator", () => {
     decorator.stop();
   });
 
+  it("refreshes a targeted ID batch with one scan and skips IDs absent from the page", async () => {
+    renderArticle("123");
+    renderArticle("456");
+    const lookup = vi.fn(async () => result());
+    const decorator = startBookmarkMetadataDecorator({ document, lookup });
+    await settle();
+    lookup.mockClear();
+
+    decorator.refresh(["123", "999"]);
+
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledOnce());
+    expect(lookup).toHaveBeenCalledWith(["123"]);
+    decorator.stop();
+  });
+
   it("rerenders an injected card with the latest localization", async () => {
     const article = renderArticle("123");
     const current = uncategorizedResult({

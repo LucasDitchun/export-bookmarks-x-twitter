@@ -294,13 +294,7 @@ chrome.runtime.onMessage.addListener((request: unknown, sender, sendResponse) =>
   }
 
   if (request.type === "REFRESH_BOOKMARK_METADATA") {
-    if (request.bookmarkIds) {
-      for (const bookmarkId of request.bookmarkIds) {
-        metadataDecorator.refresh(bookmarkId);
-      }
-    } else {
-      metadataDecorator.refresh();
-    }
+    metadataDecorator.refresh(request.bookmarkIds);
     sendResponse({ accepted: true });
     return false;
   }
