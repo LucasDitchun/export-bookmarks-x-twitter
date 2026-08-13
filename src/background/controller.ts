@@ -1090,7 +1090,16 @@ export class BackgroundController {
         const surface = settings.behavior.surface;
         const opened = prompt && surface === "sidePanel";
         if (opened) await this.dependencies.browser.openSidePanel(tabId);
-        return success({ prompt, surface, opened });
+        const localization =
+          prompt && surface === "modal"
+            ? await this.dependencies.locale.get().catch(() => undefined)
+            : undefined;
+        return success({
+          prompt,
+          surface,
+          opened,
+          ...(localization && { localization }),
+        });
       }
 
       const pending = await this.dependencies.liveState.get(tabId, event.intentId);

@@ -58,6 +58,11 @@ export interface BookmarkDecorationLookupResult {
   settings: ExtensionSettings;
 }
 
+export interface BookmarkLocalizationResult {
+  locale: SupportedLocale;
+  messages: Record<string, string>;
+}
+
 export interface TagListResult {
   tags: BookmarkTag[];
   usage?: Record<string, number>;
@@ -130,6 +135,7 @@ export interface LiveBookmarkContext {
 
 export interface LiveBookmarkIntentResult extends OpenSurfaceResult {
   prompt: boolean;
+  localization?: BookmarkLocalizationResult;
 }
 
 export type UiRequest =
