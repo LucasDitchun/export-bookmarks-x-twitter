@@ -16,7 +16,11 @@ import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { createLocaleCatalogCache } from "./locale-catalog-cache";
 import { bookmarkMetadataMessagesFromCatalog } from "../shared/bookmark-metadata-messages";
 import { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
-import { KeyedTaskQueue, messageSerializationKey } from "./message-serialization";
+import {
+  isGlobalSerializationBarrier,
+  KeyedTaskQueue,
+  messageSerializationKey,
+} from "./message-serialization";
 import { createMetadataRefreshBroadcaster } from "./metadata-refresh-broadcaster";
 import {
   createLocaleRefreshBroadcaster,
@@ -159,12 +163,16 @@ const broadcastMetadataRefresh = createMetadataRefreshBroadcaster({
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   void messageQueue
-    .run(messageSerializationKey(request), async () => {
-      const response = await controller.handle(request, sender);
-      sendResponse(response);
-      const refresh = metadataRefreshAfterResponse(request, response);
-      if (refresh) void broadcastMetadataRefresh(refresh).catch(() => undefined);
-    })
+    .run(
+      messageSerializationKey(request),
+      async () => {
+        const response = await controller.handle(request, sender);
+        sendResponse(response);
+        const refresh = metadataRefreshAfterResponse(request, response);
+        if (refresh) void broadcastMetadataRefresh(refresh).catch(() => undefined);
+      },
+      { globalBarrier: isGlobalSerializationBarrier(request) },
+    )
     .catch(() => {
       sendResponse({
         ok: false,
