@@ -14,6 +14,7 @@ import type { ContentControlRequest } from "../shared/protocol";
 import { metadataRefreshRequest } from "./metadata-refresh";
 import { SemanticIndexRepository } from "../semantic/semantic-index-repository";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
+import { createLocaleCatalogCache } from "./locale-catalog-cache";
 
 const state = new ExtensionStateRepository({
   get: (keys) => chrome.storage.local.get(keys),
@@ -78,25 +79,18 @@ const metadataMessageKeys = [
   "liveBookmarkFailed",
   "uncategorizedFolder",
 ] as const;
-const localeMessageCache = new Map<string, Promise<Record<string, string>>>();
-
-function loadMetadataMessages(localeName: string): Promise<Record<string, string>> {
-  const cached = localeMessageCache.get(localeName);
-  if (cached) return cached;
-  const loading = fetch(
+const loadMetadataMessages = createLocaleCatalogCache(async (localeName) => {
+  const response = await fetch(
     chrome.runtime.getURL(`_locales/${localeName}/messages.json`),
-  ).then(async (response) => {
-    if (!response.ok) throw new Error("Could not load metadata translations.");
-    const catalog = (await response.json()) as Record<string, { message?: unknown }>;
-    return Object.fromEntries(
-      metadataMessageKeys.flatMap((key) =>
-        typeof catalog[key]?.message === "string" ? [[key, catalog[key].message]] : [],
-      ),
-    );
-  });
-  localeMessageCache.set(localeName, loading);
-  return loading;
-}
+  );
+  if (!response.ok) throw new Error("Could not load metadata translations.");
+  const catalog = (await response.json()) as Record<string, { message?: unknown }>;
+  return Object.fromEntries(
+    metadataMessageKeys.flatMap((key) =>
+      typeof catalog[key]?.message === "string" ? [[key, catalog[key].message]] : [],
+    ),
+  );
+});
 
 const locale = {
   async get() {
