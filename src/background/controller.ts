@@ -52,6 +52,16 @@ import {
   BackupSettingsWriteError,
   type BackupRepository,
 } from "../storage/backup-repository";
+import {
+  isBookmarkId,
+  isBookmarksUrl,
+  isFolderName,
+  isLocalEntityId,
+  isRecord,
+  isTagName,
+  isXUrl,
+} from "./request-guards";
+import { isOrganizationRequest, OrganizationRouter } from "./organization-router";
 
 interface ActiveTab {
   id: number;
@@ -177,18 +187,6 @@ interface BackgroundDependencies {
   createId?: () => string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isBookmarkId(value: unknown): value is string {
-  return typeof value === "string" && /^\d+$/.test(value);
-}
-
-function isLocalEntityId(value: unknown): value is string {
-  return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
-}
-
 function collectCheckpointCandidates(
   current: readonly string[],
   incoming: readonly string[],
@@ -227,34 +225,6 @@ function collectCheckpointMatches(
   return matches;
 }
 
-function isFolderName(value: unknown): value is string {
-  const hasControlCharacters =
-    typeof value === "string" &&
-    Array.from(value).some((character) => {
-      const codePoint = character.codePointAt(0) ?? 0;
-      return codePoint <= 31 || codePoint === 127;
-    });
-  return (
-    typeof value === "string" &&
-    value.trim().length >= 1 &&
-    value.trim().length <= 100 &&
-    !hasControlCharacters
-  );
-}
-
-function isTagName(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.length <= 200 &&
-    value.trim().length > 0 &&
-    value.trim().normalize("NFKC").length <= 50 &&
-    !Array.from(value).some((character) => {
-      const codePoint = character.codePointAt(0) ?? 0;
-      return codePoint <= 31 || codePoint === 127;
-    })
-  );
-}
-
 function isSaveBookmarkMetadataInput(
   value: unknown,
 ): value is SaveBookmarkMetadataInput {
@@ -272,28 +242,7 @@ function isSaveBookmarkMetadataInput(
   );
 }
 
-export function isBookmarksUrl(value: string | undefined): boolean {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    return (
-      (url.hostname === "x.com" || url.hostname === "www.x.com") &&
-      (url.pathname === "/i/bookmarks" || url.pathname.startsWith("/i/bookmarks/"))
-    );
-  } catch {
-    return false;
-  }
-}
-
-export function isXUrl(value: string | undefined): boolean {
-  if (!value) return false;
-  try {
-    const hostname = new URL(value).hostname;
-    return hostname === "x.com" || hostname === "www.x.com";
-  } catch {
-    return false;
-  }
-}
+export { isBookmarksUrl, isXUrl } from "./request-guards";
 
 function isUiRequest(value: unknown): value is UiRequest {
   if (!isRecord(value) || typeof value.type !== "string") return false;
@@ -610,10 +559,17 @@ export class BackgroundController {
     locale: SupportedLocale;
     messages: BookmarkMetadataMessages;
   }>();
+  private readonly organization: OrganizationRouter;
 
   constructor(private readonly dependencies: BackgroundDependencies) {
     this.now = dependencies.now ?? (() => new Date());
     this.createId = dependencies.createId ?? (() => crypto.randomUUID());
+    this.organization = new OrganizationRouter({
+      tags: dependencies.tags,
+      folders: dependencies.folders,
+      invalidateSearch: () => dependencies.search.invalidate(),
+      invalidateDecorationOrganization: () => this.invalidateDecorationOrganization(),
+    });
   }
 
   invalidateDecorationLocalization(): void {
@@ -660,6 +616,9 @@ export class BackgroundController {
     }
 
     try {
+      if (isOrganizationRequest(request)) {
+        return success(await this.organization.handle(request));
+      }
       switch (request.type) {
         case "GET_STATUS":
           return success(await this.getStatus());
@@ -723,13 +682,12 @@ export class BackgroundController {
           });
         case "GET_BOOKMARK_DECORATIONS": {
           const ids = [...new Set(request.payload.ids)];
-          const [bookmarks, organization, settings, localization] =
-            await Promise.all([
-              this.dependencies.bookmarks.getMany(ids),
-              this.getDecorationOrganization(),
-              this.decorationSettings.get(() => this.dependencies.settings.get()),
-              this.decorationLocalization.get(() => this.dependencies.locale.get()),
-            ]);
+          const [bookmarks, organization, settings, localization] = await Promise.all([
+            this.dependencies.bookmarks.getMany(ids),
+            this.getDecorationOrganization(),
+            this.decorationSettings.get(() => this.dependencies.settings.get()),
+            this.decorationLocalization.get(() => this.dependencies.locale.get()),
+          ]);
           const { tags, folders } = organization;
           const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
           return success({
@@ -757,100 +715,6 @@ export class BackgroundController {
         case "SAVE_BOOKMARK_METADATA": {
           const bookmark = await this.dependencies.metadata.save(request.payload);
           this.invalidateDecorationOrganization();
-          this.dependencies.search.invalidate();
-          return success({ bookmark });
-        }
-        case "LIST_TAGS": {
-          const [tags, usage] = await Promise.all([
-            this.dependencies.tags.list(),
-            this.dependencies.tags.usage?.() ?? Promise.resolve({}),
-          ]);
-          return success({ tags, usage });
-        }
-        case "LIST_ORGANIZATION_TRASH": {
-          const [tags, folders] = await Promise.all([
-            this.dependencies.tags.listDeleted(),
-            this.dependencies.folders.listDeleted(),
-          ]);
-          return success({ tags, folders });
-        }
-        case "ADD_BOOKMARK_TAG": {
-          const result = await this.dependencies.tags.add(
-            request.payload.id,
-            request.payload.name,
-          );
-          this.invalidateDecorationOrganization();
-          this.dependencies.search.invalidate();
-          return success(result);
-        }
-        case "REMOVE_BOOKMARK_TAG": {
-          const bookmark = await this.dependencies.tags.remove(
-            request.payload.id,
-            request.payload.tagId,
-          );
-          this.dependencies.search.invalidate();
-          return success({ bookmark });
-        }
-        case "RENAME_TAG": {
-          const tag = await this.dependencies.tags.rename(
-            request.payload.id,
-            request.payload.name,
-          );
-          this.invalidateDecorationOrganization();
-          this.dependencies.search.invalidate();
-          return success({ tag });
-        }
-        case "DELETE_TAG": {
-          const result = await this.dependencies.tags.delete(request.payload.id);
-          this.invalidateDecorationOrganization();
-          this.dependencies.search.invalidate();
-          return success(result);
-        }
-        case "RESTORE_TAG": {
-          const tag = await this.dependencies.tags.restore(request.payload.id);
-          this.invalidateDecorationOrganization();
-          this.dependencies.search.invalidate();
-          return success({ tag });
-        }
-        case "LIST_FOLDERS": {
-          const [folders, usage] = await Promise.all([
-            this.dependencies.folders.list(),
-            this.dependencies.folders.usage?.() ?? Promise.resolve({}),
-          ]);
-          return success({ folders, usage });
-        }
-        case "CREATE_FOLDER": {
-          const folder = await this.dependencies.folders.create(request.payload);
-          this.invalidateDecorationOrganization();
-          this.dependencies.search.invalidate();
-          return success({ folder });
-        }
-        case "RENAME_FOLDER": {
-          const folder = await this.dependencies.folders.rename(
-            request.payload.id,
-            request.payload.name,
-          );
-          this.invalidateDecorationOrganization();
-          this.dependencies.search.invalidate();
-          return success({ folder });
-        }
-        case "DELETE_FOLDER": {
-          const result = await this.dependencies.folders.delete(request.payload.id);
-          this.invalidateDecorationOrganization();
-          this.dependencies.search.invalidate();
-          return success(result);
-        }
-        case "RESTORE_FOLDER": {
-          const result = await this.dependencies.folders.restore(request.payload.id);
-          this.invalidateDecorationOrganization();
-          this.dependencies.search.invalidate();
-          return success(result);
-        }
-        case "ASSIGN_BOOKMARK_FOLDER": {
-          const bookmark = await this.dependencies.folders.assignBookmark(
-            request.payload.bookmarkId,
-            request.payload.folderId,
-          );
           this.dependencies.search.invalidate();
           return success({ bookmark });
         }
