@@ -634,6 +634,88 @@ describe("BackgroundController", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
   });
 
+  it("reuses decoration context snapshots and invalidates only the changed domains", async () => {
+    const dependencies = createDependencies("https://x.com/home");
+    const controller = new BackgroundController(dependencies);
+    const lookup = () =>
+      controller.handle(
+        { type: "GET_BOOKMARK_DECORATIONS", payload: { ids: ["123"] } },
+        CONTENT_SENDER,
+      );
+
+    await lookup();
+    await lookup();
+    expect(dependencies.bookmarks.getMany).toHaveBeenCalledTimes(2);
+    expect(dependencies.tags.list).toHaveBeenCalledOnce();
+    expect(dependencies.folders.list).toHaveBeenCalledOnce();
+    expect(dependencies.settings.get).toHaveBeenCalledOnce();
+    expect(dependencies.locale.get).toHaveBeenCalledOnce();
+
+    await controller.handle(
+      {
+        type: "SAVE_BOOKMARK_METADATA",
+        payload: { id: "123", note: "", tags: ["AI"], folderPath: [] },
+      },
+      CONTENT_SENDER,
+    );
+    await lookup();
+    expect(dependencies.tags.list).toHaveBeenCalledTimes(2);
+    expect(dependencies.folders.list).toHaveBeenCalledTimes(2);
+    expect(dependencies.settings.get).toHaveBeenCalledOnce();
+    expect(dependencies.locale.get).toHaveBeenCalledOnce();
+
+    await controller.handle(
+      {
+        type: "SAVE_SETTINGS",
+        payload: { settings: { behavior: { metadata: { summary: false } } } },
+      },
+      POPUP_SENDER,
+    );
+    await lookup();
+    expect(dependencies.tags.list).toHaveBeenCalledTimes(2);
+    expect(dependencies.settings.get).toHaveBeenCalledTimes(2);
+    expect(dependencies.locale.get).toHaveBeenCalledOnce();
+
+    controller.invalidateDecorationLocalization();
+    await lookup();
+    expect(dependencies.tags.list).toHaveBeenCalledTimes(2);
+    expect(dependencies.settings.get).toHaveBeenCalledTimes(2);
+    expect(dependencies.locale.get).toHaveBeenCalledTimes(2);
+
+    await controller.handle(
+      {
+        type: "RESTORE_BACKUP",
+        payload: { content: '{"schemaVersion":3}', mode: "merge" },
+      },
+      POPUP_SENDER,
+    );
+    await lookup();
+    expect(dependencies.tags.list).toHaveBeenCalledTimes(3);
+    expect(dependencies.folders.list).toHaveBeenCalledTimes(3);
+    expect(dependencies.settings.get).toHaveBeenCalledTimes(4);
+    expect(dependencies.locale.get).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries a decoration context snapshot after its loader rejects", async () => {
+    const dependencies = createDependencies("https://x.com/home");
+    dependencies.tags.list
+      .mockRejectedValueOnce(new Error("Temporary tag read failure"))
+      .mockResolvedValueOnce([]);
+    const controller = new BackgroundController(dependencies);
+    const request = {
+      type: "GET_BOOKMARK_DECORATIONS",
+      payload: { ids: ["123"] },
+    } as const;
+
+    await expect(controller.handle(request, CONTENT_SENDER)).resolves.toMatchObject({
+      ok: false,
+    });
+    await expect(controller.handle(request, CONTENT_SENDER)).resolves.toMatchObject({
+      ok: true,
+    });
+    expect(dependencies.tags.list).toHaveBeenCalledTimes(2);
+  });
+
   it("loads and saves settings, then applies the selected action surface", async () => {
     const dependencies = createDependencies();
     const controller = new BackgroundController(dependencies);

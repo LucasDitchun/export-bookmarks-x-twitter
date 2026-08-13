@@ -19,6 +19,7 @@ interface LocaleRefreshTab {
 }
 
 interface LocaleRefreshDependencies {
+  invalidateLocalization(): void;
   loadLocalization(): Promise<BookmarkLocalizationResult>;
   queryTabs(query: { url: readonly string[] }): Promise<LocaleRefreshTab[]>;
   sendToTab(tabId: number, request: ContentControlRequest): Promise<unknown>;
@@ -36,6 +37,7 @@ export function createLocaleRefreshBroadcaster(
       .then(async () => {
         while (queued) {
           queued = false;
+          dependencies.invalidateLocalization();
           const localization = await dependencies.loadLocalization();
           const tabs = await dependencies.queryTabs({ url: X_TAB_URL_PATTERNS });
           const request: ContentControlRequest = {

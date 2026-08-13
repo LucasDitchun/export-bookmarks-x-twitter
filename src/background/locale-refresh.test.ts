@@ -26,7 +26,9 @@ describe("createLocaleRefreshBroadcaster", () => {
       { id: undefined, url: "https://x.com/explore" },
     ]);
     const sendToTab = vi.fn(async () => undefined);
+    const invalidateLocalization = vi.fn();
     const schedule = createLocaleRefreshBroadcaster({
+      invalidateLocalization,
       loadLocalization: vi.fn(async () => localization),
       queryTabs,
       sendToTab,
@@ -35,6 +37,7 @@ describe("createLocaleRefreshBroadcaster", () => {
     await Promise.all([schedule(), schedule(), schedule()]);
 
     expect(queryTabs).toHaveBeenCalledOnce();
+    expect(invalidateLocalization).toHaveBeenCalledOnce();
     expect(queryTabs).toHaveBeenCalledWith({ url: X_TAB_URL_PATTERNS });
     expect(sendToTab).toHaveBeenCalledOnce();
     expect(sendToTab).toHaveBeenCalledWith(7, {
