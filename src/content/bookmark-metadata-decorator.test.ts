@@ -215,6 +215,36 @@ describe("startBookmarkMetadataDecorator", () => {
     decorator.stop();
   });
 
+  it("rerenders every mounted bookmark after a targeted refresh and locale change", async () => {
+    const first = renderArticle("123");
+    const second = renderArticle("456");
+    let targeted = false;
+    const lookup = vi.fn(async (ids: string[]) => ({
+      ...resultForIds(ids, targeted ? "targeted" : "initial"),
+      messages: { bookmarkPromptFolder: "Folder" },
+    }));
+    const decorator = startBookmarkMetadataDecorator({ document, lookup });
+    await vi.waitFor(() =>
+      expect(document.querySelectorAll("bookmark-x-metadata")).toHaveLength(2),
+    );
+
+    targeted = true;
+    decorator.refresh("123");
+    await vi.waitFor(() => expect(lookup).toHaveBeenLastCalledWith(["123"]));
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { bookmarkPromptFolder: "Pasta" },
+    });
+
+    expect(
+      first.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+    ).toContain("Pasta");
+    expect(
+      second.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+    ).toContain("Pasta");
+    decorator.stop();
+  });
+
   it("serializes disjoint targeted refreshes without dropping an in-flight result", async () => {
     const first = renderArticle("123");
     const second = renderArticle("456");

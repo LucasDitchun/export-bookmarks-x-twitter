@@ -394,6 +394,7 @@ export function startBookmarkMetadataDecorator(
   let generation = 0;
   let localizationEpoch = 0;
   let lastResult: BookmarkDecorationLookupResult | null = null;
+  let replaceCachedItemsOnNextFlush = true;
   let localizationOverride: {
     epoch: number;
     value: BookmarkLocalizationResult;
@@ -405,13 +406,21 @@ export function startBookmarkMetadataDecorator(
   const rememberPresentationContext = (
     result: BookmarkDecorationLookupResult,
     lookupEpoch: number,
+    refreshedIds?: readonly string[],
+    replaceItems = true,
   ): BookmarkDecorationLookupResult => {
     const currentOverride = localizationOverride;
     const startedBeforeCurrentLocalization =
       currentOverride !== null && lookupEpoch < currentOverride.epoch;
-    const current = startedBeforeCurrentLocalization
+    let current = startedBeforeCurrentLocalization
       ? { ...result, ...currentOverride.value }
       : result;
+    if (!replaceItems && lastResult) {
+      const items = new Map(lastResult.items.map((item) => [item.bookmark.id, item]));
+      for (const id of refreshedIds ?? []) items.delete(id);
+      for (const item of current.items) items.set(item.bookmark.id, item);
+      current = { ...current, items: [...items.values()] };
+    }
     if (!startedBeforeCurrentLocalization) {
       localizationEpoch += 1;
       localizationOverride = {
@@ -488,6 +497,8 @@ export function startBookmarkMetadataDecorator(
           byId.set(id, group);
         }
         if (byId.size === 0) continue;
+        const replaceCachedItems = replaceCachedItemsOnNextFlush;
+        replaceCachedItemsOnNextFlush = false;
 
         try {
           const ids = [...byId.keys()];
@@ -504,6 +515,8 @@ export function startBookmarkMetadataDecorator(
           result = rememberPresentationContext(
             { ...result, items: collectedItems },
             lookupEpoch,
+            ids,
+            replaceCachedItems,
           );
           const translate: BookmarkMetadataTranslator = (key) =>
             result.messages[key] ?? key;
@@ -615,6 +628,7 @@ export function startBookmarkMetadataDecorator(
           : bookmarkIds
             ? new Set(bookmarkIds)
             : null;
+      if (!targetedIds) replaceCachedItemsOnNextFlush = true;
       for (const [article, pendingId] of pending) {
         if (!targetedIds || targetedIds.has(pendingId)) pending.delete(article);
       }
