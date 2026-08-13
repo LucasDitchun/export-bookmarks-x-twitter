@@ -87,6 +87,8 @@ export interface SaveBookmarkMetadataInput {
   note: string;
   tags: BookmarkMetadataTagSelection[];
   folder: BookmarkMetadataFolderSelection | null;
+  /** Omitted by older clients, which retain full-replacement semantics. */
+  organizationChanges?: { tags: boolean; folder: boolean };
 }
 
 export interface HydratedBookmarkRecord extends BookmarkRecord {

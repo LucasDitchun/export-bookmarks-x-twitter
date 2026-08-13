@@ -30,6 +30,7 @@ interface ValidatedMetadata {
   note: string;
   tags: BookmarkModalValues["tags"];
   folder: BookmarkModalValues["folder"];
+  organizationChanges?: BookmarkModalValues["organizationChanges"];
 }
 
 function normalizeName(value: string): string {
@@ -100,7 +101,14 @@ function validateValues(values: BookmarkModalValues): ValidatedMetadata {
           ),
         }),
   };
-  return { note: values.description, tags, folder };
+  return {
+    note: values.description,
+    tags,
+    folder,
+    ...(values.organizationChanges === undefined
+      ? {}
+      : { organizationChanges: { ...values.organizationChanges } }),
+  };
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
@@ -207,6 +215,9 @@ export async function saveBookmarkMetadata(
         note: validated.note,
         tags: validated.tags,
         folder: validated.folder,
+        ...(validated.organizationChanges === undefined
+          ? {}
+          : { organizationChanges: validated.organizationChanges }),
       },
     },
     options.signal,

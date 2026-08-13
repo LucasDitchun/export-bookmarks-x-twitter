@@ -250,7 +250,11 @@ function isSaveBookmarkMetadataInput(
     Array.isArray(value.tags) &&
     value.tags.length <= 50 &&
     value.tags.every(isTagSelection) &&
-    isFolderSelection(value.folder)
+    isFolderSelection(value.folder) &&
+    (value.organizationChanges === undefined ||
+      (isRecord(value.organizationChanges) &&
+        typeof value.organizationChanges.tags === "boolean" &&
+        typeof value.organizationChanges.folder === "boolean"))
   );
 }
 
