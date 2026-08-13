@@ -44,6 +44,9 @@ import {
 } from "../settings/date-time-preferences";
 import { DEFAULT_QUICK_STOP_THRESHOLD } from "../domain/quick-update";
 import { createIconButton } from "../ui/icons";
+import { downloadExport } from "./download";
+import { createNoteAutosave } from "./note-autosave";
+import { getPopupElements } from "./popup-dom";
 
 interface PopupAppOptions {
   document: Document;
@@ -70,151 +73,12 @@ interface PopupAppOptions {
   quickStopThreshold?: number;
 }
 
-interface RequiredElements {
-  alert: HTMLElement;
-  captureButton: HTMLButtonElement;
-  captureButtonLabel: HTMLElement;
-  captureFeedback: HTMLElement;
-  captureModeField: HTMLElement;
-  captureModeHelp: HTMLElement;
-  captureModeSelect: HTMLSelectElement;
-  captureProgress: HTMLElement;
-  captureProgressCopy: HTMLElement;
-  captureState: HTMLElement;
-  clearDialog: HTMLDialogElement;
-  confirmClearButton: HTMLButtonElement;
-  currentCount: HTMLElement;
-  dashboardView: HTMLElement;
-  duplicateSummary: HTMLElement;
-  emptyNote: HTMLElement;
-  fullReviewReminder: HTMLElement;
-  lastSync: HTMLElement;
-  libraryEmpty: HTMLElement;
-  libraryPanel: HTMLElement;
-  librarySearch: HTMLInputElement;
-  librarySearchButton: HTMLButtonElement;
-  librarySearchStatus: HTMLElement;
-  libraryStatus: HTMLElement;
-  loadMoreBookmarks: HTMLButtonElement;
-  loadingView: HTMLElement;
-  bookmarkList: HTMLUListElement;
-  viewArchivedButton: HTMLButtonElement;
-  viewCurrentButton: HTMLButtonElement;
-  viewInboxButton: HTMLButtonElement;
-  noteEditor: HTMLElement;
-  noteSaveStatus: HTMLElement;
-  noteTextarea: HTMLTextAreaElement;
-  organizationCounts: HTMLElement;
-  organizationTrashCount: HTMLElement;
-  organizationTrashEmpty: HTMLElement;
-  organizationTrashStatus: HTMLElement;
-  openBookmarksButton: HTMLButtonElement;
-  openClearDialogButton: HTMLButtonElement;
-  pageBadge: HTMLElement;
-  pageGuidance: HTMLElement;
-  pageLabel: HTMLElement;
-  selectedBookmarkAuthor: HTMLElement;
-  selectedCategoryIndicator: HTMLElement;
-  selectedBookmarkTitle: HTMLElement;
-  selectedTags: HTMLElement;
-  tagInput: HTMLInputElement;
-  tagStatus: HTMLElement;
-  tagSuggestions: HTMLDataListElement;
-  tagOverviewList: HTMLUListElement;
-  trashFolderList: HTMLUListElement;
-  trashTagList: HTMLUListElement;
-}
-
-interface PendingNoteSave {
-  id: string;
-  note: string;
-  revision: number;
-}
-
 const EMPTY_STATS: ArchiveStats = {
   total: 0,
   current: 0,
   archived: 0,
   lastSuccessfulSyncAt: null,
 };
-
-function requireElement<T extends HTMLElement>(document: Document, id: string): T {
-  const element = document.getElementById(id);
-  if (!element) throw new Error(`Missing popup element: #${id}`);
-  return element as T;
-}
-
-function getElements(document: Document): RequiredElements {
-  return {
-    alert: requireElement(document, "alert"),
-    captureButton: requireElement(document, "capture-button"),
-    captureButtonLabel: requireElement(document, "capture-button-label"),
-    captureFeedback: requireElement(document, "capture-feedback"),
-    captureModeField: requireElement(document, "capture-mode-field"),
-    captureModeHelp: requireElement(document, "capture-mode-help"),
-    captureModeSelect: requireElement(document, "capture-mode"),
-    captureProgress: requireElement(document, "capture-progress"),
-    captureProgressCopy: requireElement(document, "capture-progress-copy"),
-    captureState: requireElement(document, "capture-state"),
-    clearDialog: requireElement(document, "clear-dialog"),
-    confirmClearButton: requireElement(document, "confirm-clear-button"),
-    currentCount: requireElement(document, "current-count"),
-    dashboardView: requireElement(document, "dashboard-view"),
-    duplicateSummary: requireElement(document, "duplicate-summary"),
-    emptyNote: requireElement(document, "empty-note"),
-    fullReviewReminder: requireElement(document, "full-review-reminder"),
-    lastSync: requireElement(document, "last-sync"),
-    libraryEmpty: requireElement(document, "library-empty"),
-    libraryPanel: requireElement(document, "library-view-panel"),
-    librarySearch: requireElement(document, "library-search"),
-    librarySearchButton: requireElement(document, "library-search-button"),
-    librarySearchStatus: requireElement(document, "library-search-status"),
-    libraryStatus: requireElement(document, "library-status"),
-    loadMoreBookmarks: requireElement(document, "load-more-bookmarks"),
-    loadingView: requireElement(document, "loading-view"),
-    bookmarkList: requireElement(document, "bookmark-list"),
-    viewArchivedButton: requireElement(document, "view-archived-button"),
-    viewCurrentButton: requireElement(document, "view-current-button"),
-    viewInboxButton: requireElement(document, "view-inbox-button"),
-    noteEditor: requireElement(document, "note-editor"),
-    noteSaveStatus: requireElement(document, "note-save-status"),
-    noteTextarea: requireElement(document, "note-textarea"),
-    organizationCounts: requireElement(document, "organization-counts"),
-    organizationTrashCount: requireElement(document, "organization-trash-count"),
-    organizationTrashEmpty: requireElement(document, "organization-trash-empty"),
-    organizationTrashStatus: requireElement(document, "organization-trash-status"),
-    openBookmarksButton: requireElement(document, "open-bookmarks-button"),
-    openClearDialogButton: requireElement(document, "open-clear-dialog-button"),
-    pageBadge: requireElement(document, "page-badge"),
-    pageGuidance: requireElement(document, "page-guidance"),
-    pageLabel: requireElement(document, "page-label"),
-    selectedBookmarkAuthor: requireElement(document, "selected-bookmark-author"),
-    selectedCategoryIndicator: requireElement(document, "selected-category-indicator"),
-    selectedBookmarkTitle: requireElement(document, "selected-bookmark-title"),
-    selectedTags: requireElement(document, "selected-tags"),
-    tagInput: requireElement(document, "tag-input"),
-    tagStatus: requireElement(document, "tag-status"),
-    tagSuggestions: requireElement(document, "tag-suggestions"),
-    tagOverviewList: requireElement(document, "tag-overview-list"),
-    trashFolderList: requireElement(document, "trash-folder-list"),
-    trashTagList: requireElement(document, "trash-tag-list"),
-  };
-}
-
-function defaultDownload(result: ExportResult): void {
-  const type = result.filename.endsWith(".json")
-    ? "application/json;charset=utf-8"
-    : result.filename.endsWith(".md")
-      ? "text/markdown;charset=utf-8"
-      : "text/plain;charset=utf-8";
-  const blob = new Blob([result.content], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = result.filename;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-}
 
 export function createPopupApp(options: PopupAppOptions): {
   destroy: () => void;
@@ -230,7 +94,7 @@ export function createPopupApp(options: PopupAppOptions): {
     locale,
     sendMessage,
     translate,
-    createDownload = defaultDownload,
+    createDownload = downloadExport,
     schedule = window.setTimeout.bind(window),
     cancelSchedule = window.clearTimeout.bind(window),
     readBackupFile = (file) => file.text(),
@@ -246,7 +110,7 @@ export function createPopupApp(options: PopupAppOptions): {
     dateTimePreferences: initialDateTimePreferences = DEFAULT_DATE_TIME_PREFERENCES,
     quickStopThreshold: initialQuickStopThreshold = DEFAULT_QUICK_STOP_THRESHOLD,
   } = options;
-  const elements = getElements(document);
+  const elements = getPopupElements(document);
   elements.tagInput.placeholder = translate("tagInputPlaceholder");
   elements.librarySearch.placeholder = translate("searchPlaceholder");
   let status: PopupStatus | null = null;
@@ -280,11 +144,6 @@ export function createPopupApp(options: PopupAppOptions): {
   let libraryRefreshWaiters: Array<() => void> = [];
   let captureRefreshPending = false;
   let captureModeTouched = false;
-  let editRevision = 0;
-  let noteSaveHandle: number | null = null;
-  let debouncedNoteSave: PendingNoteSave | null = null;
-  let pendingNoteSave: PendingNoteSave | null = null;
-  let noteSaveInFlight = false;
   let folderUi: ReturnType<typeof createFolderUi> | null = null;
   let backupUi: ReturnType<typeof createBackupUi> | null = null;
   let exportUi: ReturnType<typeof createExportUi> | null = null;
@@ -812,16 +671,23 @@ export function createPopupApp(options: PopupAppOptions): {
     elements.noteSaveStatus.dataset.state = messageKey ?? "idle";
   };
 
+  const noteAutosave = createNoteAutosave({
+    sendMessage,
+    schedule,
+    cancelSchedule,
+    getVisibleDraft: () =>
+      selectedBookmarkId && !elements.noteTextarea.disabled
+        ? { id: selectedBookmarkId, note: elements.noteTextarea.value }
+        : null,
+    onSaved: updateBookmark,
+    onStatus: setNoteSaveStatus,
+  });
+
   const resetBookmarkSelection = (discardDraft = false): void => {
-    if (!discardDraft) queueDebouncedNote();
     selectionVersion += 1;
+    noteAutosave.select(null, discardDraft);
     selectedBookmarkId = null;
     selectedBookmark = null;
-    editRevision += 1;
-    if (noteSaveHandle !== null) cancelSchedule(noteSaveHandle);
-    noteSaveHandle = null;
-    debouncedNoteSave = null;
-    if (discardDraft) pendingNoteSave = null;
     elements.noteEditor.hidden = true;
     elements.selectedBookmarkTitle.textContent = "";
     elements.selectedBookmarkAuthor.textContent = "";
@@ -877,90 +743,16 @@ export function createPopupApp(options: PopupAppOptions): {
     void loadActiveLibrary(undefined, false);
   };
 
-  const queueDebouncedNote = (): void => {
-    if (!debouncedNoteSave) return;
-    if (noteSaveHandle !== null) {
-      cancelSchedule(noteSaveHandle);
-      noteSaveHandle = null;
-    }
-    pendingNoteSave = debouncedNoteSave;
-    debouncedNoteSave = null;
-    void drainNoteSaves();
-  };
-
-  async function drainNoteSaves(): Promise<void> {
-    if (destroyed || noteSaveInFlight || !pendingNoteSave) return;
-    const save = pendingNoteSave;
-    pendingNoteSave = null;
-    noteSaveInFlight = true;
-    try {
-      const response = await sendMessage<BookmarkDetailResult>({
-        type: "SAVE_BOOKMARK_NOTE",
-        payload: { id: save.id, note: save.note },
-      });
-      const isLatestVisibleDraft =
-        selectedBookmarkId === save.id &&
-        editRevision === save.revision &&
-        elements.noteTextarea.value === save.note &&
-        !pendingNoteSave &&
-        !debouncedNoteSave;
-      if (isLatestVisibleDraft) {
-        if (response.ok && response.data?.bookmark) {
-          updateBookmark(response.data.bookmark);
-        }
-        setNoteSaveStatus(response.ok ? "noteSaved" : "noteSaveError");
-      }
-    } catch {
-      if (
-        selectedBookmarkId === save.id &&
-        editRevision === save.revision &&
-        !pendingNoteSave &&
-        !debouncedNoteSave
-      ) {
-        setNoteSaveStatus("noteSaveError");
-      }
-    } finally {
-      noteSaveInFlight = false;
-      if (pendingNoteSave) void drainNoteSaves();
-    }
-  }
-
   const stageNoteSave = (): void => {
     if (!selectedBookmarkId || elements.noteTextarea.disabled) return;
-    const revision = ++editRevision;
-    debouncedNoteSave = {
-      id: selectedBookmarkId,
-      note: elements.noteTextarea.value,
-      revision,
-    };
-    setNoteSaveStatus("noteSaving");
-    if (noteSaveHandle !== null) cancelSchedule(noteSaveHandle);
-    noteSaveHandle = schedule(() => {
-      noteSaveHandle = null;
-      queueDebouncedNote();
-    }, 400);
-  };
-
-  const flushPendingNoteBeforeDestroy = (): void => {
-    if (noteSaveHandle !== null) {
-      cancelSchedule(noteSaveHandle);
-      noteSaveHandle = null;
-    }
-    const latestDraft = debouncedNoteSave ?? pendingNoteSave;
-    debouncedNoteSave = null;
-    pendingNoteSave = null;
-    if (latestDraft === null) return;
-
-    void sendMessage<BookmarkDetailResult>({
-      type: "SAVE_BOOKMARK_NOTE",
-      payload: { id: latestDraft.id, note: latestDraft.note },
-    }).catch(() => undefined);
+    noteAutosave.stage(elements.noteTextarea.value);
   };
 
   async function selectBookmark(id: string, explicitOpen = false): Promise<void> {
-    if (selectedBookmarkId !== id) queueDebouncedNote();
+    if (selectedBookmarkId !== id) noteAutosave.flush();
     const version = ++selectionVersion;
     selectedBookmarkId = id;
+    noteAutosave.select(id);
     selectedBookmark = null;
     renderSelectedTags();
     elements.noteEditor.hidden = true;
@@ -990,7 +782,6 @@ export function createPopupApp(options: PopupAppOptions): {
     renderSelectedCategoryIndicator();
     elements.noteTextarea.value = bookmark.note;
     folderUi?.setBookmark(bookmark);
-    editRevision += 1;
     elements.noteTextarea.disabled = false;
     setNoteSaveStatus(null);
     setTagStatus(null);
@@ -1462,7 +1253,7 @@ export function createPopupApp(options: PopupAppOptions): {
     });
   }
   elements.noteTextarea.addEventListener("input", stageNoteSave);
-  elements.noteTextarea.addEventListener("blur", queueDebouncedNote);
+  elements.noteTextarea.addEventListener("blur", () => noteAutosave.flush());
   elements.tagInput.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.isComposing) return;
     event.preventDefault();
@@ -1519,7 +1310,7 @@ export function createPopupApp(options: PopupAppOptions): {
     handleLiveBookmarkContext,
     destroy: () => {
       if (destroyed) return;
-      flushPendingNoteBeforeDestroy();
+      noteAutosave.destroy();
       destroyed = true;
       for (const resolveWaiter of libraryRefreshWaiters) resolveWaiter();
       libraryRefreshWaiters = [];
