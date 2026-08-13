@@ -396,6 +396,7 @@ describe("startLiveBookmarkObserver", () => {
             { id: null, name: "New, exact" },
           ],
           folder: { id: "folder-reading", path: ["R&D/Video"] },
+          organizationChanges: { tags: true, folder: false },
         },
       });
     });
@@ -439,11 +440,13 @@ describe("startLiveBookmarkObserver", () => {
     expect(events).toContainEqual(
       expect.objectContaining({ type: "LIVE_BOOKMARK_CANCELLED" }),
     );
-    expect(
-      document
-        .querySelector("bookmark-x-note-modal")
-        ?.shadowRoot?.querySelector('[role="status"]')?.textContent,
-    ).toBe("liveBookmarkFailed");
+    await vi.waitFor(() => {
+      expect(
+        document
+          .querySelector("bookmark-x-note-modal")
+          ?.shadowRoot?.querySelector('[role="status"]')?.textContent,
+      ).toBe("liveBookmarkFailed");
+    });
     observer.stop();
   });
 
@@ -470,8 +473,12 @@ describe("startLiveBookmarkObserver", () => {
     });
 
     button.click();
-    await settleMutation();
-    expect(document.querySelector("bookmark-x-note-modal")).toBeNull();
+    await vi.waitFor(() => {
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: "LIVE_BOOKMARK_PENDING" }),
+      );
+      expect(document.querySelector("bookmark-x-note-modal")).toBeNull();
+    });
     button.dataset.testid = "bookmark";
     button.setAttribute("aria-pressed", "false");
     await settleMutation();
