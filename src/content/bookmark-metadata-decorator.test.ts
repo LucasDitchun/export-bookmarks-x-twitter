@@ -98,6 +98,52 @@ afterEach(() => {
 });
 
 describe("startBookmarkMetadataDecorator", () => {
+  it("waits for localized settings before rendering a pending bookmark", async () => {
+    const article = renderArticle("123");
+    let resolveLookup!: (value: BookmarkDecorationLookupResult) => void;
+    const lookupResult = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveLookup = resolve;
+    });
+    const lookup = vi.fn(() => lookupResult);
+    const decorator = startBookmarkMetadataDecorator({ document, lookup });
+
+    const pending = decorator.setPending(article, "123");
+    expect(article.querySelector("bookmark-x-metadata")).toBeNull();
+    resolveLookup(
+      uncategorizedResult({ messages: { liveBookmarkPending: "Salvando…" } }),
+    );
+    await pending;
+
+    const host = article.querySelector<HTMLElement>("bookmark-x-metadata");
+    expect(host?.dataset.state).toBe("pending");
+    expect(host?.shadowRoot?.textContent).toContain("Salvando…");
+    expect(host?.shadowRoot?.textContent).not.toContain("liveBookmarkPending");
+    decorator.stop();
+  });
+
+  it("does not render pending metadata when context fails or summary is disabled", async () => {
+    const failedArticle = renderArticle("123");
+    const failed = startBookmarkMetadataDecorator({
+      document,
+      lookup: async () => Promise.reject(new Error("temporary lookup failure")),
+    });
+    await failed.setPending(failedArticle, "123");
+    expect(failedArticle.querySelector("bookmark-x-metadata")).toBeNull();
+    failed.stop();
+
+    document.body.replaceChildren();
+    const hiddenArticle = renderArticle("123");
+    const settings = structuredClone(DEFAULT_SETTINGS);
+    settings.behavior.metadata.summary = false;
+    const hidden = startBookmarkMetadataDecorator({
+      document,
+      lookup: async () => uncategorizedResult({ settings }),
+    });
+    await hidden.setPending(hiddenArticle, "123");
+    expect(hiddenArticle.querySelector("bookmark-x-metadata")).toBeNull();
+    hidden.stop();
+  });
+
   it("injects safe, isolated metadata after the actions only for a local bookmark", async () => {
     const local = renderArticle("123");
     const unknown = renderArticle("999");
@@ -182,7 +228,7 @@ describe("startBookmarkMetadataDecorator", () => {
     expect(host.shadowRoot?.textContent).toContain("uncategorizedFolder");
     expect(host.shadowRoot?.querySelector(".status")?.textContent).not.toContain("!");
 
-    decorator.setPending(article, "123");
+    await decorator.setPending(article, "123");
     expect(article.querySelectorAll("bookmark-x-metadata")).toHaveLength(1);
     expect(host.dataset.state).toBe("pending");
     expect(host.shadowRoot?.textContent).toContain("liveBookmarkPending");

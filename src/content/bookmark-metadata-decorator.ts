@@ -4,7 +4,6 @@ import type {
   BookmarkLocalizationResult,
 } from "../shared/protocol";
 import type { ExtensionSettings } from "../settings/settings-repository";
-import { DEFAULT_QUICK_STOP_THRESHOLD } from "../domain/quick-update";
 import { createIconButton } from "../ui/icons";
 import type { BookmarkMetadataTranslator } from "../shared/bookmark-metadata-messages";
 
@@ -16,39 +15,6 @@ export type {
 const ARTICLE_SELECTOR = 'article[data-testid="tweet"]';
 const HOST_TAG = "bookmark-x-metadata";
 const STATUS_PATH_PATTERN = /^\/[A-Za-z0-9_]+\/status\/(\d+)$/;
-const DEFAULT_DECORATION_SETTINGS = {
-  appearance: { largeText: true, highContrast: true, reduceMotion: false },
-  behavior: {
-    surface: "modal",
-    promptAfterBookmark: true,
-    metadata: {
-      summary: true,
-      breadcrumb: true,
-      tags: true,
-      note: true,
-      categoryIndicator: true,
-    },
-  },
-  export: {
-    includeLink: true,
-    includeText: true,
-    includeAuthor: true,
-    includeDate: true,
-    includeImages: true,
-    includeVideos: true,
-    includeNote: true,
-    includeTags: true,
-    includeFolder: true,
-    includeFirstSavedAt: true,
-    includeLastSeenAt: true,
-  },
-  search: { filterAsYouType: true },
-  data: {
-    keepArchived: true,
-    quickStopThreshold: DEFAULT_QUICK_STOP_THRESHOLD,
-  },
-} as const satisfies ExtensionSettings;
-
 export interface BookmarkMetadataDecoratorOptions {
   document: Document;
   lookup(ids: string[]): Promise<BookmarkDecorationLookupResult>;
@@ -64,7 +30,7 @@ export interface BookmarkMetadataDecoratorOptions {
 export interface BookmarkMetadataDecoratorController {
   refresh(bookmarkId?: string): void;
   setLocalization(localization: BookmarkLocalizationResult): void;
-  setPending(article: Element, bookmarkId: string): void;
+  setPending(article: Element, bookmarkId: string): Promise<void>;
   stop(): void;
 }
 
@@ -427,6 +393,30 @@ export function startBookmarkMetadataDecorator(
   let generation = 0;
   let lastResult: BookmarkDecorationLookupResult | null = null;
   let lastTranslator: BookmarkMetadataTranslator = (key) => key;
+  let presentationContextLoading: Promise<BookmarkDecorationLookupResult | null> | null =
+    null;
+
+  const rememberPresentationContext = (
+    result: BookmarkDecorationLookupResult,
+  ): BookmarkDecorationLookupResult => {
+    lastResult = result;
+    lastTranslator = (key) => result.messages[key] ?? key;
+    return result;
+  };
+
+  const loadPresentationContext = (
+    bookmarkId: string,
+  ): Promise<BookmarkDecorationLookupResult | null> => {
+    if (lastResult) return Promise.resolve(lastResult);
+    presentationContextLoading ??= options
+      .lookup([bookmarkId])
+      .then((result) => (stopped ? null : rememberPresentationContext(result)))
+      .catch(() => null)
+      .finally(() => {
+        presentationContextLoading = null;
+      });
+    return presentationContextLoading;
+  };
 
   const removeMounted = (article: Element): void => {
     mounted.get(article)?.host.remove();
@@ -488,8 +478,7 @@ export function startBookmarkMetadataDecorator(
       const translate: BookmarkMetadataTranslator = (key) =>
         result.messages[key] ?? key;
       if (stopped || run !== generation) return;
-      lastResult = result;
-      lastTranslator = translate;
+      rememberPresentationContext(result);
       const itemsById = new Map(result.items.map((item) => [item.bookmark.id, item]));
       for (const [id, matchingArticles] of byId) {
         const item = itemsById.get(id);
@@ -608,18 +597,27 @@ export function startBookmarkMetadataDecorator(
         });
       }
     },
-    setPending(article, bookmarkId) {
-      const host = ensureHost(article, bookmarkId);
-      if (!host) return;
-      const settings = lastResult?.settings ?? DEFAULT_DECORATION_SETTINGS;
+    async setPending(article, bookmarkId) {
+      pending.set(article, bookmarkId);
+      const context = await loadPresentationContext(bookmarkId);
+      if (
+        !context ||
+        stopped ||
+        !article.isConnected ||
+        pending.get(article) !== bookmarkId
+      ) {
+        pending.delete(article);
+        return;
+      }
+      const settings = context.settings;
       if (!settings.behavior.metadata.summary) {
         removeMounted(article);
         return;
       }
+      const host = ensureHost(article, bookmarkId);
+      if (!host) return;
       pending.set(article, bookmarkId);
-      const existing = lastResult?.items.find(
-        (item) => item.bookmark.id === bookmarkId,
-      );
+      const existing = context.items.find((item) => item.bookmark.id === bookmarkId);
       const item: BookmarkDecorationItem =
         existing ??
         ({
