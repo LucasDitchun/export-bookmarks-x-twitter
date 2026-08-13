@@ -13,6 +13,7 @@ import {
 } from "../domain/bookmark-categorization";
 import { createBackupUi } from "./backup-ui";
 import { getLocaleTag, type Translator } from "./i18n";
+import { organizationUsageLabel } from "./organization-usage-label";
 import { createFolderUi } from "./folder-ui";
 import type {
   BookmarkDetailResult,
@@ -575,7 +576,12 @@ export function createPopupApp(options: PopupAppOptions): {
       button.className = "organization-item";
       button.setAttribute(
         "aria-label",
-        translate("tagUsageLabel", [tag.name, String(tagUsage[tag.id] ?? 0)]),
+        organizationUsageLabel(
+          translate,
+          "tagUsageLabel",
+          tag.name,
+          tagUsage[tag.id] ?? 0,
+        ),
       );
       name.textContent = tag.name;
       count.textContent = String(tagUsage[tag.id] ?? 0);
