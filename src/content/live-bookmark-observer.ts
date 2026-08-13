@@ -14,7 +14,10 @@ import {
 import { extractBookmarks } from "./extract-bookmarks";
 import { loadBookmarkMetadataDraft, saveBookmarkMetadata } from "./bookmark-metadata";
 import { isContentBookmarkMedia } from "./bookmark-media";
-import type { BookmarkMetadataTranslator } from "../shared/bookmark-metadata-messages";
+import type {
+  BookmarkMetadataMessageKey,
+  BookmarkMetadataTranslator,
+} from "../shared/bookmark-metadata-messages";
 
 const DEFAULT_STABLE_FOR_MS = 900;
 const DEFAULT_TIMEOUT_MS = 6_000;
@@ -216,10 +219,10 @@ export function startLiveBookmarkObserver(
       : null;
     let translate = options.translate;
     let modalState: Parameters<BookmarkModalController["setState"]>[0] = "pending";
-    let modalMessageKey = "liveBookmarkPending";
+    let modalMessageKey: BookmarkMetadataMessageKey = "liveBookmarkPending";
     const setTranslatedState = (
       state: Parameters<BookmarkModalController["setState"]>[0],
-      messageKey: string,
+      messageKey: BookmarkMetadataMessageKey,
     ): void => {
       modalState = state;
       modalMessageKey = messageKey;
