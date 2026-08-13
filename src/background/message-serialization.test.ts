@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { KeyedTaskQueue, messageSerializationKey } from "./message-serialization";
+import {
+  isGlobalSerializationBarrier,
+  KeyedTaskQueue,
+  messageSerializationKey,
+} from "./message-serialization";
 
 function deferred(): { promise: Promise<void>; resolve: () => void } {
   let resolve!: () => void;
@@ -122,6 +126,129 @@ describe("KeyedTaskQueue", () => {
     await expect(recovered).resolves.toBe("recovered");
   });
 
+  it.each(["RESTORE_BACKUP", "CLEAR_ARCHIVE"])(
+    "%s waits for prior mutations and blocks every later mutation",
+    async (barrierType) => {
+      const queue = new KeyedTaskQueue();
+      const priorGate = deferred();
+      const barrierGate = deferred();
+      const events: string[] = [];
+      const priorRequests = [
+        { type: "SAVE_BOOKMARK_METADATA", payload: { id: "100" } },
+        { type: "SAVE_SETTINGS", payload: {} },
+        { type: "START_SCRAPE" },
+        {
+          type: "LIVE_BOOKMARK_CONFIRMED",
+          intentId: "intent-before",
+          bookmark: { id: "200" },
+        },
+      ];
+      const prior = priorRequests.map((request, index) =>
+        queue.run(messageSerializationKey(request), async () => {
+          events.push(`prior:${index}:start`);
+          await priorGate.promise;
+          events.push(`prior:${index}:end`);
+        }),
+      );
+      const barrierRequest = { type: barrierType };
+      const barrier = queue.run(
+        messageSerializationKey(barrierRequest),
+        async () => {
+          events.push("barrier:start");
+          await barrierGate.promise;
+          events.push("barrier:end");
+        },
+        { globalBarrier: isGlobalSerializationBarrier(barrierRequest) },
+      );
+      const laterRequests = [
+        { type: "SAVE_BOOKMARK_NOTE", payload: { id: "300" } },
+        { type: "SAVE_SETTINGS", payload: {} },
+        { type: "START_SCRAPE" },
+        {
+          type: "LIVE_BOOKMARK_CONFIRMED",
+          intentId: "intent-after",
+          bookmark: { id: "400" },
+        },
+      ];
+      const later = laterRequests.map((request, index) =>
+        queue.run(messageSerializationKey(request), async () => {
+          events.push(`later:${index}`);
+        }),
+      );
+
+      await Promise.resolve();
+      expect(events).toEqual([
+        "prior:0:start",
+        "prior:1:start",
+        "prior:2:start",
+        "prior:3:start",
+      ]);
+      priorGate.resolve();
+      await Promise.all(prior);
+      await vi.waitFor(() => expect(events).toContain("barrier:start"));
+      expect(events).not.toContain("later:0");
+      barrierGate.resolve();
+      await Promise.all([barrier, ...later]);
+      expect(events.slice(-5)).toEqual([
+        "barrier:end",
+        "later:0",
+        "later:1",
+        "later:2",
+        "later:3",
+      ]);
+    },
+  );
+
+  it("does not poison later mutations when a global barrier rejects", async () => {
+    const queue = new KeyedTaskQueue();
+    const barrierRequest = { type: "RESTORE_BACKUP" };
+    const barrier = queue.run(
+      messageSerializationKey(barrierRequest),
+      () => Promise.reject(new Error("restore failed")),
+      { globalBarrier: isGlobalSerializationBarrier(barrierRequest) },
+    );
+    const later = queue.run("bookmark:100", () => Promise.resolve("saved"));
+
+    await expect(barrier).rejects.toThrow("restore failed");
+    await expect(later).resolves.toBe("saved");
+    await Promise.resolve();
+    expect(queue.pendingKeyCount).toBe(0);
+    expect(queue.pendingMutationCount).toBe(0);
+  });
+
+  it("runs a global barrier after a prior mutation rejects", async () => {
+    const queue = new KeyedTaskQueue();
+    const prior = queue.run("settings", () => Promise.reject(new Error("save failed")));
+    const barrierRequest = { type: "CLEAR_ARCHIVE" };
+    const barrier = queue.run(
+      messageSerializationKey(barrierRequest),
+      () => Promise.resolve("cleared"),
+      { globalBarrier: isGlobalSerializationBarrier(barrierRequest) },
+    );
+
+    await expect(prior).rejects.toThrow("save failed");
+    await expect(barrier).resolves.toBe("cleared");
+    await Promise.resolve();
+    expect(queue.pendingMutationCount).toBe(0);
+  });
+
+  it("keeps safe reads independent from a global destructive barrier", async () => {
+    const queue = new KeyedTaskQueue();
+    const gate = deferred();
+    const barrierRequest = { type: "CLEAR_ARCHIVE" };
+    const barrier = queue.run(
+      messageSerializationKey(barrierRequest),
+      () => gate.promise,
+      { globalBarrier: isGlobalSerializationBarrier(barrierRequest) },
+    );
+
+    await expect(queue.run(null, () => Promise.resolve("status"))).resolves.toBe(
+      "status",
+    );
+    gate.resolve();
+    await barrier;
+  });
+
   it("removes settled keys instead of growing for the service worker lifetime", async () => {
     const queue = new KeyedTaskQueue();
     await Promise.all(
@@ -131,6 +258,7 @@ describe("KeyedTaskQueue", () => {
     );
 
     expect(queue.pendingKeyCount).toBe(0);
+    expect(queue.pendingMutationCount).toBe(0);
   });
 });
 
@@ -171,5 +299,8 @@ describe("messageSerializationKey", () => {
     expect(messageSerializationKey({ type: "GET_STATUS" })).toBeNull();
     expect(messageSerializationKey({ type: "LIST_TAGS" })).toBeNull();
     expect(messageSerializationKey({ type: "invalid" })).toBeNull();
+    expect(isGlobalSerializationBarrier({ type: "RESTORE_BACKUP" })).toBe(true);
+    expect(isGlobalSerializationBarrier({ type: "CLEAR_ARCHIVE" })).toBe(true);
+    expect(isGlobalSerializationBarrier({ type: "SAVE_SETTINGS" })).toBe(false);
   });
 });

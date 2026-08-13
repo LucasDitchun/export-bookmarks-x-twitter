@@ -92,23 +92,48 @@ export function messageSerializationKey(value: unknown): MessageSerializationKey
   }
 }
 
+export function isGlobalSerializationBarrier(value: unknown): boolean {
+  const request = record(value);
+  return request?.type === "CLEAR_ARCHIVE" || request?.type === "RESTORE_BACKUP";
+}
+
+interface TaskQueueOptions {
+  globalBarrier?: boolean;
+}
+
 export class KeyedTaskQueue {
   private readonly tails = new Map<string, Promise<void>>();
+  private readonly pendingMutations = new Set<Promise<void>>();
+  private globalBarrierTail: Promise<void> | null = null;
 
   get pendingKeyCount(): number {
     return this.tails.size;
   }
 
-  run<T>(key: MessageSerializationKey, task: () => Promise<T> | T): Promise<T> {
+  get pendingMutationCount(): number {
+    return this.pendingMutations.size;
+  }
+
+  run<T>(
+    key: MessageSerializationKey,
+    task: () => Promise<T> | T,
+    options: TaskQueueOptions = {},
+  ): Promise<T> {
     const keys = [
       ...new Set(key === null ? [] : typeof key === "string" ? [key] : key),
     ];
-    if (keys.length === 0) return Promise.resolve().then(task);
+    const globalBarrier = options.globalBarrier === true;
+    if (keys.length === 0 && !globalBarrier) return Promise.resolve().then(task);
 
-    const dependencies = keys.flatMap((currentKey) => {
-      const pending = this.tails.get(currentKey);
-      return pending === undefined ? [] : [pending];
-    });
+    const dependencies = globalBarrier
+      ? [...this.pendingMutations]
+      : keys.flatMap((currentKey) => {
+          const pending = this.tails.get(currentKey);
+          return pending === undefined ? [] : [pending];
+        });
+    if (!globalBarrier && this.globalBarrierTail !== null) {
+      dependencies.push(this.globalBarrierTail);
+    }
     const previous =
       dependencies.length === 0 ? Promise.resolve() : Promise.all(dependencies);
     const result = previous.then(task);
@@ -117,10 +142,14 @@ export class KeyedTaskQueue {
       () => undefined,
     );
     for (const currentKey of keys) this.tails.set(currentKey, settled);
+    this.pendingMutations.add(settled);
+    if (globalBarrier) this.globalBarrierTail = settled;
     void settled.then(() => {
       for (const currentKey of keys) {
         if (this.tails.get(currentKey) === settled) this.tails.delete(currentKey);
       }
+      this.pendingMutations.delete(settled);
+      if (this.globalBarrierTail === settled) this.globalBarrierTail = null;
     });
     return result;
   }
