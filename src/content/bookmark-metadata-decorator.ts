@@ -401,7 +401,9 @@ export function startBookmarkMetadataDecorator(
   const rememberPresentationContext = (
     result: BookmarkDecorationLookupResult,
   ): BookmarkDecorationLookupResult => {
-    const current = localizationOverride ? { ...result, ...localizationOverride } : result;
+    const current = localizationOverride
+      ? { ...result, ...localizationOverride }
+      : result;
     lastResult = current;
     lastTranslator = (key) => current.messages[key] ?? key;
     return current;
