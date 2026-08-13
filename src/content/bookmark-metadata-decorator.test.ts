@@ -432,11 +432,13 @@ describe("startBookmarkMetadataDecorator", () => {
     const lookupResult = new Promise<BookmarkDecorationLookupResult>((resolve) => {
       resolveLookup = resolve;
     });
+    const lookup = vi.fn(() => lookupResult);
     const decorator = startBookmarkMetadataDecorator({
       document,
-      lookup: () => lookupResult,
+      lookup,
     });
 
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledOnce());
     decorator.setLocalization({
       locale: "pt_BR",
       messages: { bookmarkPromptFolder: "Pasta" },
@@ -491,6 +493,42 @@ describe("startBookmarkMetadataDecorator", () => {
       const host = document.querySelector("bookmark-x-metadata");
       expect(host?.shadowRoot?.textContent).toContain("Pasta");
       expect(host?.shadowRoot?.textContent).not.toContain("Folder");
+    });
+    decorator.stop();
+  });
+
+  it("lets a fresh canonical lookup supersede an older locale override", async () => {
+    renderArticle("123");
+    let current: BookmarkDecorationLookupResult = {
+      ...result(),
+      locale: "en",
+      messages: { bookmarkPromptFolder: "Folder" },
+    };
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup: async () => current,
+    });
+    await settle();
+
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { bookmarkPromptFolder: "Pasta" },
+    });
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { bookmarkPromptFolder: "Pasta" },
+    });
+    current = {
+      ...result(),
+      locale: "ja",
+      messages: { bookmarkPromptFolder: "フォルダー" },
+    };
+    decorator.refresh("123");
+
+    await vi.waitFor(() => {
+      const host = document.querySelector("bookmark-x-metadata");
+      expect(host?.shadowRoot?.textContent).toContain("フォルダー");
+      expect(host?.shadowRoot?.textContent).not.toContain("Pasta");
     });
     decorator.stop();
   });
