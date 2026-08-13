@@ -125,26 +125,28 @@ describe("createMetadataRefreshBroadcaster", () => {
     ).toEqual(Array.from({ length: 150 }, (_, index) => String(1_000 + index)));
   });
 
-  it("preserves the current IDs after a tab query failure for the next retry", async () => {
+  it("retries an isolated tab query failure without waiting for another mutation", async () => {
     const queryTabs = vi
       .fn<() => Promise<Array<{ id: number; url: string }>>>()
       .mockRejectedValueOnce(new Error("Chrome query failed"))
       .mockResolvedValue([{ id: 1, url: "https://x.com/home" }]);
     const sendToTab = vi.fn(async () => undefined);
-    const broadcast = createMetadataRefreshBroadcaster({ queryTabs, sendToTab });
+    const waitBeforeQueryRetry = vi.fn(async () => undefined);
+    const broadcast = createMetadataRefreshBroadcaster({
+      queryTabs,
+      sendToTab,
+      waitBeforeQueryRetry,
+    });
 
     await expect(
       broadcast({ type: "REFRESH_BOOKMARK_METADATA", bookmarkIds: ["123"] }),
-    ).rejects.toThrow("Chrome query failed");
-    expect(sendToTab).not.toHaveBeenCalled();
-
-    await broadcast({
-      type: "REFRESH_BOOKMARK_METADATA",
-      bookmarkIds: ["456"],
-    });
+    ).resolves.toBeUndefined();
+    expect(queryTabs).toHaveBeenCalledTimes(2);
+    expect(waitBeforeQueryRetry).toHaveBeenCalledOnce();
+    expect(waitBeforeQueryRetry).toHaveBeenCalledWith(1);
     expect(sendToTab).toHaveBeenCalledWith(1, {
       type: "REFRESH_BOOKMARK_METADATA",
-      bookmarkIds: ["123", "456"],
+      bookmarkIds: ["123"],
     });
   });
 
@@ -213,21 +215,43 @@ describe("createMetadataRefreshBroadcaster", () => {
     });
   });
 
-  it("does not retry forever after an isolated query failure", async () => {
-    const queryTabs = vi.fn(() => Promise.reject(new Error("Chrome query failed")));
+  it("bounds retry attempts and preserves pending IDs after repeated failures", async () => {
+    const queryTabs = vi
+      .fn<() => Promise<Array<{ id: number; url: string }>>>()
+      .mockRejectedValueOnce(new Error("Chrome query failed"))
+      .mockRejectedValueOnce(new Error("Chrome query failed"))
+      .mockRejectedValueOnce(new Error("Chrome query failed"))
+      .mockRejectedValueOnce(new Error("Chrome query failed"))
+      .mockResolvedValue([{ id: 1, url: "https://x.com/home" }]);
     const sendToTab = vi.fn(async () => undefined);
-    const broadcast = createMetadataRefreshBroadcaster({ queryTabs, sendToTab });
+    const waitBeforeQueryRetry = vi.fn(async () => undefined);
+    const broadcast = createMetadataRefreshBroadcaster({
+      queryTabs,
+      sendToTab,
+      waitBeforeQueryRetry,
+    });
 
     await expect(
       broadcast({ type: "REFRESH_BOOKMARK_METADATA", bookmarkIds: ["123"] }),
     ).rejects.toThrow("Chrome query failed");
     await Promise.resolve();
-    expect(queryTabs).toHaveBeenCalledOnce();
+    expect(queryTabs).toHaveBeenCalledTimes(2);
 
     await expect(
       broadcast({ type: "REFRESH_BOOKMARK_METADATA", bookmarkIds: ["456"] }),
     ).rejects.toThrow("Chrome query failed");
-    expect(queryTabs).toHaveBeenCalledTimes(2);
+    expect(queryTabs).toHaveBeenCalledTimes(4);
+    expect(waitBeforeQueryRetry).toHaveBeenCalledTimes(2);
     expect(sendToTab).not.toHaveBeenCalled();
+
+    await broadcast({
+      type: "REFRESH_BOOKMARK_METADATA",
+      bookmarkIds: ["789"],
+    });
+    expect(queryTabs).toHaveBeenCalledTimes(5);
+    expect(sendToTab).toHaveBeenCalledWith(1, {
+      type: "REFRESH_BOOKMARK_METADATA",
+      bookmarkIds: ["123", "456", "789"],
+    });
   });
 });
