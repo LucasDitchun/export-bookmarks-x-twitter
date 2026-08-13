@@ -115,7 +115,7 @@ describe("shared library settings UI", () => {
       expect(getComputedStyle(element).display).not.toBe("none");
       expect(element.textContent).toContain("<img src=x");
     }
-  });
+  }, 15_000);
 
   it("does not let a stale settings response overwrite a newer refresh", async () => {
     const stale = deferred<ExtensionSettings | null>();

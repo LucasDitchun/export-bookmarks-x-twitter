@@ -113,13 +113,12 @@ test("dry-run validates configuration without network or inference", async () =>
   assert.deepEqual(result, { assets: 2, cases: 8, dryRun: true });
 });
 
-test("the staging profile invokes the real gate, while normal CI does not", async () => {
-  const [releaseWorkflow, ciWorkflow, packageJson] = await Promise.all([
+test("the staging profile invokes the real gate without a contribution workflow", async () => {
+  const [releaseWorkflow, packageJson] = await Promise.all([
     readFile(
       new URL("../.github/workflows/release-train.yml", import.meta.url),
       "utf8",
     ),
-    readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8").then(JSON.parse),
   ]);
 
@@ -133,8 +132,6 @@ test("the staging profile invokes the real gate, while normal CI does not", asyn
   assert.match(releaseWorkflow, /^\s*run: pnpm verify:staging\s*$/mu);
   assert.ok(stagingCommands.includes("pnpm semantic-model:gate"));
   assert.doesNotMatch(releaseWorkflow, /semantic-model:gate --dry-run/u);
-  assert.doesNotMatch(ciWorkflow, /^\s*(?:run:\s*)?pnpm verify:staging\s*$/mu);
-  assert.doesNotMatch(ciWorkflow, /^\s*(?:run:\s*)?pnpm semantic-model:gate\s*$/mu);
   assert.equal(
     packageJson.scripts["semantic-model:gate"],
     "node scripts/semantic-model-gate.mjs",

@@ -290,8 +290,8 @@ pnpm verify:local
 ```
 
 Pull requests to `develop` intentionally do not repeat this profile in GitHub
-Actions. If local verification is unavailable, a maintainer can run the manual
-**On-demand validation** workflow for the exact commit.
+Actions. Keep an unverified pull request in draft until the exact commit passes
+locally.
 
 `pnpm build` creates the unpacked extension in `dist`. Load that directory from
 `chrome://extensions`, then select **Reload** after each rebuild.

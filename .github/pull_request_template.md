@@ -6,9 +6,8 @@
 
 - Commit tested: `________________________________________`
 - [ ] `pnpm verify:local` passed for the commit above
-- [ ] Local verification was not available; manual **On-demand validation** was requested
 
-<!-- Keep exactly one of the two choices above checked. Add focused commands below. -->
+<!-- GitHub Actions does not repeat contribution checks. Add focused commands below. -->
 
 Additional checks:
 
