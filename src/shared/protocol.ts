@@ -1,5 +1,6 @@
 import type {
   ArchiveStats,
+  BookmarkDecorationReadModel,
   BookmarkRecord,
   BookmarkSnapshot,
   BookmarkTag,
@@ -47,7 +48,7 @@ export interface BookmarkDetailResult {
 }
 
 export interface BookmarkDecorationItem {
-  bookmark: BookmarkRecord;
+  bookmark: BookmarkDecorationReadModel;
   breadcrumb: string[];
   tags: BookmarkTag[];
 }

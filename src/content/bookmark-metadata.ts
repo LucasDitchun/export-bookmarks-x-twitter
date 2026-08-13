@@ -1,4 +1,4 @@
-import type { BookmarkRecord, FolderRecord } from "../domain/types";
+import type { BookmarkMetadataReadModel, FolderRecord } from "../domain/types";
 import type {
   FolderListResult,
   RuntimeResponse,
@@ -20,7 +20,7 @@ const MAX_FOLDER_DEPTH = 32;
 type SendMetadataRequest = (request: UiRequest) => Promise<RuntimeResponse<unknown>>;
 
 interface SaveBookmarkMetadataOptions {
-  bookmark: BookmarkRecord;
+  bookmark: BookmarkMetadataReadModel;
   values: BookmarkModalValues;
   send: SendMetadataRequest;
   signal?: AbortSignal;
@@ -131,7 +131,7 @@ function folderTokenFor(
 }
 
 export async function loadBookmarkMetadataValues(options: {
-  bookmark: BookmarkRecord;
+  bookmark: BookmarkMetadataReadModel;
   send: SendMetadataRequest;
   signal?: AbortSignal;
 }): Promise<BookmarkModalValues> {
@@ -139,7 +139,7 @@ export async function loadBookmarkMetadataValues(options: {
 }
 
 export async function loadBookmarkMetadataDraft(options: {
-  bookmark: BookmarkRecord;
+  bookmark: BookmarkMetadataReadModel;
   send: SendMetadataRequest;
   signal?: AbortSignal;
 }): Promise<{ values: BookmarkModalValues; choices: BookmarkModalChoices }> {
