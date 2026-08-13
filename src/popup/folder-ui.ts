@@ -21,6 +21,7 @@ interface FolderUiOptions {
     usage: Readonly<Record<string, number>>,
   ) => void;
   onFolderSelected?: (folderPath: string) => void;
+  onTrashChanged?: () => void;
 }
 
 interface FolderElements {
@@ -71,6 +72,7 @@ function appendOption(
 
 export function createFolderUi(options: FolderUiOptions): {
   ready: Promise<void>;
+  refresh: () => Promise<void>;
   setBookmark: (bookmark: BookmarkRecord | null) => void;
 } {
   const {
@@ -78,6 +80,7 @@ export function createFolderUi(options: FolderUiOptions): {
     onBookmarkUpdated,
     onFoldersChanged,
     onFolderSelected,
+    onTrashChanged,
     sendMessage,
     translate,
   } = options;
@@ -335,16 +338,9 @@ export function createFolderUi(options: FolderUiOptions): {
       folders = folders.filter((folder) => !deleted.has(folder.id));
       for (const folderId of deleted) delete usage[folderId];
       onFoldersChanged?.(folders, usage);
-      if (
-        bookmark !== null &&
-        bookmark.folderId !== null &&
-        deleted.has(bookmark.folderId)
-      ) {
-        bookmark = { ...bookmark, folderId: null };
-        onBookmarkUpdated(bookmark);
-      }
       deletingId = null;
       setStatus("folderDeleted", "saved");
+      onTrashChanged?.();
     } catch {
       setStatus("folderActionError", "error");
     } finally {
@@ -431,6 +427,7 @@ export function createFolderUi(options: FolderUiOptions): {
   render();
   return {
     ready,
+    refresh: refreshFolders,
     setBookmark: (nextBookmark) => {
       bookmark = nextBookmark;
       render();

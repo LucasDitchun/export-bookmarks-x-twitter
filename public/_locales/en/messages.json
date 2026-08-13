@@ -425,6 +425,23 @@
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": { "message": "Open a bookmark to add or remove tags." },
+  "organizationTrashTitle": { "message": "Trash" },
+  "organizationTrashHelp": {
+    "message": "Restore deleted folders and tags with their saved-post relationships."
+  },
+  "organizationTrashEmpty": { "message": "Trash is empty." },
+  "organizationTrashError": { "message": "Could not load Trash." },
+  "organizationRestoring": { "message": "Restoring…" },
+  "organizationRestored": { "message": "Restored." },
+  "organizationRestoreError": { "message": "Could not restore this item." },
+  "restoreTag": {
+    "message": "Restore tag $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "Restore folder $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "Back to library" },
   "settingsViewHelp": { "message": "Export, backup, language, and preferences." }
 }

@@ -22,7 +22,12 @@ export interface CreateFolderInput {
 
 export interface DeleteFolderResult {
   deletedFolderIds: string[];
-  uncategorizedBookmarkCount: number;
+  preservedBookmarkCount: number;
+}
+
+export interface RestoreFolderResult {
+  restoredFolderIds: string[];
+  restoredBookmarkCount: number;
 }
 
 export interface FolderRepositoryOptions {
@@ -88,6 +93,16 @@ export class FolderRepository {
     );
     await transactionDone(transaction);
     return sortFolders(folders.filter((folder) => folder.deletedAt === undefined));
+  }
+
+  async listDeleted(): Promise<FolderRecord[]> {
+    const database = await this.connection.open();
+    const transaction = database.transaction(FOLDERS_STORE, "readonly");
+    const folders = await requestAsPromise(
+      transaction.objectStore(FOLDERS_STORE).getAll() as IDBRequest<FolderRecord[]>,
+    );
+    await transactionDone(transaction);
+    return sortFolders(folders.filter((folder) => folder.deletedAt !== undefined));
   }
 
   async usage(): Promise<Record<string, number>> {
@@ -242,7 +257,6 @@ export class FolderRepository {
     );
     const folderStore = transaction.objectStore(FOLDERS_STORE);
     const bookmarkStore = transaction.objectStore(BOOKMARKS_STORE);
-    const membershipStore = transaction.objectStore(BOOKMARK_FOLDERS_STORE);
     const folders = await requestAsPromise(
       folderStore.getAll() as IDBRequest<FolderRecord[]>,
     );
@@ -275,25 +289,8 @@ export class FolderRepository {
         ),
       ),
     );
-    const membershipKeyGroups = await Promise.all(
-      deletedFolderIds.map((folderId) =>
-        requestAsPromise(
-          membershipStore.index("byFolder").getAllKeys(IDBKeyRange.only(folderId)),
-        ),
-      ),
-    );
     const affectedBookmarks = bookmarkGroups.flat();
     const timestamp = this.now().toISOString();
-    for (const bookmark of affectedBookmarks) {
-      bookmarkStore.put({
-        ...bookmark,
-        folderId: null,
-        metadataUpdatedAt: timestamp,
-      } satisfies BookmarkRecord);
-    }
-    for (const keys of membershipKeyGroups) {
-      for (const key of keys) membershipStore.delete(key);
-    }
     for (const folderId of deletedFolderIds) {
       const folder = folders.find((candidate) => candidate.id === folderId);
       if (folder) folderStore.put({ ...folder, deletedAt: timestamp });
@@ -301,7 +298,89 @@ export class FolderRepository {
     await transactionDone(transaction);
     return {
       deletedFolderIds,
-      uncategorizedBookmarkCount: affectedBookmarks.length,
+      preservedBookmarkCount: affectedBookmarks.length,
+    };
+  }
+
+  async restore(id: string): Promise<RestoreFolderResult> {
+    const database = await this.connection.open();
+    const transaction = database.transaction(
+      [FOLDERS_STORE, BOOKMARKS_STORE],
+      "readwrite",
+    );
+    const folderStore = transaction.objectStore(FOLDERS_STORE);
+    const bookmarkStore = transaction.objectStore(BOOKMARKS_STORE);
+    const folders = await requestAsPromise(
+      folderStore.getAll() as IDBRequest<FolderRecord[]>,
+    );
+    const root = folders.find(
+      (folder) => folder.id === id && folder.deletedAt !== undefined,
+    );
+    if (!root) {
+      transaction.abort();
+      throw new Error(`Deleted folder ${id} was not found.`);
+    }
+    if (
+      root.parentId !== null &&
+      !folders.some(
+        (folder) => folder.id === root.parentId && folder.deletedAt === undefined,
+      )
+    ) {
+      transaction.abort();
+      throw new Error("Restore the parent folder first.");
+    }
+
+    const restored = new Set([id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const folder of folders) {
+        if (
+          folder.deletedAt !== undefined &&
+          folder.deletedAt === root.deletedAt &&
+          folder.parentId !== null &&
+          restored.has(folder.parentId)
+        ) {
+          const size = restored.size;
+          restored.add(folder.id);
+          changed ||= restored.size !== size;
+        }
+      }
+    }
+    const activeFolders = folders.filter((folder) => folder.deletedAt === undefined);
+    const restoredFolders = folders.filter((folder) => restored.has(folder.id));
+    for (const folder of restoredFolders) {
+      assertUniqueSibling(
+        [
+          ...activeFolders,
+          ...restoredFolders.filter((candidate) => candidate.id !== folder.id),
+        ],
+        folder,
+        folder.id,
+      );
+    }
+    for (const folder of restoredFolders) {
+      const active: FolderRecord = {
+        id: folder.id,
+        name: folder.name,
+        parentId: folder.parentId,
+      };
+      folderStore.put(active);
+    }
+    const restoredFolderIds = restoredFolders.map((folder) => folder.id);
+    const bookmarkGroups = await Promise.all(
+      restoredFolderIds.map((folderId) =>
+        requestAsPromise(
+          bookmarkStore
+            .index("byFolder")
+            .getAll(IDBKeyRange.only(folderId)) as IDBRequest<BookmarkRecord[]>,
+        ),
+      ),
+    );
+    await transactionDone(transaction);
+    return {
+      restoredFolderIds,
+      restoredBookmarkCount: bookmarkGroups.flat().length,
     };
   }
 }

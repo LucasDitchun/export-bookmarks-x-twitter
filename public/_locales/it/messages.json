@@ -504,6 +504,25 @@
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": { "message": "Apri un segnalibro per aggiungere o rimuovere tag." },
+  "organizationTrashTitle": { "message": "Cestino" },
+  "organizationTrashHelp": {
+    "message": "Ripristina cartelle e tag eliminati con le relative associazioni ai segnalibri."
+  },
+  "organizationTrashEmpty": { "message": "Il cestino è vuoto." },
+  "organizationTrashError": { "message": "Impossibile caricare il cestino." },
+  "organizationRestoring": { "message": "Ripristino…" },
+  "organizationRestored": { "message": "Ripristinato." },
+  "organizationRestoreError": {
+    "message": "Impossibile ripristinare questo elemento."
+  },
+  "restoreTag": {
+    "message": "Ripristina tag $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "Ripristina cartella $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "Torna alla raccolta" },
   "settingsViewHelp": { "message": "Esportazione, backup, lingua e preferenze." }
 }

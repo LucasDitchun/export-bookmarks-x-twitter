@@ -40,6 +40,12 @@ describe("metadataRefreshRequest", () => {
     expect(metadataRefreshRequest({ type: "DELETE_FOLDER" })).toEqual({
       type: "REFRESH_BOOKMARK_METADATA",
     });
+    expect(metadataRefreshRequest({ type: "RESTORE_TAG" })).toEqual({
+      type: "REFRESH_BOOKMARK_METADATA",
+    });
+    expect(metadataRefreshRequest({ type: "RESTORE_FOLDER" })).toEqual({
+      type: "REFRESH_BOOKMARK_METADATA",
+    });
   });
 
   it("ignores malformed, unrelated, and failed identifiers", () => {

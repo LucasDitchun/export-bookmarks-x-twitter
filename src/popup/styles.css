@@ -1852,6 +1852,42 @@ html[data-surface="side-panel"] .dashboard {
   font-size: 0.75rem;
 }
 
+.organization-trash {
+  margin-top: 12px;
+  border-top: 1px solid var(--soft-line);
+  padding-top: 10px;
+}
+
+.organization-trash > summary {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.organization-trash > section {
+  margin-top: 10px;
+}
+
+.trash-item {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 4px 4px 10px;
+  border: 1px solid var(--soft-line);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--canvas);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .folder-list-item {
   position: relative;
   min-height: 54px;

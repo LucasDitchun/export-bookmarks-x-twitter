@@ -11,6 +11,8 @@ import {
   type ExtensionSettings,
 } from "../settings/settings-repository";
 import { BookmarkRepository } from "./bookmark-repository";
+import { FolderRepository } from "./folder-repository";
+import { TagRepository } from "./tag-repository";
 import {
   BookmarkDatabase,
   requestAsPromise,
@@ -280,6 +282,40 @@ describe("BackupRepository", () => {
     expect(await allFromStore(targetName, "bookmarkFolders")).toEqual([
       { bookmarkId: "123", folderId: "folder-ai" },
     ]);
+  });
+
+  it("backs up and restores deleted organization entries with their relationships", async () => {
+    const sourceName = `backup-trash-source-${crypto.randomUUID()}`;
+    const targetName = `backup-trash-target-${crypto.randomUUID()}`;
+    const storage = new MemoryStorage();
+    await seed(sourceName);
+    await new FolderRepository(sourceName).delete("folder-root");
+    await new TagRepository(sourceName).delete("tag-research");
+
+    const content = (await repository(sourceName, storage).export()).content;
+    const exported = parseBackup(content);
+    expect(
+      exported.data.folders.map(({ id, deletedAt }) => ({
+        id,
+        deleted: typeof deletedAt === "string",
+      })),
+    ).toEqual([
+      { id: "folder-ai", deleted: true },
+      { id: "folder-root", deleted: true },
+    ]);
+    expect(exported.data.tags).toHaveLength(1);
+    expect(exported.data.tags[0]?.id).toBe("tag-research");
+    expect(typeof exported.data.tags[0]?.deletedAt).toBe("string");
+
+    await repository(targetName, storage).restore(content, "replace");
+    await expect(new FolderRepository(targetName).listDeleted()).resolves.toHaveLength(
+      2,
+    );
+    await expect(new TagRepository(targetName).listDeleted()).resolves.toHaveLength(1);
+    await expect(new BookmarkRepository(targetName).get("123")).resolves.toMatchObject({
+      folderId: "folder-ai",
+      tagIds: ["tag-research"],
+    });
   });
 
   it("merges with backup records winning conflicts and preserves local-only data", async () => {

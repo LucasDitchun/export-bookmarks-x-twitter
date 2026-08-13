@@ -508,6 +508,23 @@
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": { "message": "Abre un marcador para añadir o quitar etiquetas." },
+  "organizationTrashTitle": { "message": "Papelera" },
+  "organizationTrashHelp": {
+    "message": "Restaura carpetas y etiquetas eliminadas con sus relaciones de marcadores."
+  },
+  "organizationTrashEmpty": { "message": "La papelera está vacía." },
+  "organizationTrashError": { "message": "No se pudo cargar la papelera." },
+  "organizationRestoring": { "message": "Restaurando…" },
+  "organizationRestored": { "message": "Restaurado." },
+  "organizationRestoreError": { "message": "No se pudo restaurar este elemento." },
+  "restoreTag": {
+    "message": "Restaurar etiqueta $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "Restaurar carpeta $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "Volver a la biblioteca" },
   "settingsViewHelp": {
     "message": "Exportación, copia de seguridad, idioma y preferencias."

@@ -50,8 +50,10 @@ export function metadataRefreshRequest(request: unknown): ContentControlRequest 
     message.type === "CREATE_FOLDER" ||
     message.type === "RENAME_TAG" ||
     message.type === "DELETE_TAG" ||
+    message.type === "RESTORE_TAG" ||
     message.type === "RENAME_FOLDER" ||
     message.type === "DELETE_FOLDER" ||
+    message.type === "RESTORE_FOLDER" ||
     message.type === "CLEAR_ARCHIVE" ||
     message.type === "RESTORE_BACKUP"
   ) {

@@ -432,6 +432,23 @@
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": { "message": "Abra um bookmark para adicionar ou remover tags." },
+  "organizationTrashTitle": { "message": "Lixeira" },
+  "organizationTrashHelp": {
+    "message": "Restaure pastas e tags excluídas com os vínculos dos bookmarks."
+  },
+  "organizationTrashEmpty": { "message": "A lixeira está vazia." },
+  "organizationTrashError": { "message": "Não foi possível carregar a lixeira." },
+  "organizationRestoring": { "message": "Restaurando…" },
+  "organizationRestored": { "message": "Restaurado." },
+  "organizationRestoreError": { "message": "Não foi possível restaurar este item." },
+  "restoreTag": {
+    "message": "Restaurar tag $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "Restaurar pasta $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "Voltar para a biblioteca" },
   "settingsViewHelp": {
     "message": "Exporte, faça backup, altere o idioma e as preferências."

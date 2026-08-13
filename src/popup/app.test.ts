@@ -1843,7 +1843,7 @@ describe("popup app", () => {
       if (request.type === "DELETE_TAG") {
         return Promise.resolve({
           ok: true as const,
-          data: { deletedTagId: "tag-research", untaggedBookmarkCount: 2 },
+          data: { deletedTagId: "tag-research", preservedBookmarkCount: 2 },
         });
       }
       return Promise.resolve({ ok: true as const, data: undefined });
@@ -1890,6 +1890,105 @@ describe("popup app", () => {
     );
     expect(confirmDelete).toHaveBeenCalledWith("deleteTagConfirmation:References|2");
     expect(tagOverview?.textContent).not.toContain("References");
+    app.destroy();
+  });
+
+  it("shows recoverable folders and tags in Trash and restores them accessibly", async () => {
+    const requests: unknown[] = [];
+    let trash = {
+      tags: [
+        {
+          id: "tag-deleted",
+          name: "Research",
+          normalizedName: "research",
+          deletedAt: "2026-08-13T00:00:00.000Z",
+        },
+      ],
+      folders: [
+        {
+          id: "folder-deleted",
+          name: "Reading",
+          parentId: null,
+          deletedAt: "2026-08-13T00:00:00.000Z",
+        },
+      ],
+    };
+    const sendMessage = ((request) => {
+      requests.push(request);
+      if (request.type === "GET_STATUS") {
+        return Promise.resolve({ ok: true as const, data: readyStatus });
+      }
+      if (request.type === "LIST_BOOKMARKS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { items: [], nextCursor: null },
+        });
+      }
+      if (request.type === "LIST_TAGS") {
+        return Promise.resolve({ ok: true as const, data: { tags: [], usage: {} } });
+      }
+      if (request.type === "LIST_FOLDERS") {
+        return Promise.resolve({
+          ok: true as const,
+          data: { folders: [], usage: {} },
+        });
+      }
+      if (request.type === "LIST_ORGANIZATION_TRASH") {
+        return Promise.resolve({ ok: true as const, data: structuredClone(trash) });
+      }
+      if (request.type === "RESTORE_TAG") {
+        trash = { ...trash, tags: [] };
+        return Promise.resolve({ ok: true as const, data: { tag: null } });
+      }
+      if (request.type === "RESTORE_FOLDER") {
+        trash = { ...trash, folders: [] };
+        return Promise.resolve({
+          ok: true as const,
+          data: { restoredFolderIds: ["folder-deleted"], restoredBookmarkCount: 1 },
+        });
+      }
+      return Promise.resolve({ ok: true as const, data: undefined });
+    }) as SendMessage;
+    const app = createPopupApp({ document, locale: "en", sendMessage, translate });
+    await app.ready;
+
+    expect(document.getElementById("organization-trash-count")?.textContent).toBe("2");
+    const restoreTag = document.querySelector<HTMLButtonElement>(
+      '[data-trash-kind="tag"][data-trash-id="tag-deleted"]',
+    );
+    let restoreFolder = document.querySelector<HTMLButtonElement>(
+      '[data-trash-kind="folder"][data-trash-id="folder-deleted"]',
+    );
+    expect(restoreTag?.textContent).toBe("");
+    expect(restoreTag?.getAttribute("aria-label")).toBe("restoreTag:Research");
+    expect(restoreFolder?.getAttribute("aria-label")).toBe("restoreFolder:Reading");
+    restoreTag?.click();
+    await vi.waitFor(() =>
+      expect(requests).toContainEqual({
+        type: "RESTORE_TAG",
+        payload: { id: "tag-deleted" },
+      }),
+    );
+    await vi.waitFor(() => {
+      expect(
+        document.querySelector('[data-trash-kind="tag"][data-trash-id="tag-deleted"]'),
+      ).toBeNull();
+    });
+    restoreFolder = document.querySelector<HTMLButtonElement>(
+      '[data-trash-kind="folder"][data-trash-id="folder-deleted"]',
+    );
+    restoreFolder?.click();
+    await vi.waitFor(() =>
+      expect(requests).toContainEqual({
+        type: "RESTORE_FOLDER",
+        payload: { id: "folder-deleted" },
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(document.getElementById("organization-trash-count")?.textContent).toBe(
+        "0",
+      ),
+    );
     app.destroy();
   });
 
