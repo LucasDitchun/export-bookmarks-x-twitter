@@ -10,7 +10,7 @@ import { LiveBookmarkStateRepository } from "../storage/live-bookmark-state";
 import { LOCALE_STORAGE_KEY, resolvePreferredLocale } from "../popup/i18n";
 import { ExportRepository } from "../storage/export-repository";
 import { BackgroundController } from "./controller";
-import { metadataRefreshRequest } from "./metadata-refresh";
+import { metadataRefreshAfterResponse } from "./metadata-refresh";
 import { SemanticIndexRepository } from "../semantic/semantic-index-repository";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { createLocaleCatalogCache } from "./locale-catalog-cache";
@@ -162,7 +162,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     .run(messageSerializationKey(request), async () => {
       const response = await controller.handle(request, sender);
       sendResponse(response);
-      const refresh = response.ok ? metadataRefreshRequest(request) : null;
+      const refresh = metadataRefreshAfterResponse(request, response);
       if (refresh) void broadcastMetadataRefresh(refresh).catch(() => undefined);
     })
     .catch(() => {

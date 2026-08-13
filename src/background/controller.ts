@@ -638,7 +638,13 @@ export class BackgroundController {
             request.payload.settings,
           );
           this.decorationSettings.invalidate();
-          await this.dependencies.browser.configureSurface(settings.behavior.surface);
+          try {
+            await this.dependencies.browser.configureSurface(settings.behavior.surface);
+          } catch {
+            // Settings are already committed. Chrome reapplies the canonical
+            // surface on startup; this disposable UI effect must not make the
+            // save look retryable or suppress metadata refresh broadcasts.
+          }
           return success({ settings });
         }
         case "OPEN_SELECTED_SURFACE": {

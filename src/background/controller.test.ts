@@ -19,6 +19,7 @@ import {
 } from "../settings/settings-repository";
 import { BackupSettingsWriteError } from "../storage/backup-repository";
 import { BackgroundController, isBookmarksUrl } from "./controller";
+import { metadataRefreshAfterResponse } from "./metadata-refresh";
 
 const EXTENSION_ID = "bookmark-x-extension";
 const POPUP_SENDER = { id: EXTENSION_ID };
@@ -744,6 +745,55 @@ describe("BackgroundController", () => {
       data: { settings: { behavior: { surface: "sidePanel" } } },
     });
     expect(dependencies.browser.configureSurface).toHaveBeenCalledWith("sidePanel");
+  });
+
+  it("keeps a committed settings save successful when surface application fails", async () => {
+    const dependencies = createDependencies();
+    dependencies.browser.configureSurface.mockRejectedValueOnce(
+      new Error("Chrome surface temporarily unavailable"),
+    );
+    const controller = new BackgroundController(dependencies);
+    const request = {
+      type: "SAVE_SETTINGS",
+      payload: { settings: { behavior: { surface: "sidePanel" as const } } },
+    } as const;
+
+    await controller.handle(
+      { type: "GET_BOOKMARK_DECORATIONS", payload: { ids: ["123"] } },
+      CONTENT_SENDER,
+    );
+    expect(dependencies.settings.get).toHaveBeenCalledOnce();
+
+    const response = await controller.handle(request, POPUP_SENDER);
+    expect(response).toMatchObject({
+      ok: true,
+      data: { settings: { behavior: { surface: "sidePanel" } } },
+    });
+    expect(metadataRefreshAfterResponse(request, response)).toEqual({
+      type: "REFRESH_BOOKMARK_METADATA",
+    });
+    expect(dependencies.settings.save).toHaveBeenCalledOnce();
+
+    await controller.handle(
+      { type: "GET_BOOKMARK_DECORATIONS", payload: { ids: ["123"] } },
+      CONTENT_SENDER,
+    );
+    expect(dependencies.settings.get).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports a settings storage failure without applying the surface", async () => {
+    const dependencies = createDependencies();
+    dependencies.settings.save.mockRejectedValueOnce(new Error("storage failed"));
+    const controller = new BackgroundController(dependencies);
+
+    const request = {
+      type: "SAVE_SETTINGS",
+      payload: { settings: { behavior: { surface: "sidePanel" as const } } },
+    } as const;
+    const response = await controller.handle(request, POPUP_SENDER);
+    expect(response).toMatchObject({ ok: false });
+    expect(metadataRefreshAfterResponse(request, response)).toBeNull();
+    expect(dependencies.browser.configureSurface).not.toHaveBeenCalled();
   });
 
   it("rejects malformed and unknown settings before storage", async () => {
