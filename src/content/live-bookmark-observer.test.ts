@@ -324,17 +324,14 @@ describe("startLiveBookmarkObserver", () => {
       ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
     await vi.waitFor(() => {
       expect(metadataRequests).toContainEqual({
-        type: "ASSIGN_BOOKMARK_FOLDER",
-        payload: { bookmarkId: "123", folderId: "folder-ai" },
+        type: "SAVE_BOOKMARK_METADATA",
+        payload: {
+          id: "123",
+          note: "Why this matters",
+          tags: ["Existing", "New"],
+          folderPath: ["Reading", "AI"],
+        },
       });
-    });
-    expect(metadataRequests).toContainEqual({
-      type: "SAVE_BOOKMARK_NOTE",
-      payload: { id: "123", note: "Why this matters" },
-    });
-    expect(metadataRequests).toContainEqual({
-      type: "ADD_BOOKMARK_TAG",
-      payload: { id: "123", name: "New" },
     });
     observer.stop();
   });

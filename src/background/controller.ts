@@ -42,6 +42,10 @@ import {
   type SettingsPatch,
 } from "../settings/settings-repository";
 import type { ArchiveRepository } from "../storage/archive-repository";
+import type {
+  BookmarkMetadataRepository,
+  SaveBookmarkMetadataInput,
+} from "../storage/bookmark-metadata-repository";
 import type { ExtensionStateRepository } from "../storage/extension-state";
 import {
   BackupSettingsWriteError,
@@ -99,6 +103,7 @@ interface BackgroundDependencies {
     getMany(ids: string[]): Promise<BookmarkRecord[]>;
     saveNote(id: string, note: string): Promise<unknown>;
   };
+  metadata: Pick<BookmarkMetadataRepository, "save">;
   search: {
     search(options: {
       query: string;
@@ -218,6 +223,36 @@ function isFolderName(value: unknown): value is string {
   );
 }
 
+function isTagName(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length <= 200 &&
+    value.trim().length > 0 &&
+    value.trim().normalize("NFKC").length <= 50 &&
+    !Array.from(value).some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint <= 31 || codePoint === 127;
+    })
+  );
+}
+
+function isSaveBookmarkMetadataInput(
+  value: unknown,
+): value is SaveBookmarkMetadataInput {
+  return (
+    isRecord(value) &&
+    isBookmarkId(value.id) &&
+    typeof value.note === "string" &&
+    value.note.length <= 20_000 &&
+    Array.isArray(value.tags) &&
+    value.tags.length <= 50 &&
+    value.tags.every(isTagName) &&
+    Array.isArray(value.folderPath) &&
+    value.folderPath.length <= 32 &&
+    value.folderPath.every(isFolderName)
+  );
+}
+
 export function isBookmarksUrl(value: string | undefined): boolean {
   if (!value) return false;
   try {
@@ -323,6 +358,9 @@ function isUiRequest(value: unknown): value is UiRequest {
       typeof value.payload.note === "string" &&
       value.payload.note.length <= 20_000
     );
+  }
+  if (value.type === "SAVE_BOOKMARK_METADATA") {
+    return isSaveBookmarkMetadataInput(value.payload);
   }
   if (value.type === "ADD_BOOKMARK_TAG") {
     return (
@@ -656,6 +694,11 @@ export class BackgroundController {
             request.payload.id,
             request.payload.note,
           );
+          this.dependencies.search.invalidate();
+          return success({ bookmark });
+        }
+        case "SAVE_BOOKMARK_METADATA": {
+          const bookmark = await this.dependencies.metadata.save(request.payload);
           this.dependencies.search.invalidate();
           return success({ bookmark });
         }

@@ -191,6 +191,10 @@ export type UiRequest =
   | { type: "GET_BOOKMARK"; payload: { id: string } }
   | { type: "GET_BOOKMARK_DECORATIONS"; payload: { ids: string[] } }
   | { type: "SAVE_BOOKMARK_NOTE"; payload: { id: string; note: string } }
+  | {
+      type: "SAVE_BOOKMARK_METADATA";
+      payload: { id: string; note: string; tags: string[]; folderPath: string[] };
+    }
   | { type: "LIST_TAGS" }
   | { type: "LIST_ORGANIZATION_TRASH" }
   | { type: "ADD_BOOKMARK_TAG"; payload: { id: string; name: string } }

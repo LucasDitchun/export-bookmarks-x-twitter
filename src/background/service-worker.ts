@@ -1,5 +1,6 @@
 import { ArchiveRepository } from "../storage/archive-repository";
 import { BookmarkRepository } from "../storage/bookmark-repository";
+import { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
 import { ExtensionStateRepository } from "../storage/extension-state";
 import { TagRepository } from "../storage/tag-repository";
 import { FolderRepository } from "../storage/folder-repository";
@@ -23,6 +24,7 @@ const state = new ExtensionStateRepository({
 });
 const archive = new ArchiveRepository();
 const bookmarks = new BookmarkRepository();
+const metadata = new BookmarkMetadataRepository();
 const tags = new TagRepository();
 const folders = new FolderRepository();
 const search = new SearchRepository();
@@ -111,6 +113,7 @@ const controller = new BackgroundController({
   archive,
   exports,
   bookmarks,
+  metadata,
   tags,
   folders,
   search,

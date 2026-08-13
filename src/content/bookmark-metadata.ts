@@ -1,7 +1,5 @@
-import type { BookmarkRecord, BookmarkTag, FolderRecord } from "../domain/types";
+import type { BookmarkRecord, FolderRecord } from "../domain/types";
 import type {
-  BookmarkDetailResult,
-  FolderDetailResult,
   FolderListResult,
   RuntimeResponse,
   TagListResult,
@@ -110,21 +108,6 @@ function isTagListResult(value: unknown): value is TagListResult {
   );
 }
 
-function isCurrentBookmarkResult(
-  value: unknown,
-  bookmarkId: string,
-): value is BookmarkDetailResult & { bookmark: BookmarkRecord } {
-  if (typeof value !== "object" || value === null) return false;
-  const bookmark = (value as Partial<BookmarkDetailResult>).bookmark;
-  return (
-    typeof bookmark === "object" &&
-    bookmark !== null &&
-    bookmark.id === bookmarkId &&
-    Array.isArray(bookmark.tagIds) &&
-    bookmark.tagIds.every((tagId) => typeof tagId === "string")
-  );
-}
-
 function isFolderListResult(value: unknown): value is FolderListResult {
   return (
     typeof value === "object" &&
@@ -186,89 +169,6 @@ export async function loadBookmarkMetadataDraft(options: {
   };
 }
 
-async function reconcileTags(
-  options: SaveBookmarkMetadataOptions,
-  names: string[],
-): Promise<void> {
-  const [tagData, bookmarkData] = await Promise.all([
-    sendChecked<unknown>(options.send, { type: "LIST_TAGS" }, options.signal),
-    sendChecked<unknown>(
-      options.send,
-      { type: "GET_BOOKMARK", payload: { id: options.bookmark.id } },
-      options.signal,
-    ),
-  ]);
-  if (!isTagListResult(tagData)) throw new Error("Invalid tag response.");
-  if (!isCurrentBookmarkResult(bookmarkData, options.bookmark.id)) {
-    throw new Error("Invalid bookmark response.");
-  }
-  const byId = new Map(tagData.tags.map((tag) => [tag.id, tag]));
-  const assigned = bookmarkData.bookmark.tagIds
-    .map((id) => byId.get(id))
-    .filter((tag): tag is BookmarkTag => tag !== undefined);
-  const desired = new Map(names.map((name) => [comparableName(name), name]));
-
-  for (const tag of assigned) {
-    if (!desired.has(comparableName(tag.normalizedName || tag.name))) {
-      await sendChecked(
-        options.send,
-        {
-          type: "REMOVE_BOOKMARK_TAG",
-          payload: { id: options.bookmark.id, tagId: tag.id },
-        },
-        options.signal,
-      );
-    }
-  }
-  const assignedNames = new Set(
-    assigned.map((tag) => comparableName(tag.normalizedName || tag.name)),
-  );
-  for (const [normalized, name] of desired) {
-    if (!assignedNames.has(normalized)) {
-      await sendChecked(
-        options.send,
-        { type: "ADD_BOOKMARK_TAG", payload: { id: options.bookmark.id, name } },
-        options.signal,
-      );
-    }
-  }
-}
-
-async function resolveFolder(
-  options: SaveBookmarkMetadataOptions,
-  path: string[],
-): Promise<string | null> {
-  if (path.length === 0) return null;
-  const data = await sendChecked<unknown>(
-    options.send,
-    { type: "LIST_FOLDERS" },
-    options.signal,
-  );
-  if (!isFolderListResult(data)) throw new Error("Invalid folder response.");
-  const folders = [...data.folders];
-  let parentId: string | null = null;
-  for (const name of path) {
-    let folder = folders.find(
-      (candidate) =>
-        candidate.parentId === parentId &&
-        comparableName(candidate.name) === comparableName(name),
-    );
-    if (!folder) {
-      const created: FolderDetailResult = await sendChecked<FolderDetailResult>(
-        options.send,
-        { type: "CREATE_FOLDER", payload: { name, parentId } },
-        options.signal,
-      );
-      if (!created?.folder) throw new Error("Invalid folder response.");
-      const createdFolder: FolderRecord = created.folder;
-      folder = createdFolder;
-      folders.push(createdFolder);
-    }
-    parentId = folder.id;
-  }
-  return parentId;
-}
-
 export async function saveBookmarkMetadata(
   options: SaveBookmarkMetadataOptions,
 ): Promise<void> {
@@ -277,18 +177,13 @@ export async function saveBookmarkMetadata(
   await sendChecked(
     options.send,
     {
-      type: "SAVE_BOOKMARK_NOTE",
-      payload: { id: options.bookmark.id, note: validated.note },
-    },
-    options.signal,
-  );
-  await reconcileTags(options, validated.tags);
-  const folderId = await resolveFolder(options, validated.folderPath);
-  await sendChecked(
-    options.send,
-    {
-      type: "ASSIGN_BOOKMARK_FOLDER",
-      payload: { bookmarkId: options.bookmark.id, folderId },
+      type: "SAVE_BOOKMARK_METADATA",
+      payload: {
+        id: options.bookmark.id,
+        note: validated.note,
+        tags: validated.tags,
+        folderPath: validated.folderPath,
+      },
     },
     options.signal,
   );

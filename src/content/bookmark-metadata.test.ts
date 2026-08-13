@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { BookmarkRecord, FolderRecord } from "../domain/types";
+import type { BookmarkRecord } from "../domain/types";
 import type { RuntimeResponse, UiRequest } from "../shared/protocol";
 import { saveBookmarkMetadata } from "./bookmark-metadata";
 
@@ -23,36 +23,10 @@ const bookmark: BookmarkRecord = {
 
 describe("saveBookmarkMetadata", () => {
   it("reconciles a plain note, tags, and hierarchical folder from the modal", async () => {
-    const folders: FolderRecord[] = [
-      { id: "folder-research", name: "Research", parentId: null },
-    ];
     const requests: UiRequest[] = [];
     const send = vi.fn(
       async (request: UiRequest): Promise<RuntimeResponse<unknown>> => {
         requests.push(request);
-        if (request.type === "LIST_TAGS") {
-          return {
-            ok: true,
-            data: {
-              tags: [
-                { id: "tag-keep", name: "Keep", normalizedName: "keep" },
-                { id: "tag-remove", name: "Remove", normalizedName: "remove" },
-              ],
-            },
-          };
-        }
-        if (request.type === "LIST_FOLDERS") {
-          return { ok: true, data: { folders } };
-        }
-        if (request.type === "CREATE_FOLDER") {
-          const folder = {
-            id: "folder-ai",
-            name: request.payload.name,
-            parentId: request.payload.parentId,
-          };
-          folders.push(folder);
-          return { ok: true, data: { folder } };
-        }
         return { ok: true, data: { bookmark } };
       },
     );
@@ -67,64 +41,26 @@ describe("saveBookmarkMetadata", () => {
       send,
     });
 
-    expect(requests).toContainEqual({
-      type: "SAVE_BOOKMARK_NOTE",
-      payload: { id: "123", note: "<b>Keep as plain text</b>" },
-    });
-    expect(requests).toContainEqual({
-      type: "REMOVE_BOOKMARK_TAG",
-      payload: { id: "123", tagId: "tag-remove" },
-    });
-    expect(requests).toContainEqual({
-      type: "ADD_BOOKMARK_TAG",
-      payload: { id: "123", name: "New" },
-    });
-    expect(requests).toContainEqual({
-      type: "CREATE_FOLDER",
-      payload: { name: "AI", parentId: "folder-research" },
-    });
-    expect(requests.at(-1)).toEqual({
-      type: "ASSIGN_BOOKMARK_FOLDER",
-      payload: { bookmarkId: "123", folderId: "folder-ai" },
-    });
+    expect(requests).toEqual([
+      {
+        type: "SAVE_BOOKMARK_METADATA",
+        payload: {
+          id: "123",
+          note: "<b>Keep as plain text</b>",
+          tags: ["Keep", "New"],
+          folderPath: ["Research", "AI"],
+        },
+      },
+    ]);
   });
 
-  it("reloads current tag assignments before each modal save", async () => {
+  it("sends each modal save as one independent replacement", async () => {
     const original = { ...bookmark, tagIds: [] as string[] };
-    let currentTagIds: string[] = [];
-    const tags: Array<{ id: string; name: string; normalizedName: string }> = [];
     const requests: UiRequest[] = [];
     const send = vi.fn(
       async (request: UiRequest): Promise<RuntimeResponse<unknown>> => {
         requests.push(request);
-        if (request.type === "GET_BOOKMARK") {
-          return {
-            ok: true,
-            data: { bookmark: { ...original, tagIds: [...currentTagIds] } },
-          };
-        }
-        if (request.type === "LIST_TAGS") {
-          return { ok: true, data: { tags: [...tags] } };
-        }
-        if (request.type === "LIST_FOLDERS") {
-          return { ok: true, data: { folders: [] } };
-        }
-        if (request.type === "ADD_BOOKMARK_TAG") {
-          const tag = {
-            id: "tag-generated",
-            name: request.payload.name,
-            normalizedName: request.payload.name.toLocaleLowerCase("en-US"),
-          };
-          tags.push(tag);
-          currentTagIds = [tag.id];
-        }
-        if (request.type === "REMOVE_BOOKMARK_TAG") {
-          currentTagIds = currentTagIds.filter((id) => id !== request.payload.tagId);
-        }
-        return {
-          ok: true,
-          data: { bookmark: { ...original, tagIds: [...currentTagIds] } },
-        };
+        return { ok: true, data: { bookmark: original } };
       },
     );
 
@@ -139,10 +75,16 @@ describe("saveBookmarkMetadata", () => {
       send,
     });
 
-    expect(requests).toContainEqual({
-      type: "REMOVE_BOOKMARK_TAG",
-      payload: { id: "123", tagId: "tag-generated" },
-    });
+    expect(requests).toEqual([
+      {
+        type: "SAVE_BOOKMARK_METADATA",
+        payload: { id: "123", note: "", tags: ["Research"], folderPath: [] },
+      },
+      {
+        type: "SAVE_BOOKMARK_METADATA",
+        payload: { id: "123", note: "", tags: [], folderPath: [] },
+      },
+    ]);
   });
 
   it("rejects invalid modal values before sending any partial update", async () => {
