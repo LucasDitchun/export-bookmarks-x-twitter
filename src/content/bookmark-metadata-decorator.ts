@@ -409,10 +409,9 @@ export function startBookmarkMetadataDecorator(
     const currentOverride = localizationOverride;
     const startedBeforeCurrentLocalization =
       currentOverride !== null && lookupEpoch < currentOverride.epoch;
-    const current =
-      startedBeforeCurrentLocalization
-        ? { ...result, ...currentOverride.value }
-        : result;
+    const current = startedBeforeCurrentLocalization
+      ? { ...result, ...currentOverride.value }
+      : result;
     if (!startedBeforeCurrentLocalization) {
       localizationEpoch += 1;
       localizationOverride = {
