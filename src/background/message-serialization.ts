@@ -97,8 +97,13 @@ export function isGlobalSerializationBarrier(value: unknown): boolean {
   return request?.type === "CLEAR_ARCHIVE" || request?.type === "RESTORE_BACKUP";
 }
 
+export function isGlobalSerializationBarrierAwareRead(value: unknown): boolean {
+  return record(value)?.type === "EXPORT_BACKUP";
+}
+
 interface TaskQueueOptions {
   globalBarrier?: boolean;
+  waitForGlobalBarrier?: boolean;
 }
 
 export class KeyedTaskQueue {
@@ -123,7 +128,10 @@ export class KeyedTaskQueue {
       ...new Set(key === null ? [] : typeof key === "string" ? [key] : key),
     ];
     const globalBarrier = options.globalBarrier === true;
-    if (keys.length === 0 && !globalBarrier) return Promise.resolve().then(task);
+    const waitForGlobalBarrier = options.waitForGlobalBarrier === true;
+    if (keys.length === 0 && !globalBarrier && !waitForGlobalBarrier) {
+      return Promise.resolve().then(task);
+    }
 
     const dependencies = globalBarrier
       ? [...this.pendingMutations]
@@ -137,6 +145,7 @@ export class KeyedTaskQueue {
     const previous =
       dependencies.length === 0 ? Promise.resolve() : Promise.all(dependencies);
     const result = previous.then(task);
+    if (keys.length === 0 && !globalBarrier) return result;
     const settled = result.then(
       () => undefined,
       () => undefined,

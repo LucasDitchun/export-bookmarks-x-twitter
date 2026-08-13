@@ -17,6 +17,7 @@ import { createLocaleCatalogCache } from "./locale-catalog-cache";
 import { bookmarkMetadataMessagesFromCatalog } from "../shared/bookmark-metadata-messages";
 import { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
 import {
+  isGlobalSerializationBarrierAwareRead,
   isGlobalSerializationBarrier,
   KeyedTaskQueue,
   messageSerializationKey,
@@ -171,7 +172,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const refresh = metadataRefreshAfterResponse(request, response);
         if (refresh) void broadcastMetadataRefresh(refresh).catch(() => undefined);
       },
-      { globalBarrier: isGlobalSerializationBarrier(request) },
+      {
+        globalBarrier: isGlobalSerializationBarrier(request),
+        waitForGlobalBarrier: isGlobalSerializationBarrierAwareRead(request),
+      },
     )
     .catch(() => {
       sendResponse({
