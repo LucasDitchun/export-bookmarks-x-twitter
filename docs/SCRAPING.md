@@ -58,17 +58,31 @@ and never participate in a full-review run ID or finalization.
 
 ## Quick updates and checkpoints
 
-The capture card offers two modes. **Quick update** is the normal fast path for
-new bookmarks; **Full review** deliberately traverses the whole list and is the
-only mode that reconciles posts removed on another device. The first capture is
-always a full review because there is no trustworthy stopping point yet.
+The capture card offers two modes:
 
-After a successful capture, Bookmark X stores the first ten unique post IDs as
-local checkpoints. A quick update scans from the newest items and stops only
-after it sees three known checkpoint IDs consecutively. A repeated virtualized
-DOM node is ignored, while any unknown ID resets the consecutive-match count.
-This makes reordered or partly removed checkpoints safe without turning a
-single coincidental match into an early stop.
+- **Recent** starts at the newest bookmarks and uses a proven overlap with the
+  local library as its early stopping point. It is the normal fast path for new
+  bookmarks.
+- **All** deliberately traverses the complete bookmarks timeline. It is the
+  only mode that always performs a full review and reconciles posts removed on
+  another device.
+
+The first capture always behaves as **All** because no successful full review
+or trustworthy stopping point exists yet.
+
+After a successful capture, Bookmark X stores up to 50 of the first unique post
+IDs seen in that run as local checkpoints. When **Recent** starts, it supplements
+an undersized checkpoint set with the newest locally current bookmarks when
+possible. The runner then scans X from newest to oldest and stops early only
+after it proves a consecutive overlap with distinct known checkpoints.
+
+The overlap threshold is configured under **Settings → Data**. It defaults to
+15 known bookmarks and accepts values from 3 through 50. A repeated virtualized
+DOM node is ignored, while any unknown post resets the consecutive-match count.
+After reaching the threshold, the runner waits once more for content activity;
+a loader or a newly rendered post cancels that stopping attempt and scanning
+continues. These safeguards prevent a single coincidental match or a temporarily
+quiet timeline from ending the update early.
 
 At a checkpoint stop, every delivered batch is already committed to IndexedDB.
 The worker saves the new checkpoint window and discards only that run's
@@ -76,12 +90,12 @@ temporary `seen` rows. It does not finalize the run, archive or delete absent
 posts, apply the keep-archived setting, or change the timestamp of the last
 successful full review.
 
-If three consecutive checkpoints are never found, the runner continues with
-the same loader, retry, route, and stable-end safeguards used by a full review.
-Only after reaching a proven stable end does the worker convert it into a full
-review and reconcile absences. Cancellation, navigation, delivery failure, and
-loading timeout still keep partial batches but preserve the previous
-checkpoints and never reconcile.
+If the configured number of consecutive checkpoints is never proven, the
+runner continues with the same loader, retry, route, and stable-end safeguards
+used by **All**. Only after reaching a proven stable end does the worker convert
+the run into a full review and reconcile absences. Cancellation, navigation,
+delivery failure, and loading timeout still keep partial batches but preserve
+the previous checkpoints and never reconcile.
 
 The popup shows a small reminder after 30 elapsed days without a successful
 full review. The calculation compares absolute timestamps, so daylight-saving
