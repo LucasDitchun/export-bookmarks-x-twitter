@@ -426,6 +426,75 @@ describe("startBookmarkMetadataDecorator", () => {
     decorator.stop();
   });
 
+  it("preserves a locale selected before the first decoration lookup resolves", async () => {
+    renderArticle("123");
+    let resolveLookup!: (value: BookmarkDecorationLookupResult) => void;
+    const lookupResult = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveLookup = resolve;
+    });
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup: () => lookupResult,
+    });
+
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { bookmarkPromptFolder: "Pasta" },
+    });
+    resolveLookup({
+      ...result(),
+      locale: "en",
+      messages: { bookmarkPromptFolder: "Folder" },
+    });
+
+    await settle();
+    const host = document.querySelector("bookmark-x-metadata");
+    expect(host?.shadowRoot?.textContent).toContain("Pasta");
+    expect(host?.shadowRoot?.textContent).not.toContain("Folder");
+    decorator.stop();
+  });
+
+  it("merges the current locale into a subsequent stale metadata response", async () => {
+    renderArticle("123");
+    let resolveRefresh!: (value: BookmarkDecorationLookupResult) => void;
+    let refreshing = false;
+    const refreshResult = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup: () =>
+        refreshing
+          ? refreshResult
+          : Promise.resolve({
+              ...result(),
+              locale: "en",
+              messages: { bookmarkPromptFolder: "Folder" },
+            }),
+    });
+    await settle();
+    refreshing = true;
+
+    decorator.refresh("123");
+    await Promise.resolve();
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { bookmarkPromptFolder: "Pasta" },
+    });
+    resolveRefresh({
+      ...result(),
+      locale: "en",
+      messages: { bookmarkPromptFolder: "Folder" },
+    });
+
+    await vi.waitFor(() => {
+      const host = document.querySelector("bookmark-x-metadata");
+      expect(host?.shadowRoot?.textContent).toContain("Pasta");
+      expect(host?.shadowRoot?.textContent).not.toContain("Folder");
+    });
+    decorator.stop();
+  });
+
   it("moves through pending, uncategorized, mapped, and archived states without duplicate hosts", async () => {
     const article = renderArticle("123");
     let current = uncategorizedResult();

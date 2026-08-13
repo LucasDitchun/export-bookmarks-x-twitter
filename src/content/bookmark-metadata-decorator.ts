@@ -393,6 +393,7 @@ export function startBookmarkMetadataDecorator(
   let flushing = false;
   let generation = 0;
   let lastResult: BookmarkDecorationLookupResult | null = null;
+  let localizationOverride: BookmarkLocalizationResult | null = null;
   let lastTranslator: BookmarkMetadataTranslator = (key) => key;
   let presentationContextLoading: Promise<BookmarkDecorationLookupResult | null> | null =
     null;
@@ -400,9 +401,10 @@ export function startBookmarkMetadataDecorator(
   const rememberPresentationContext = (
     result: BookmarkDecorationLookupResult,
   ): BookmarkDecorationLookupResult => {
-    lastResult = result;
-    lastTranslator = (key) => result.messages[key] ?? key;
-    return result;
+    const current = localizationOverride ? { ...result, ...localizationOverride } : result;
+    lastResult = current;
+    lastTranslator = (key) => current.messages[key] ?? key;
+    return current;
   };
 
   const loadPresentationContext = (
@@ -478,11 +480,10 @@ export function startBookmarkMetadataDecorator(
             collectedItems.push(...page.items);
           }
           if (!result) continue;
-          result = { ...result, items: collectedItems };
+          result = rememberPresentationContext({ ...result, items: collectedItems });
           const translate: BookmarkMetadataTranslator = (key) =>
             result.messages[key] ?? key;
           if (stopped || run !== generation) return;
-          rememberPresentationContext(result);
           const itemsById = new Map(
             result.items.map((item) => [item.bookmark.id, item]),
           );
@@ -603,9 +604,9 @@ export function startBookmarkMetadataDecorator(
       }
     },
     setLocalization(localization) {
+      localizationOverride = localization;
       if (!lastResult) return;
-      lastResult = { ...lastResult, ...localization };
-      lastTranslator = (key) => localization.messages[key] ?? key;
+      lastResult = rememberPresentationContext(lastResult);
       const itemsById = new Map(
         lastResult.items.map((item) => [item.bookmark.id, item]),
       );
