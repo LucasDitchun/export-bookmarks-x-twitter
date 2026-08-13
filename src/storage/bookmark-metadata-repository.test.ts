@@ -299,6 +299,7 @@ describe("BookmarkMetadataRepository", () => {
         note: "Updated",
         tags: [{ id: null, name: "Research" }],
         folder: { id: null, path: ["Research"] },
+        organizationChanges: { tags: true, folder: true },
       }),
     ).resolves.toMatchObject({
       tagIds: ["tag-active"],
@@ -310,5 +311,43 @@ describe("BookmarkMetadataRepository", () => {
     await expect(new FolderRepository(databaseName).listDeleted()).resolves.toEqual([
       expect.objectContaining({ id: "folder-deleted" }),
     ]);
+  });
+
+  it("preserves tombstoned organization links during a note-only save", async () => {
+    const databaseName = `metadata-note-only-${crypto.randomUUID()}`;
+    const original = { ...bookmark(), tagIds: ["tag-hidden"] };
+    await seed(databaseName, original, [
+      { id: "folder-old", name: "Old", parentId: null },
+    ]);
+    await seedTags(databaseName, [
+      { id: "tag-hidden", name: "Hidden", normalizedName: "hidden" },
+    ]);
+    const folders = new FolderRepository(databaseName);
+    const tags = new TagRepository(databaseName);
+    await folders.delete("folder-old");
+    await tags.delete("tag-hidden");
+
+    await expect(
+      new BookmarkMetadataRepository(databaseName).save({
+        id: "123",
+        note: "Updated while organizations are in the trash",
+        tags: [],
+        folder: null,
+        organizationChanges: { tags: false, folder: false },
+      }),
+    ).resolves.toMatchObject({
+      note: "Updated while organizations are in the trash",
+      tagIds: ["tag-hidden"],
+      folderId: "folder-old",
+    });
+
+    await tags.restore("tag-hidden");
+    await folders.restore("folder-old");
+    await expect(
+      new BookmarkRepository(databaseName).get("123"),
+    ).resolves.toMatchObject({
+      tagIds: ["tag-hidden"],
+      folderId: "folder-old",
+    });
   });
 });

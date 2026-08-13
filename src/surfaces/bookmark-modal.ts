@@ -12,6 +12,7 @@ export interface BookmarkModalValues {
   description: string;
   folder: BookmarkModalFolderToken | null;
   tags: BookmarkModalTagToken[];
+  organizationChanges?: { tags: boolean; folder: boolean };
 }
 
 export interface BookmarkModalTagToken {
@@ -328,6 +329,8 @@ export function createBookmarkModal(
   let returnFocus: HTMLElement | null = null;
   let selectedTags = [...(options.values?.tags ?? [])];
   let selectedFolder = options.values?.folder ?? null;
+  let tagsChanged = false;
+  let folderChanged = false;
   let availableTags: BookmarkModalChoices["tags"] = [];
   let availableFolders: BookmarkModalChoices["folders"] = [];
 
@@ -345,6 +348,7 @@ export function createBookmarkModal(
     token.setAttribute("aria-label", `Remove ${formatFolderLabel(selectedFolder)}`);
     token.addEventListener("click", () => {
       selectedFolder = null;
+      folderChanged = true;
       renderSelectedFolder();
       folder.focus();
     });
@@ -360,6 +364,7 @@ export function createBookmarkModal(
         token.setAttribute("aria-label", `Remove ${tag.name}`);
         token.addEventListener("click", () => {
           selectedTags = selectedTags.filter((candidate) => candidate !== tag);
+          tagsChanged = true;
           renderSelectedTags();
           tags.focus();
         });
@@ -378,6 +383,7 @@ export function createBookmarkModal(
       !selectedTags.some((candidate) => comparable(candidate.name) === comparable(name))
     ) {
       selectedTags = [...selectedTags, token];
+      tagsChanged = true;
       renderSelectedTags();
     }
     tags.value = "";
@@ -396,6 +402,7 @@ export function createBookmarkModal(
         ? {}
         : { newSegments: [...(selectedFolder?.newSegments ?? []), label] }),
     };
+    folderChanged = true;
     folder.value = "";
     renderSelectedFolder();
   };
@@ -457,6 +464,7 @@ export function createBookmarkModal(
         description: description.value,
         folder: selectedFolder,
         tags: [...selectedTags],
+        organizationChanges: { tags: tagsChanged, folder: folderChanged },
       }),
     )
       .then((saved) => {
@@ -480,11 +488,13 @@ export function createBookmarkModal(
     setValues(values) {
       if (values.tags !== undefined) {
         selectedTags = [...values.tags];
+        tagsChanged = false;
         tags.value = "";
         renderSelectedTags();
       }
       if (values.folder !== undefined) {
         selectedFolder = values.folder;
+        folderChanged = false;
         folder.value = "";
         renderSelectedFolder();
       }

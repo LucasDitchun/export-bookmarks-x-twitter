@@ -92,6 +92,35 @@ describe("saveBookmarkMetadata", () => {
     ]);
   });
 
+  it("sends note-only organization intent without materializing hidden links", async () => {
+    const send = vi.fn(async (): Promise<RuntimeResponse<unknown>> => ({
+      ok: true,
+      data: { bookmark },
+    }));
+
+    await saveBookmarkMetadata({
+      bookmark,
+      values: {
+        description: "Only the note changed",
+        tags: [],
+        folder: null,
+        organizationChanges: { tags: false, folder: false },
+      },
+      send,
+    });
+
+    expect(send).toHaveBeenCalledWith({
+      type: "SAVE_BOOKMARK_METADATA",
+      payload: {
+        id: "123",
+        note: "Only the note changed",
+        tags: [],
+        folder: null,
+        organizationChanges: { tags: false, folder: false },
+      },
+    });
+  });
+
   it("rejects invalid modal values before sending any partial update", async () => {
     const send = vi.fn(async (): Promise<RuntimeResponse<unknown>> => ({
       ok: true,

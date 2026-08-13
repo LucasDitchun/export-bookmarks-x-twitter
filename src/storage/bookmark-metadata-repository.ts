@@ -119,7 +119,11 @@ function validateInput(input: SaveBookmarkMetadataInput): SaveBookmarkMetadataIn
   ) {
     throw new RangeError("The selected folder hierarchy is invalid.");
   }
-  return { id: input.id, note: input.note, tags, folder };
+  const organizationChanges = input.organizationChanges ?? {
+    tags: true,
+    folder: true,
+  };
+  return { id: input.id, note: input.note, tags, folder, organizationChanges };
 }
 
 export class BookmarkMetadataRepository {
@@ -164,17 +168,22 @@ export class BookmarkMetadataRepository {
     }
 
     const activeTags = storedTags.filter((tag) => tag.deletedAt === undefined);
-    const missingTag = input.tags.find(
-      (selection) =>
-        selection.id !== null && !activeTags.some((tag) => tag.id === selection.id),
-    );
+    const tagsChanged = input.organizationChanges?.tags ?? true;
+    const folderChanged = input.organizationChanges?.folder ?? true;
+    const missingTag = tagsChanged
+      ? input.tags.find(
+          (selection) =>
+            selection.id !== null && !activeTags.some((tag) => tag.id === selection.id),
+        )
+      : undefined;
     const activeFolders = storedFolders.filter(
       (folder) => folder.deletedAt === undefined,
     );
     const selectedFolderId = input.folder?.id ?? null;
     if (
       missingTag?.id !== undefined ||
-      (selectedFolderId !== null &&
+      (folderChanged &&
+        selectedFolderId !== null &&
         !activeFolders.some((folder) => folder.id === selectedFolderId))
     ) {
       transaction.abort();
@@ -184,48 +193,48 @@ export class BookmarkMetadataRepository {
       }
       throw new Error(`Selected folder ${selectedFolderId} is no longer available.`);
     }
-    const tagIds = [
-      ...new Set(
-        input.tags.map((selection) => {
-          if (selection.id !== null) {
-            return selection.id;
-          }
-          const normalizedName = normalizeTagName(selection.name);
-          const existing = activeTags.find(
-            (tag) => normalizeTagName(tag.name) === normalizedName,
-          );
-          if (existing !== undefined) {
-            const hydrated: BookmarkTag = {
-              ...existing,
-              name: tagDisplayName(existing.name),
-              normalizedName,
-            };
-            if (
-              existing.name !== hydrated.name ||
-              existing.normalizedName !== hydrated.normalizedName
-            ) {
-              tags.put(hydrated);
-            }
-            return hydrated.id;
-          }
-          const tag: BookmarkTag = {
-            id: this.createId(),
-            name: selection.name,
-            normalizedName,
-          };
-          tags.add(tag);
-          activeTags.push(tag);
-          return tag.id;
-        }),
-      ),
-    ];
+    const tagIds = tagsChanged
+      ? [
+          ...new Set(
+            input.tags.map((selection) => {
+              if (selection.id !== null) {
+                return selection.id;
+              }
+              const normalizedName = normalizeTagName(selection.name);
+              const existing = activeTags.find(
+                (tag) => normalizeTagName(tag.name) === normalizedName,
+              );
+              if (existing !== undefined) {
+                const hydrated: BookmarkTag = {
+                  ...existing,
+                  name: tagDisplayName(existing.name),
+                  normalizedName,
+                };
+                if (
+                  existing.name !== hydrated.name ||
+                  existing.normalizedName !== hydrated.normalizedName
+                ) {
+                  tags.put(hydrated);
+                }
+                return hydrated.id;
+              }
+              const tag: BookmarkTag = {
+                id: this.createId(),
+                name: selection.name,
+                normalizedName,
+              };
+              tags.add(tag);
+              activeTags.push(tag);
+              return tag.id;
+            }),
+          ),
+        ]
+      : bookmark.tagIds;
 
-    let folderId: string | null = selectedFolderId;
+    let folderId: string | null = folderChanged ? selectedFolderId : bookmark.folderId;
     const newFolderSegments =
-      input.folder?.id === null
-        ? input.folder.path
-        : (input.folder?.newSegments ?? []);
-    for (const name of newFolderSegments) {
+      input.folder?.id === null ? input.folder.path : (input.folder?.newSegments ?? []);
+    for (const name of folderChanged ? newFolderSegments : []) {
       let folder = activeFolders.find(
         (candidate) =>
           candidate.parentId === folderId && sameFolderName(candidate.name, name),
@@ -238,12 +247,14 @@ export class BookmarkMetadataRepository {
       folderId = folder.id;
     }
 
-    for (const key of membershipKeys) memberships.delete(key);
-    if (folderId !== null) {
-      memberships.put({
-        bookmarkId: input.id,
-        folderId,
-      } satisfies BookmarkFolderMembership);
+    if (folderChanged) {
+      for (const key of membershipKeys) memberships.delete(key);
+      if (folderId !== null) {
+        memberships.put({
+          bookmarkId: input.id,
+          folderId,
+        } satisfies BookmarkFolderMembership);
+      }
     }
     const updated: BookmarkRecord = {
       ...bookmark,
