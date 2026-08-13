@@ -392,18 +392,34 @@ export function startBookmarkMetadataDecorator(
   let frame: number | null = null;
   let flushing = false;
   let generation = 0;
+  let localizationEpoch = 0;
   let lastResult: BookmarkDecorationLookupResult | null = null;
-  let localizationOverride: BookmarkLocalizationResult | null = null;
+  let localizationOverride: {
+    epoch: number;
+    value: BookmarkLocalizationResult;
+  } | null = null;
   let lastTranslator: BookmarkMetadataTranslator = (key) => key;
   let presentationContextLoading: Promise<BookmarkDecorationLookupResult | null> | null =
     null;
 
   const rememberPresentationContext = (
     result: BookmarkDecorationLookupResult,
+    lookupEpoch: number,
   ): BookmarkDecorationLookupResult => {
-    const current = localizationOverride
-      ? { ...result, ...localizationOverride }
-      : result;
+    const currentOverride = localizationOverride;
+    const startedBeforeCurrentLocalization =
+      currentOverride !== null && lookupEpoch < currentOverride.epoch;
+    const current =
+      startedBeforeCurrentLocalization
+        ? { ...result, ...currentOverride.value }
+        : result;
+    if (!startedBeforeCurrentLocalization) {
+      localizationEpoch += 1;
+      localizationOverride = {
+        epoch: localizationEpoch,
+        value: { locale: result.locale, messages: result.messages },
+      };
+    }
     lastResult = current;
     lastTranslator = (key) => current.messages[key] ?? key;
     return current;
@@ -413,9 +429,12 @@ export function startBookmarkMetadataDecorator(
     bookmarkId: string,
   ): Promise<BookmarkDecorationLookupResult | null> => {
     if (lastResult) return Promise.resolve(lastResult);
+    const lookupEpoch = localizationEpoch;
     presentationContextLoading ??= options
       .lookup([bookmarkId])
-      .then((result) => (stopped ? null : rememberPresentationContext(result)))
+      .then((result) =>
+        stopped ? null : rememberPresentationContext(result, lookupEpoch),
+      )
       .catch(() => null)
       .finally(() => {
         presentationContextLoading = null;
@@ -473,6 +492,7 @@ export function startBookmarkMetadataDecorator(
 
         try {
           const ids = [...byId.keys()];
+          const lookupEpoch = localizationEpoch;
           let result: BookmarkDecorationLookupResult | null = null;
           const collectedItems: BookmarkDecorationItem[] = [];
           for (let offset = 0; offset < ids.length; offset += 100) {
@@ -482,7 +502,10 @@ export function startBookmarkMetadataDecorator(
             collectedItems.push(...page.items);
           }
           if (!result) continue;
-          result = rememberPresentationContext({ ...result, items: collectedItems });
+          result = rememberPresentationContext(
+            { ...result, items: collectedItems },
+            lookupEpoch,
+          );
           const translate: BookmarkMetadataTranslator = (key) =>
             result.messages[key] ?? key;
           if (stopped || run !== generation) return;
@@ -606,9 +629,11 @@ export function startBookmarkMetadataDecorator(
       }
     },
     setLocalization(localization) {
-      localizationOverride = localization;
+      localizationEpoch += 1;
+      localizationOverride = { epoch: localizationEpoch, value: localization };
       if (!lastResult) return;
-      lastResult = rememberPresentationContext(lastResult);
+      lastResult = { ...lastResult, ...localization };
+      lastTranslator = (key) => localization.messages[key] ?? key;
       const itemsById = new Map(
         lastResult.items.map((item) => [item.bookmark.id, item]),
       );
