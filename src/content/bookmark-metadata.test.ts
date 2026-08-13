@@ -1,24 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { BookmarkRecord } from "../domain/types";
+import type { BookmarkMetadataReadModel } from "../domain/types";
 import type { RuntimeResponse, UiRequest } from "../shared/protocol";
 import { loadBookmarkMetadataDraft, saveBookmarkMetadata } from "./bookmark-metadata";
 
-const bookmark: BookmarkRecord = {
+const bookmark: BookmarkMetadataReadModel = {
   id: "123",
-  text: "Post",
-  url: "https://x.com/alice/status/123",
-  author: { id: "alice", username: "alice", name: "Alice" },
-  postCreatedAt: "2026-08-09T09:00:00.000Z",
-  media: { images: [], videos: [] },
   note: "Old note",
   folderId: "folder-old",
   tagIds: ["tag-keep", "tag-remove"],
-  firstSavedAt: "2026-08-09T09:01:00.000Z",
-  lastSeenAt: "2026-08-09T09:01:00.000Z",
-  archivedAt: null,
-  metadataUpdatedAt: "2026-08-09T09:01:00.000Z",
-  status: "current",
 };
 
 describe("saveBookmarkMetadata", () => {

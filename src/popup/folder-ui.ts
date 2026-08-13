@@ -1,4 +1,8 @@
-import type { BookmarkRecord, FolderRecord } from "../domain/types";
+import type {
+  BookmarkFolderReadModel,
+  BookmarkRecord,
+  FolderRecord,
+} from "../domain/types";
 import { folderBreadcrumb, sortFolders } from "../domain/folder-tree";
 import type {
   BookmarkDetailResult,
@@ -73,7 +77,7 @@ function appendOption(
 export function createFolderUi(options: FolderUiOptions): {
   ready: Promise<void>;
   refresh: () => Promise<void>;
-  setBookmark: (bookmark: BookmarkRecord | null) => void;
+  setBookmark: (bookmark: BookmarkFolderReadModel | null) => void;
 } {
   const {
     document,
@@ -87,7 +91,7 @@ export function createFolderUi(options: FolderUiOptions): {
   const elements = getElements(document);
   let folders: FolderRecord[] = [];
   let usage: Record<string, number> = {};
-  let bookmark: BookmarkRecord | null = null;
+  let bookmark: BookmarkFolderReadModel | null = null;
   let busy = false;
   let editingId: string | null = null;
   let deletingId: string | null = null;
@@ -364,8 +368,9 @@ export function createFolderUi(options: FolderUiOptions): {
         if (!response.ok || !response.data?.bookmark) {
           throw new Error("assignment failed");
         }
-        bookmark = response.data.bookmark;
-        onBookmarkUpdated(bookmark);
+        const updatedBookmark = response.data.bookmark;
+        bookmark = updatedBookmark;
+        onBookmarkUpdated(updatedBookmark);
         void refreshFolders();
         setStatus("folderSaved", "saved");
       })

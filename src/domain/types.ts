@@ -58,6 +58,19 @@ export interface BookmarkRecord {
   status: BookmarkStatus;
 }
 
+/** Read model used by note, tag, and folder editors. */
+export type BookmarkMetadataReadModel = Pick<
+  BookmarkRecord,
+  "id" | "note" | "folderId" | "tagIds"
+>;
+
+/** Read model rendered by the supplementary metadata card on X. */
+export type BookmarkDecorationReadModel = BookmarkMetadataReadModel &
+  Pick<BookmarkRecord, "text" | "url" | "status">;
+
+/** Read model required by the popup folder assignment control. */
+export type BookmarkFolderReadModel = Pick<BookmarkRecord, "id" | "folderId">;
+
 export interface HydratedBookmarkRecord extends BookmarkRecord {
   folders: BookmarkFolder[];
 }

@@ -2,27 +2,20 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { BookmarkRecord } from "../domain/types";
+import type { BookmarkDecorationReadModel } from "../domain/types";
 import { DEFAULT_SETTINGS } from "../settings/settings-repository";
 import {
   startBookmarkMetadataDecorator,
   type BookmarkDecorationLookupResult,
 } from "./bookmark-metadata-decorator";
 
-const categorizedBookmark: BookmarkRecord = {
+const categorizedBookmark: BookmarkDecorationReadModel = {
   id: "123",
   text: "Useful post",
   url: "https://x.com/alice/status/123",
-  author: { id: "alice", username: "alice", name: "Alice" },
-  postCreatedAt: "2026-08-09T09:00:00.000Z",
-  media: { images: [], videos: [] },
   note: '<img src=x onerror="alert(1)">Keep this for the launch plan.',
   folderId: "folder-ai",
   tagIds: ["tag-ai", "tag-research"],
-  firstSavedAt: "2026-08-09T09:01:00.000Z",
-  lastSeenAt: "2026-08-09T09:01:00.000Z",
-  archivedAt: null,
-  metadataUpdatedAt: "2026-08-09T09:01:00.000Z",
   status: "current",
 };
 
@@ -279,7 +272,6 @@ describe("startBookmarkMetadataDecorator", () => {
           bookmark: {
             ...categorizedBookmark,
             status: "archived",
-            archivedAt: "2026-08-09T10:00:00.000Z",
           },
         },
       ],
