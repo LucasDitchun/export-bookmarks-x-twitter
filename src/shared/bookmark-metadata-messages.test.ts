@@ -47,7 +47,7 @@ describe("bookmark metadata message contract", () => {
     expect(() => bookmarkMetadataMessagesFromCatalog({})).toThrow(
       /bookmarkPromptTitle/,
     );
-    const malformed = Object.fromEntries(
+    const malformed: Record<string, unknown> = Object.fromEntries(
       BOOKMARK_METADATA_MESSAGE_KEYS.map((key) => [key, { message: key }]),
     );
     malformed.bookmarkMetadataLabel = { message: 42 };

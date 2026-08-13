@@ -16,6 +16,7 @@ import { SemanticIndexRepository } from "../semantic/semantic-index-repository";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { createLocaleCatalogCache } from "./locale-catalog-cache";
 import { bookmarkMetadataMessagesFromCatalog } from "../shared/bookmark-metadata-messages";
+import { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
 
 const state = new ExtensionStateRepository({
   get: (keys) => chrome.storage.local.get(keys),
@@ -26,6 +27,7 @@ const archive = new ArchiveRepository();
 const bookmarks = new BookmarkRepository();
 const tags = new TagRepository();
 const folders = new FolderRepository();
+const metadata = new BookmarkMetadataRepository();
 const search = new SearchRepository();
 const semanticIndex = new SemanticIndexRepository();
 const semanticState = new SemanticStateRepository({
@@ -91,6 +93,7 @@ const controller = new BackgroundController({
   bookmarks,
   tags,
   folders,
+  metadata,
   search,
   semantic,
   settings,
