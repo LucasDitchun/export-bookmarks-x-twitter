@@ -312,6 +312,80 @@ describe("KeyedTaskQueue", () => {
     expect(queue.pendingMutationCount).toBe(0);
   });
 
+  it("keeps a restore from mixing settings into an earlier backup snapshot", async () => {
+    const queue = new KeyedTaskQueue();
+    const idbRead = deferred();
+    let idb = "old";
+    let settings = "old";
+    let snapshot: { idb: string; settings: string } | null = null;
+
+    const exported = queue.run(
+      null,
+      async () => {
+        const capturedIdb = idb;
+        await idbRead.promise;
+        snapshot = { idb: capturedIdb, settings };
+      },
+      { waitForGlobalBarrier: true },
+    );
+    const restored = queue.run(
+      "library",
+      async () => {
+        idb = "new";
+        settings = "new";
+      },
+      { globalBarrier: true },
+    );
+
+    await Promise.resolve();
+    expect(idb).toBe("old");
+    idbRead.resolve();
+    await Promise.all([exported, restored]);
+    expect(snapshot).toEqual({ idb: "old", settings: "old" });
+    expect({ idb, settings }).toEqual({ idb: "new", settings: "new" });
+  });
+
+  it("runs concurrent backup snapshots in parallel when no barrier exists", async () => {
+    const queue = new KeyedTaskQueue();
+    const gate = deferred();
+    const started = vi.fn();
+    const exportSnapshot = (id: string) =>
+      queue.run(
+        null,
+        async () => {
+          started(id);
+          await gate.promise;
+        },
+        { waitForGlobalBarrier: true },
+      );
+
+    const first = exportSnapshot("first");
+    const second = exportSnapshot("second");
+    await Promise.resolve();
+    expect(started).toHaveBeenCalledTimes(2);
+    expect(queue.pendingBarrierAwareReadCount).toBe(2);
+    gate.resolve();
+    await Promise.all([first, second]);
+    await Promise.resolve();
+    expect(queue.pendingBarrierAwareReadCount).toBe(0);
+  });
+
+  it("cleans up a rejected backup snapshot before a later barrier", async () => {
+    const queue = new KeyedTaskQueue();
+    const failed = queue.run(null, () => Promise.reject(new Error("export failed")), {
+      waitForGlobalBarrier: true,
+    });
+    const restored = queue.run("library", () => Promise.resolve("restored"), {
+      globalBarrier: true,
+    });
+
+    await expect(failed).rejects.toThrow("export failed");
+    await expect(restored).resolves.toBe("restored");
+    await Promise.resolve();
+    expect(queue.pendingBarrierAwareReadCount).toBe(0);
+    expect(queue.pendingMutationCount).toBe(0);
+  });
+
   it("removes settled keys instead of growing for the service worker lifetime", async () => {
     const queue = new KeyedTaskQueue();
     await Promise.all(
