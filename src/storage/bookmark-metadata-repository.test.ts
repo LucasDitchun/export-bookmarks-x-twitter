@@ -350,4 +350,42 @@ describe("BookmarkMetadataRepository", () => {
       folderId: "folder-old",
     });
   });
+
+  it("replaces active tag links while preserving tombstoned links", async () => {
+    const databaseName = `metadata-edit-visible-tags-${crypto.randomUUID()}`;
+    const original = {
+      ...bookmark(),
+      tagIds: ["tag-active", "tag-hidden"],
+    };
+    await seed(databaseName, original, [
+      { id: "folder-old", name: "Old", parentId: null },
+    ]);
+    await seedTags(databaseName, [
+      { id: "tag-active", name: "Active", normalizedName: "active" },
+      { id: "tag-hidden", name: "Hidden", normalizedName: "hidden" },
+    ]);
+    const tags = new TagRepository(databaseName);
+    await tags.delete("tag-hidden");
+
+    await expect(
+      new BookmarkMetadataRepository(databaseName, {
+        createId: () => "tag-new",
+      }).save({
+        id: "123",
+        note: "Replace the visible tag",
+        tags: [{ id: null, name: "New" }],
+        folder: null,
+        organizationChanges: { tags: true, folder: true },
+      }),
+    ).resolves.toMatchObject({
+      tagIds: ["tag-new", "tag-hidden"],
+    });
+
+    await tags.restore("tag-hidden");
+    await expect(
+      new BookmarkRepository(databaseName).get("123"),
+    ).resolves.toMatchObject({
+      tagIds: ["tag-new", "tag-hidden"],
+    });
+  });
 });
