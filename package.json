@@ -1,6 +1,6 @@
 {
   "name": "bookmark-x",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "Open-source Manifest V3 Chrome extension to organize and export X (Twitter) bookmarks as private local TXT or Markdown files.",

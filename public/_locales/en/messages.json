@@ -317,15 +317,12 @@
   "bookmarkPromptClose": { "message": "Close" },
   "bookmarkPromptSave": { "message": "Save note" },
   "bookmarkPromptTags": { "message": "Tags" },
-  "bookmarkPromptTagsHelp": { "message": "Separate multiple tags with commas." },
+  "bookmarkPromptTagsHelp": { "message": "Press Enter after each tag." },
   "bookmarkPromptFolder": { "message": "Folder" },
-  "bookmarkPromptChooseFolder": { "message": "Choose an existing folder" },
-  "bookmarkPromptChooseTag": { "message": "Choose an existing tag" },
   "bookmarkPromptNote": { "message": "Private note" },
   "bookmarkCategorized": { "message": "Categorized" },
   "bookmarkNeedsCategory": { "message": "Needs category" },
   "bookmarkMetadataLabel": { "message": "Bookmark X saved-post details" },
-  "bookmarkMetadataMapped": { "message": "Mapped by Bookmark X" },
   "bookmarkMetadataArchived": { "message": "Archived locally" },
   "liveBookmarkPending": { "message": "Waiting for X to confirm…" },
   "liveBookmarkSaved": { "message": "Saved locally. Add a note, folder, or tags." },
@@ -412,11 +409,36 @@
     "message": "$NAME$, $COUNT$ bookmarks",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "folderUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ bookmark",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagUsageLabel": {
     "message": "$NAME$, $COUNT$ bookmarks",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "tagUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ bookmark",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagsManageHelp": { "message": "Open a bookmark to add or remove tags." },
+  "organizationTrashTitle": { "message": "Trash" },
+  "organizationTrashHelp": {
+    "message": "Restore deleted folders and tags with their saved-post relationships."
+  },
+  "organizationTrashEmpty": { "message": "Trash is empty." },
+  "organizationTrashError": { "message": "Could not load Trash." },
+  "organizationRestoring": { "message": "Restoring…" },
+  "organizationRestored": { "message": "Restored." },
+  "organizationRestoreError": { "message": "Could not restore this item." },
+  "restoreTag": {
+    "message": "Restore tag $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "Restore folder $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "Back to library" },
   "settingsViewHelp": { "message": "Export, backup, language, and preferences." }
 }

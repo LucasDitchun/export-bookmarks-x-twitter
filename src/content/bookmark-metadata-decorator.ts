@@ -1,10 +1,11 @@
 import type {
   BookmarkDecorationItem,
   BookmarkDecorationLookupResult,
+  BookmarkLocalizationResult,
 } from "../shared/protocol";
 import type { ExtensionSettings } from "../settings/settings-repository";
-import { DEFAULT_QUICK_STOP_THRESHOLD } from "../domain/quick-update";
 import { createIconButton } from "../ui/icons";
+import type { BookmarkMetadataTranslator } from "../shared/bookmark-metadata-messages";
 
 export type {
   BookmarkDecorationItem,
@@ -14,39 +15,6 @@ export type {
 const ARTICLE_SELECTOR = 'article[data-testid="tweet"]';
 const HOST_TAG = "bookmark-x-metadata";
 const STATUS_PATH_PATTERN = /^\/[A-Za-z0-9_]+\/status\/(\d+)$/;
-const DEFAULT_DECORATION_SETTINGS = {
-  appearance: { largeText: true, highContrast: true, reduceMotion: false },
-  behavior: {
-    surface: "modal",
-    promptAfterBookmark: true,
-    metadata: {
-      summary: true,
-      breadcrumb: true,
-      tags: true,
-      note: true,
-      categoryIndicator: true,
-    },
-  },
-  export: {
-    includeLink: true,
-    includeText: true,
-    includeAuthor: true,
-    includeDate: true,
-    includeImages: true,
-    includeVideos: true,
-    includeNote: true,
-    includeTags: true,
-    includeFolder: true,
-    includeFirstSavedAt: true,
-    includeLastSeenAt: true,
-  },
-  search: { filterAsYouType: true },
-  data: {
-    keepArchived: true,
-    quickStopThreshold: DEFAULT_QUICK_STOP_THRESHOLD,
-  },
-} as const satisfies ExtensionSettings;
-
 export interface BookmarkMetadataDecoratorOptions {
   document: Document;
   lookup(ids: string[]): Promise<BookmarkDecorationLookupResult>;
@@ -54,14 +22,15 @@ export interface BookmarkMetadataDecoratorOptions {
   cancelFrame?: (handle: number) => void;
   onOrganize?: (
     item: BookmarkDecorationItem,
-    translate: Translate,
+    translate: BookmarkMetadataTranslator,
     trigger: HTMLButtonElement,
   ) => void;
 }
 
 export interface BookmarkMetadataDecoratorController {
-  refresh(bookmarkId?: string): void;
-  setPending(article: Element, bookmarkId: string): void;
+  refresh(bookmarkIds?: string | readonly string[]): void;
+  setLocalization(localization: BookmarkLocalizationResult): void;
+  setPending(article: Element, bookmarkId: string): Promise<void>;
   stop(): void;
 }
 
@@ -69,8 +38,6 @@ interface MountedDecoration {
   bookmarkId: string;
   host: HTMLElement;
 }
-
-type Translate = (key: string) => string;
 
 const componentStyles = String.raw`
   :host {
@@ -237,7 +204,7 @@ function renderDecoration(options: {
   host: HTMLElement;
   item: BookmarkDecorationItem;
   settings: ExtensionSettings;
-  translate: Translate;
+  translate: BookmarkMetadataTranslator;
   pending?: boolean;
   onOrganize?: BookmarkMetadataDecoratorOptions["onOrganize"];
 }): void {
@@ -423,9 +390,65 @@ export function startBookmarkMetadataDecorator(
   const queued = new Set<Element>();
   let stopped = false;
   let frame: number | null = null;
+  let flushing = false;
   let generation = 0;
+  let localizationEpoch = 0;
   let lastResult: BookmarkDecorationLookupResult | null = null;
-  let lastTranslator: Translate = (key) => key;
+  let replaceCachedItemsOnNextFlush = true;
+  let localizationOverride: {
+    epoch: number;
+    value: BookmarkLocalizationResult;
+  } | null = null;
+  let lastTranslator: BookmarkMetadataTranslator = (key) => key;
+  let presentationContextLoading: Promise<BookmarkDecorationLookupResult | null> | null =
+    null;
+
+  const rememberPresentationContext = (
+    result: BookmarkDecorationLookupResult,
+    lookupEpoch: number,
+    refreshedIds?: readonly string[],
+    replaceItems = true,
+  ): BookmarkDecorationLookupResult => {
+    const currentOverride = localizationOverride;
+    const startedBeforeCurrentLocalization =
+      currentOverride !== null && lookupEpoch < currentOverride.epoch;
+    let current = startedBeforeCurrentLocalization
+      ? { ...result, ...currentOverride.value }
+      : result;
+    if (!replaceItems && lastResult) {
+      const items = new Map(lastResult.items.map((item) => [item.bookmark.id, item]));
+      for (const id of refreshedIds ?? []) items.delete(id);
+      for (const item of current.items) items.set(item.bookmark.id, item);
+      current = { ...current, items: [...items.values()] };
+    }
+    if (!startedBeforeCurrentLocalization) {
+      localizationEpoch += 1;
+      localizationOverride = {
+        epoch: localizationEpoch,
+        value: { locale: result.locale, messages: result.messages },
+      };
+    }
+    lastResult = current;
+    lastTranslator = (key) => current.messages[key] ?? key;
+    return current;
+  };
+
+  const loadPresentationContext = (
+    bookmarkId: string,
+  ): Promise<BookmarkDecorationLookupResult | null> => {
+    if (lastResult) return Promise.resolve(lastResult);
+    const lookupEpoch = localizationEpoch;
+    presentationContextLoading ??= options
+      .lookup([bookmarkId])
+      .then((result) =>
+        stopped ? null : rememberPresentationContext(result, lookupEpoch),
+      )
+      .catch(() => null)
+      .finally(() => {
+        presentationContextLoading = null;
+      });
+    return presentationContextLoading;
+  };
 
   const removeMounted = (article: Element): void => {
     mounted.get(article)?.host.remove();
@@ -452,71 +475,96 @@ export function startBookmarkMetadataDecorator(
 
   const flush = async (): Promise<void> => {
     frame = null;
-    if (stopped) return;
-    const run = ++generation;
-    for (const article of [...mounted.keys()]) {
-      if (!article.isConnected) removeMounted(article);
-    }
-    const articles = [...queued].filter((article) => article.isConnected);
-    queued.clear();
-    const byId = new Map<string, Element[]>();
-    for (const article of articles) {
-      const id = bookmarkIdFromArticle(article);
-      if (!id) {
-        removeMounted(article);
-        continue;
-      }
-      const group = byId.get(id) ?? [];
-      group.push(article);
-      byId.set(id, group);
-    }
-    if (byId.size === 0) return;
-
+    if (stopped || flushing) return;
+    flushing = true;
+    const run = generation;
     try {
-      const ids = [...byId.keys()];
-      let result: BookmarkDecorationLookupResult | null = null;
-      const collectedItems: BookmarkDecorationItem[] = [];
-      for (let offset = 0; offset < ids.length; offset += 100) {
-        const page = await options.lookup(ids.slice(offset, offset + 100));
-        if (stopped || run !== generation) return;
-        result = page;
-        collectedItems.push(...page.items);
-      }
-      if (!result) return;
-      result = { ...result, items: collectedItems };
-      const translate: Translate = (key) => result.messages[key] ?? key;
-      if (stopped || run !== generation) return;
-      lastResult = result;
-      lastTranslator = translate;
-      const itemsById = new Map(result.items.map((item) => [item.bookmark.id, item]));
-      for (const [id, matchingArticles] of byId) {
-        const item = itemsById.get(id);
-        for (const article of matchingArticles) {
-          if (!item) {
-            if (pending.get(article) === id) continue;
+      while (!stopped && run === generation && queued.size > 0) {
+        for (const article of [...mounted.keys()]) {
+          if (!article.isConnected) removeMounted(article);
+        }
+        const articles = [...queued].filter((article) => article.isConnected);
+        queued.clear();
+        const byId = new Map<string, Element[]>();
+        for (const article of articles) {
+          const id = bookmarkIdFromArticle(article);
+          if (!id) {
             removeMounted(article);
             continue;
           }
-          if (!hasVisibleMetadataSetting(result.settings)) {
-            removeMounted(article);
-            continue;
+          const group = byId.get(id) ?? [];
+          group.push(article);
+          byId.set(id, group);
+        }
+        if (byId.size === 0) continue;
+        const replaceCachedItems = replaceCachedItemsOnNextFlush;
+        replaceCachedItemsOnNextFlush = false;
+
+        try {
+          const ids = [...byId.keys()];
+          const lookupEpoch = localizationEpoch;
+          let result: BookmarkDecorationLookupResult | null = null;
+          const collectedItems: BookmarkDecorationItem[] = [];
+          for (let offset = 0; offset < ids.length; offset += 100) {
+            const page = await options.lookup(ids.slice(offset, offset + 100));
+            if (stopped || run !== generation) return;
+            result = page;
+            collectedItems.push(...page.items);
           }
-          const host = ensureHost(article, id);
-          if (host) {
-            renderDecoration({
-              document: options.document,
-              host,
-              item,
-              settings: result.settings,
-              translate,
-              pending: pending.get(article) === id,
-              onOrganize: options.onOrganize,
-            });
+          if (!result) continue;
+          result = rememberPresentationContext(
+            { ...result, items: collectedItems },
+            lookupEpoch,
+            ids,
+            replaceCachedItems,
+          );
+          const translate: BookmarkMetadataTranslator = (key) =>
+            result.messages[key] ?? key;
+          if (stopped || run !== generation) return;
+          const itemsById = new Map(
+            result.items.map((item) => [item.bookmark.id, item]),
+          );
+          for (const [id, matchingArticles] of byId) {
+            const item = itemsById.get(id);
+            for (const article of matchingArticles) {
+              if (!article.isConnected) {
+                removeMounted(article);
+                continue;
+              }
+              if (bookmarkIdFromArticle(article) !== id) {
+                queued.add(article);
+                continue;
+              }
+              if (!item) {
+                if (pending.get(article) === id) continue;
+                removeMounted(article);
+                continue;
+              }
+              if (!hasVisibleMetadataSetting(result.settings)) {
+                removeMounted(article);
+                continue;
+              }
+              const host = ensureHost(article, id);
+              if (host) {
+                renderDecoration({
+                  document: options.document,
+                  host,
+                  item,
+                  settings: result.settings,
+                  translate,
+                  pending: pending.get(article) === id,
+                  onOrganize: options.onOrganize,
+                });
+              }
+            }
           }
+        } catch {
+          // Host-page decoration is supplementary; X must remain fully usable if lookup fails.
         }
       }
-    } catch {
-      // Host-page decoration is supplementary; X must remain fully usable if lookup fails.
+    } finally {
+      flushing = false;
+      if (!stopped && queued.size > 0) schedule();
     }
   };
 
@@ -573,30 +621,70 @@ export function startBookmarkMetadataDecorator(
   }
 
   return {
-    refresh(bookmarkId) {
+    refresh(bookmarkIds) {
+      const targetedIds =
+        typeof bookmarkIds === "string"
+          ? new Set([bookmarkIds])
+          : bookmarkIds
+            ? new Set(bookmarkIds)
+            : null;
+      if (!targetedIds) replaceCachedItemsOnNextFlush = true;
       for (const [article, pendingId] of pending) {
-        if (!bookmarkId || pendingId === bookmarkId) pending.delete(article);
+        if (!targetedIds || targetedIds.has(pendingId)) pending.delete(article);
       }
       for (const article of Array.from(
         options.document.querySelectorAll(ARTICLE_SELECTOR),
       )) {
-        if (!bookmarkId || bookmarkIdFromArticle(article) === bookmarkId) {
+        const articleId = targetedIds ? bookmarkIdFromArticle(article) : null;
+        if (!targetedIds || (articleId !== null && targetedIds.has(articleId))) {
           queueArticle(article);
         }
       }
     },
-    setPending(article, bookmarkId) {
-      const host = ensureHost(article, bookmarkId);
-      if (!host) return;
-      const settings = lastResult?.settings ?? DEFAULT_DECORATION_SETTINGS;
+    setLocalization(localization) {
+      localizationEpoch += 1;
+      localizationOverride = { epoch: localizationEpoch, value: localization };
+      if (!lastResult) return;
+      lastResult = { ...lastResult, ...localization };
+      lastTranslator = (key) => localization.messages[key] ?? key;
+      const itemsById = new Map(
+        lastResult.items.map((item) => [item.bookmark.id, item]),
+      );
+      for (const [article, mountedDecoration] of mounted) {
+        const item = itemsById.get(mountedDecoration.bookmarkId);
+        if (!item) continue;
+        renderDecoration({
+          document: options.document,
+          host: mountedDecoration.host,
+          item,
+          settings: lastResult.settings,
+          translate: lastTranslator,
+          pending: pending.get(article) === mountedDecoration.bookmarkId,
+          onOrganize: options.onOrganize,
+        });
+      }
+    },
+    async setPending(article, bookmarkId) {
+      pending.set(article, bookmarkId);
+      const context = await loadPresentationContext(bookmarkId);
+      if (
+        !context ||
+        stopped ||
+        !article.isConnected ||
+        pending.get(article) !== bookmarkId
+      ) {
+        pending.delete(article);
+        return;
+      }
+      const settings = context.settings;
       if (!settings.behavior.metadata.summary) {
         removeMounted(article);
         return;
       }
+      const host = ensureHost(article, bookmarkId);
+      if (!host) return;
       pending.set(article, bookmarkId);
-      const existing = lastResult?.items.find(
-        (item) => item.bookmark.id === bookmarkId,
-      );
+      const existing = context.items.find((item) => item.bookmark.id === bookmarkId);
       const item: BookmarkDecorationItem =
         existing ??
         ({
@@ -604,16 +692,9 @@ export function startBookmarkMetadataDecorator(
             id: bookmarkId,
             text: "",
             url: "",
-            author: { id: "", username: "", name: "" },
-            postCreatedAt: "",
-            media: { images: [], videos: [] },
             note: "",
             folderId: null,
             tagIds: [],
-            firstSavedAt: "",
-            lastSeenAt: "",
-            archivedAt: null,
-            metadataUpdatedAt: "",
             status: "current",
           },
           breadcrumb: [],

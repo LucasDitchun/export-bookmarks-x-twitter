@@ -1,7 +1,5 @@
-import type { BookmarkRecord, BookmarkTag, FolderRecord } from "../domain/types";
+import type { BookmarkMetadataReadModel, FolderRecord } from "../domain/types";
 import type {
-  BookmarkDetailResult,
-  FolderDetailResult,
   FolderListResult,
   RuntimeResponse,
   TagListResult,
@@ -9,6 +7,7 @@ import type {
 } from "../shared/protocol";
 import type {
   BookmarkModalChoices,
+  BookmarkModalFolderToken,
   BookmarkModalValues,
 } from "../surfaces/bookmark-modal";
 
@@ -21,7 +20,7 @@ const MAX_FOLDER_DEPTH = 32;
 type SendMetadataRequest = (request: UiRequest) => Promise<RuntimeResponse<unknown>>;
 
 interface SaveBookmarkMetadataOptions {
-  bookmark: BookmarkRecord;
+  bookmark: BookmarkMetadataReadModel;
   values: BookmarkModalValues;
   send: SendMetadataRequest;
   signal?: AbortSignal;
@@ -29,8 +28,9 @@ interface SaveBookmarkMetadataOptions {
 
 interface ValidatedMetadata {
   note: string;
-  tags: string[];
-  folderPath: string[];
+  tags: BookmarkModalValues["tags"];
+  folder: BookmarkModalValues["folder"];
+  organizationChanges?: BookmarkModalValues["organizationChanges"];
 }
 
 function normalizeName(value: string): string {
@@ -63,26 +63,52 @@ function validateValues(values: BookmarkModalValues): ValidatedMetadata {
   }
   const tags = [
     ...new Map(
-      values.tags
-        .split(",")
-        .filter((value) => normalizeName(value).length > 0)
-        .map((value) => {
-          const name = validateName(value, "tag");
-          return [comparableName(name), name] as const;
-        }),
+      values.tags.map(({ id, name: value }) => {
+        const name = validateName(value, "tag");
+        if (id !== null && !/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
+          throw new Error("Invalid tag ID.");
+        }
+        const tag = { id, name };
+        return [
+          id === null ? `name:${comparableName(name)}` : `id:${id}`,
+          tag,
+        ] as const;
+      }),
     ).values(),
   ];
   if (tags.length > MAX_TAGS)
     throw new Error(`A bookmark can have at most ${MAX_TAGS} tags.`);
 
-  const rawFolderPath = values.folder
-    .split("/")
-    .filter((value) => normalizeName(value).length > 0);
+  if (
+    values.folder?.id !== null &&
+    values.folder?.id !== undefined &&
+    !/^[A-Za-z0-9_-]{1,128}$/.test(values.folder.id)
+  ) {
+    throw new Error("Invalid folder ID.");
+  }
+  const rawFolderPath = values.folder?.path ?? [];
   if (rawFolderPath.length > MAX_FOLDER_DEPTH) {
     throw new Error(`A folder path can have at most ${MAX_FOLDER_DEPTH} levels.`);
   }
-  const folderPath = rawFolderPath.map((value) => validateName(value, "folder"));
-  return { note: values.description, tags, folderPath };
+  const folder = values.folder && {
+    id: values.folder.id,
+    path: rawFolderPath.map((value) => validateName(value, "folder")),
+    ...(values.folder.newSegments === undefined
+      ? {}
+      : {
+          newSegments: values.folder.newSegments.map((value) =>
+            validateName(value, "folder"),
+          ),
+        }),
+  };
+  return {
+    note: values.description,
+    tags,
+    folder,
+    ...(values.organizationChanges === undefined
+      ? {}
+      : { organizationChanges: { ...values.organizationChanges } }),
+  };
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
@@ -110,21 +136,6 @@ function isTagListResult(value: unknown): value is TagListResult {
   );
 }
 
-function isCurrentBookmarkResult(
-  value: unknown,
-  bookmarkId: string,
-): value is BookmarkDetailResult & { bookmark: BookmarkRecord } {
-  if (typeof value !== "object" || value === null) return false;
-  const bookmark = (value as Partial<BookmarkDetailResult>).bookmark;
-  return (
-    typeof bookmark === "object" &&
-    bookmark !== null &&
-    bookmark.id === bookmarkId &&
-    Array.isArray(bookmark.tagIds) &&
-    bookmark.tagIds.every((tagId) => typeof tagId === "string")
-  );
-}
-
 function isFolderListResult(value: unknown): value is FolderListResult {
   return (
     typeof value === "object" &&
@@ -133,8 +144,11 @@ function isFolderListResult(value: unknown): value is FolderListResult {
   );
 }
 
-function folderPathFor(folderId: string | null, folders: FolderRecord[]): string {
-  if (!folderId) return "";
+function folderTokenFor(
+  folderId: string | null,
+  folders: FolderRecord[],
+): BookmarkModalFolderToken | null {
+  if (!folderId) return null;
   const byId = new Map(folders.map((folder) => [folder.id, folder]));
   const names: string[] = [];
   const visited = new Set<string>();
@@ -144,11 +158,11 @@ function folderPathFor(folderId: string | null, folders: FolderRecord[]): string
     names.unshift(current.name);
     current = current.parentId ? byId.get(current.parentId) : undefined;
   }
-  return names.join(" / ");
+  return names.length > 0 ? { id: folderId, path: names } : null;
 }
 
 export async function loadBookmarkMetadataValues(options: {
-  bookmark: BookmarkRecord;
+  bookmark: BookmarkMetadataReadModel;
   send: SendMetadataRequest;
   signal?: AbortSignal;
 }): Promise<BookmarkModalValues> {
@@ -156,7 +170,7 @@ export async function loadBookmarkMetadataValues(options: {
 }
 
 export async function loadBookmarkMetadataDraft(options: {
-  bookmark: BookmarkRecord;
+  bookmark: BookmarkMetadataReadModel;
   send: SendMetadataRequest;
   signal?: AbortSignal;
 }): Promise<{ values: BookmarkModalValues; choices: BookmarkModalChoices }> {
@@ -171,102 +185,20 @@ export async function loadBookmarkMetadataDraft(options: {
   return {
     values: {
       description: options.bookmark.note,
-      folder: folderPathFor(options.bookmark.folderId, folderData.folders),
+      folder: folderTokenFor(options.bookmark.folderId, folderData.folders),
       tags: options.bookmark.tagIds
-        .map((id) => tagsById.get(id)?.name)
-        .filter((name): name is string => typeof name === "string")
-        .join(", "),
+        .map((id) => tagsById.get(id))
+        .filter((tag): tag is NonNullable<typeof tag> => tag !== undefined)
+        .map((tag) => ({ id: tag.id, name: tag.name })),
     },
     choices: {
-      folders: folderData.folders.map((folder) =>
-        folderPathFor(folder.id, folderData.folders),
-      ),
-      tags: tagData.tags.map((tag) => tag.name),
+      folders: folderData.folders.flatMap((folder) => {
+        const token = folderTokenFor(folder.id, folderData.folders);
+        return token ? [{ ...token, id: folder.id }] : [];
+      }),
+      tags: tagData.tags.map((tag) => ({ id: tag.id, name: tag.name })),
     },
   };
-}
-
-async function reconcileTags(
-  options: SaveBookmarkMetadataOptions,
-  names: string[],
-): Promise<void> {
-  const [tagData, bookmarkData] = await Promise.all([
-    sendChecked<unknown>(options.send, { type: "LIST_TAGS" }, options.signal),
-    sendChecked<unknown>(
-      options.send,
-      { type: "GET_BOOKMARK", payload: { id: options.bookmark.id } },
-      options.signal,
-    ),
-  ]);
-  if (!isTagListResult(tagData)) throw new Error("Invalid tag response.");
-  if (!isCurrentBookmarkResult(bookmarkData, options.bookmark.id)) {
-    throw new Error("Invalid bookmark response.");
-  }
-  const byId = new Map(tagData.tags.map((tag) => [tag.id, tag]));
-  const assigned = bookmarkData.bookmark.tagIds
-    .map((id) => byId.get(id))
-    .filter((tag): tag is BookmarkTag => tag !== undefined);
-  const desired = new Map(names.map((name) => [comparableName(name), name]));
-
-  for (const tag of assigned) {
-    if (!desired.has(comparableName(tag.normalizedName || tag.name))) {
-      await sendChecked(
-        options.send,
-        {
-          type: "REMOVE_BOOKMARK_TAG",
-          payload: { id: options.bookmark.id, tagId: tag.id },
-        },
-        options.signal,
-      );
-    }
-  }
-  const assignedNames = new Set(
-    assigned.map((tag) => comparableName(tag.normalizedName || tag.name)),
-  );
-  for (const [normalized, name] of desired) {
-    if (!assignedNames.has(normalized)) {
-      await sendChecked(
-        options.send,
-        { type: "ADD_BOOKMARK_TAG", payload: { id: options.bookmark.id, name } },
-        options.signal,
-      );
-    }
-  }
-}
-
-async function resolveFolder(
-  options: SaveBookmarkMetadataOptions,
-  path: string[],
-): Promise<string | null> {
-  if (path.length === 0) return null;
-  const data = await sendChecked<unknown>(
-    options.send,
-    { type: "LIST_FOLDERS" },
-    options.signal,
-  );
-  if (!isFolderListResult(data)) throw new Error("Invalid folder response.");
-  const folders = [...data.folders];
-  let parentId: string | null = null;
-  for (const name of path) {
-    let folder = folders.find(
-      (candidate) =>
-        candidate.parentId === parentId &&
-        comparableName(candidate.name) === comparableName(name),
-    );
-    if (!folder) {
-      const created: FolderDetailResult = await sendChecked<FolderDetailResult>(
-        options.send,
-        { type: "CREATE_FOLDER", payload: { name, parentId } },
-        options.signal,
-      );
-      if (!created?.folder) throw new Error("Invalid folder response.");
-      const createdFolder: FolderRecord = created.folder;
-      folder = createdFolder;
-      folders.push(createdFolder);
-    }
-    parentId = folder.id;
-  }
-  return parentId;
 }
 
 export async function saveBookmarkMetadata(
@@ -277,18 +209,16 @@ export async function saveBookmarkMetadata(
   await sendChecked(
     options.send,
     {
-      type: "SAVE_BOOKMARK_NOTE",
-      payload: { id: options.bookmark.id, note: validated.note },
-    },
-    options.signal,
-  );
-  await reconcileTags(options, validated.tags);
-  const folderId = await resolveFolder(options, validated.folderPath);
-  await sendChecked(
-    options.send,
-    {
-      type: "ASSIGN_BOOKMARK_FOLDER",
-      payload: { bookmarkId: options.bookmark.id, folderId },
+      type: "SAVE_BOOKMARK_METADATA",
+      payload: {
+        id: options.bookmark.id,
+        note: validated.note,
+        tags: validated.tags,
+        folder: validated.folder,
+        ...(validated.organizationChanges === undefined
+          ? {}
+          : { organizationChanges: validated.organizationChanges }),
+      },
     },
     options.signal,
   );

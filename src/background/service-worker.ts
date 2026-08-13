@@ -10,10 +10,23 @@ import { LiveBookmarkStateRepository } from "../storage/live-bookmark-state";
 import { LOCALE_STORAGE_KEY, resolvePreferredLocale } from "../popup/i18n";
 import { ExportRepository } from "../storage/export-repository";
 import { BackgroundController } from "./controller";
-import type { ContentControlRequest } from "../shared/protocol";
-import { metadataRefreshRequest } from "./metadata-refresh";
+import { metadataRefreshAfterResponse } from "./metadata-refresh";
 import { SemanticIndexRepository } from "../semantic/semantic-index-repository";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
+import { createLocaleCatalogCache } from "./locale-catalog-cache";
+import { bookmarkMetadataMessagesFromCatalog } from "../shared/bookmark-metadata-messages";
+import { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
+import {
+  isGlobalSerializationBarrierAwareRead,
+  isGlobalSerializationBarrier,
+  KeyedTaskQueue,
+  messageSerializationKey,
+} from "./message-serialization";
+import { createMetadataRefreshBroadcaster } from "./metadata-refresh-broadcaster";
+import {
+  createLocaleRefreshBroadcaster,
+  isLocaleStorageChange,
+} from "./locale-refresh";
 
 const state = new ExtensionStateRepository({
   get: (keys) => chrome.storage.local.get(keys),
@@ -24,6 +37,7 @@ const archive = new ArchiveRepository();
 const bookmarks = new BookmarkRepository();
 const tags = new TagRepository();
 const folders = new FolderRepository();
+const metadata = new BookmarkMetadataRepository();
 const search = new SearchRepository();
 const semanticIndex = new SemanticIndexRepository();
 const semanticState = new SemanticStateRepository({
@@ -60,43 +74,13 @@ const backup = new BackupRepository("bookmark-x", {
   },
   settings,
 });
-const metadataMessageKeys = [
-  "bookmarkMetadataLabel",
-  "bookmarkMetadataMapped",
-  "bookmarkMetadataArchived",
-  "liveBookmarkPending",
-  "bookmarkNeedsCategory",
-  "bookmarkPromptFolder",
-  "bookmarkPromptTags",
-  "bookmarkPromptTagsHelp",
-  "bookmarkPromptNote",
-  "bookmarkPromptTitle",
-  "bookmarkPromptClose",
-  "bookmarkPromptSave",
-  "bookmarkMetadataOrganize",
-  "liveBookmarkSaved",
-  "liveBookmarkFailed",
-  "uncategorizedFolder",
-] as const;
-const localeMessageCache = new Map<string, Promise<Record<string, string>>>();
-
-function loadMetadataMessages(localeName: string): Promise<Record<string, string>> {
-  const cached = localeMessageCache.get(localeName);
-  if (cached) return cached;
-  const loading = fetch(
+const loadMetadataMessages = createLocaleCatalogCache(async (localeName) => {
+  const response = await fetch(
     chrome.runtime.getURL(`_locales/${localeName}/messages.json`),
-  ).then(async (response) => {
-    if (!response.ok) throw new Error("Could not load metadata translations.");
-    const catalog = (await response.json()) as Record<string, { message?: unknown }>;
-    return Object.fromEntries(
-      metadataMessageKeys.flatMap((key) =>
-        typeof catalog[key]?.message === "string" ? [[key, catalog[key].message]] : [],
-      ),
-    );
-  });
-  localeMessageCache.set(localeName, loading);
-  return loading;
-}
+  );
+  if (!response.ok) throw new Error("Could not load metadata translations.");
+  return bookmarkMetadataMessagesFromCatalog(await response.json());
+});
 
 const locale = {
   async get() {
@@ -119,6 +103,7 @@ const controller = new BackgroundController({
   bookmarks,
   tags,
   folders,
+  metadata,
   search,
   semantic,
   settings,
@@ -140,6 +125,12 @@ const controller = new BackgroundController({
     openSidePanel: (tabId) => chrome.sidePanel.open({ tabId }),
   },
 });
+const broadcastLocaleRefresh = createLocaleRefreshBroadcaster({
+  invalidateLocalization: () => controller.invalidateDecorationLocalization(),
+  loadLocalization: () => locale.get(),
+  queryTabs: () => chrome.tabs.query({}),
+  sendToTab: (tabId, request) => chrome.tabs.sendMessage(tabId, request),
+});
 
 async function restoreSurfacePreference(): Promise<void> {
   const current = await settings.get();
@@ -155,30 +146,37 @@ function scheduleSurfaceRestore(): void {
 scheduleSurfaceRestore();
 chrome.runtime.onInstalled.addListener(scheduleSurfaceRestore);
 chrome.runtime.onStartup.addListener(scheduleSurfaceRestore);
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (isLocaleStorageChange(changes, areaName, LOCALE_STORAGE_KEY)) {
+    void broadcastLocaleRefresh().catch(() => undefined);
+  }
+});
 
 void chrome.storage.local.setAccessLevel({
   accessLevel: "TRUSTED_CONTEXTS",
 });
 
-let messageQueue: Promise<void> = Promise.resolve();
-
-async function broadcastMetadataRefresh(request: ContentControlRequest): Promise<void> {
-  const tabs = await chrome.tabs.query({});
-  await Promise.allSettled(
-    tabs.flatMap((tab) =>
-      typeof tab.id === "number" ? [chrome.tabs.sendMessage(tab.id, request)] : [],
-    ),
-  );
-}
+const messageQueue = new KeyedTaskQueue();
+const broadcastMetadataRefresh = createMetadataRefreshBroadcaster({
+  queryTabs: () => chrome.tabs.query({}),
+  sendToTab: (tabId, request) => chrome.tabs.sendMessage(tabId, request),
+});
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  messageQueue = messageQueue
-    .then(async () => {
-      const response = await controller.handle(request, sender);
-      sendResponse(response);
-      const refresh = response.ok ? metadataRefreshRequest(request) : null;
-      if (refresh) void broadcastMetadataRefresh(refresh).catch(() => undefined);
-    })
+  void messageQueue
+    .run(
+      messageSerializationKey(request),
+      async () => {
+        const response = await controller.handle(request, sender);
+        sendResponse(response);
+        const refresh = metadataRefreshAfterResponse(request, response);
+        if (refresh) void broadcastMetadataRefresh(refresh).catch(() => undefined);
+      },
+      {
+        globalBarrier: isGlobalSerializationBarrier(request),
+        waitForGlobalBarrier: isGlobalSerializationBarrierAwareRead(request),
+      },
+    )
     .catch(() => {
       sendResponse({
         ok: false,

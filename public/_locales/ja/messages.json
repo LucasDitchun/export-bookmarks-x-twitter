@@ -403,15 +403,12 @@
   "bookmarkPromptClose": { "message": "閉じる" },
   "bookmarkPromptSave": { "message": "メモを保存" },
   "bookmarkPromptTags": { "message": "タグ" },
-  "bookmarkPromptTagsHelp": { "message": "複数のタグはカンマで区切ってください。" },
+  "bookmarkPromptTagsHelp": { "message": "タグごとに Enter キーを押してください。" },
   "bookmarkPromptFolder": { "message": "フォルダー" },
-  "bookmarkPromptChooseFolder": { "message": "既存のフォルダーを選択" },
-  "bookmarkPromptChooseTag": { "message": "既存のタグを選択" },
   "bookmarkPromptNote": { "message": "非公開メモ" },
   "bookmarkCategorized": { "message": "分類済み" },
   "bookmarkNeedsCategory": { "message": "要分類" },
   "bookmarkMetadataLabel": { "message": "Bookmark X に保存した投稿の詳細" },
-  "bookmarkMetadataMapped": { "message": "Bookmark X で整理済み" },
   "bookmarkMetadataArchived": { "message": "ローカルアーカイブに保存済み" },
   "liveBookmarkPending": { "message": "X の確認を待っています…" },
   "liveBookmarkSaved": {
@@ -497,11 +494,36 @@
     "message": "$NAME$、ブックマーク $COUNT$ 件",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "folderUsageLabelOne": {
+    "message": "$NAME$、ブックマーク $COUNT$ 件",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagUsageLabel": {
     "message": "$NAME$、ブックマーク $COUNT$ 件",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "tagUsageLabelOne": {
+    "message": "$NAME$、ブックマーク $COUNT$ 件",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagsManageHelp": { "message": "ブックマークを開いてタグを追加または削除します。" },
+  "organizationTrashTitle": { "message": "ゴミ箱" },
+  "organizationTrashHelp": {
+    "message": "削除したフォルダーとタグをブックマークとの関連付けごと復元します。"
+  },
+  "organizationTrashEmpty": { "message": "ゴミ箱は空です。" },
+  "organizationTrashError": { "message": "ゴミ箱を読み込めませんでした。" },
+  "organizationRestoring": { "message": "復元しています…" },
+  "organizationRestored": { "message": "復元しました。" },
+  "organizationRestoreError": { "message": "この項目を復元できませんでした。" },
+  "restoreTag": {
+    "message": "タグ「$NAME$」を復元",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "フォルダー「$NAME$」を復元",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "ライブラリに戻る" },
   "settingsViewHelp": { "message": "エクスポート、バックアップ、言語、環境設定。" }
 }

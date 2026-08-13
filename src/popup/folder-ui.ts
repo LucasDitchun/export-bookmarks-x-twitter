@@ -1,4 +1,8 @@
-import type { BookmarkRecord, FolderRecord } from "../domain/types";
+import type {
+  BookmarkFolderReadModel,
+  BookmarkRecord,
+  FolderRecord,
+} from "../domain/types";
 import { folderBreadcrumb, sortFolders } from "../domain/folder-tree";
 import type {
   BookmarkDetailResult,
@@ -8,6 +12,7 @@ import type {
   SendMessage,
 } from "./protocol";
 import type { Translator } from "./i18n";
+import { organizationUsageLabel } from "./organization-usage-label";
 import { createIconButton } from "../ui/icons";
 
 interface FolderUiOptions {
@@ -20,6 +25,7 @@ interface FolderUiOptions {
     usage: Readonly<Record<string, number>>,
   ) => void;
   onFolderSelected?: (folderPath: string) => void;
+  onTrashChanged?: () => void;
 }
 
 interface FolderElements {
@@ -70,20 +76,22 @@ function appendOption(
 
 export function createFolderUi(options: FolderUiOptions): {
   ready: Promise<void>;
-  setBookmark: (bookmark: BookmarkRecord | null) => void;
+  refresh: () => Promise<void>;
+  setBookmark: (bookmark: BookmarkFolderReadModel | null) => void;
 } {
   const {
     document,
     onBookmarkUpdated,
     onFoldersChanged,
     onFolderSelected,
+    onTrashChanged,
     sendMessage,
     translate,
   } = options;
   const elements = getElements(document);
   let folders: FolderRecord[] = [];
   let usage: Record<string, number> = {};
-  let bookmark: BookmarkRecord | null = null;
+  let bookmark: BookmarkFolderReadModel | null = null;
   let busy = false;
   let editingId: string | null = null;
   let deletingId: string | null = null;
@@ -267,7 +275,12 @@ export function createFolderUi(options: FolderUiOptions): {
       button.className = "organization-item";
       button.setAttribute(
         "aria-label",
-        translate("folderUsageLabel", [label, String(usage[folder.id] ?? 0)]),
+        organizationUsageLabel(
+          translate,
+          "folderUsageLabel",
+          label,
+          usage[folder.id] ?? 0,
+        ),
       );
       name.textContent = label;
       count.textContent = String(usage[folder.id] ?? 0);
@@ -329,16 +342,9 @@ export function createFolderUi(options: FolderUiOptions): {
       folders = folders.filter((folder) => !deleted.has(folder.id));
       for (const folderId of deleted) delete usage[folderId];
       onFoldersChanged?.(folders, usage);
-      if (
-        bookmark !== null &&
-        bookmark.folderId !== null &&
-        deleted.has(bookmark.folderId)
-      ) {
-        bookmark = { ...bookmark, folderId: null };
-        onBookmarkUpdated(bookmark);
-      }
       deletingId = null;
       setStatus("folderDeleted", "saved");
+      onTrashChanged?.();
     } catch {
       setStatus("folderActionError", "error");
     } finally {
@@ -362,8 +368,9 @@ export function createFolderUi(options: FolderUiOptions): {
         if (!response.ok || !response.data?.bookmark) {
           throw new Error("assignment failed");
         }
-        bookmark = response.data.bookmark;
-        onBookmarkUpdated(bookmark);
+        const updatedBookmark = response.data.bookmark;
+        bookmark = updatedBookmark;
+        onBookmarkUpdated(updatedBookmark);
         void refreshFolders();
         setStatus("folderSaved", "saved");
       })
@@ -425,6 +432,7 @@ export function createFolderUi(options: FolderUiOptions): {
   render();
   return {
     ready,
+    refresh: refreshFolders,
     setBookmark: (nextBookmark) => {
       bookmark = nextBookmark;
       render();

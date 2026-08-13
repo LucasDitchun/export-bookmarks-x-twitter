@@ -5,7 +5,11 @@ import { resolve } from "node:path";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BookmarkRecord, FolderRecord } from "../domain/types";
+import type {
+  BookmarkFolderReadModel,
+  BookmarkRecord,
+  FolderRecord,
+} from "../domain/types";
 import type { SendMessage } from "./protocol";
 import { createFolderUi } from "./folder-ui";
 
@@ -35,6 +39,11 @@ const bookmark: BookmarkRecord = {
   archivedAt: null,
   metadataUpdatedAt: "2026-01-02T00:00:00.000Z",
   status: "current",
+};
+
+const folderBookmark: BookmarkFolderReadModel = {
+  id: bookmark.id,
+  folderId: bookmark.folderId,
 };
 
 beforeEach(() => {
@@ -68,7 +77,7 @@ describe("folder UI", () => {
       onBookmarkUpdated,
     });
     await ui.ready;
-    ui.setBookmark(bookmark);
+    ui.setBookmark(folderBookmark);
 
     expect(document.getElementById("folder-breadcrumb-list")?.textContent).toBe(
       "ResearchAI",
@@ -125,7 +134,7 @@ describe("folder UI", () => {
           ok: true as const,
           data: {
             deletedFolderIds: ["ai", "models"],
-            uncategorizedBookmarkCount: 1,
+            preservedBookmarkCount: 1,
           },
         });
       }
@@ -138,7 +147,7 @@ describe("folder UI", () => {
       onBookmarkUpdated: vi.fn(),
     });
     await ui.ready;
-    ui.setBookmark(bookmark);
+    ui.setBookmark(folderBookmark);
 
     const name = document.getElementById("folder-name") as HTMLInputElement;
     const parent = document.getElementById("folder-parent") as HTMLSelectElement;

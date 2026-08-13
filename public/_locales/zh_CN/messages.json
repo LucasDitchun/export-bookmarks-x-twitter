@@ -381,15 +381,12 @@
   "bookmarkPromptClose": { "message": "关闭" },
   "bookmarkPromptSave": { "message": "保存笔记" },
   "bookmarkPromptTags": { "message": "标签" },
-  "bookmarkPromptTagsHelp": { "message": "多个标签请用逗号分隔。" },
+  "bookmarkPromptTagsHelp": { "message": "输入每个标签后按 Enter 键。" },
   "bookmarkPromptFolder": { "message": "文件夹" },
-  "bookmarkPromptChooseFolder": { "message": "选择现有文件夹" },
-  "bookmarkPromptChooseTag": { "message": "选择现有标签" },
   "bookmarkPromptNote": { "message": "私人笔记" },
   "bookmarkCategorized": { "message": "已分类" },
   "bookmarkNeedsCategory": { "message": "待分类" },
   "bookmarkMetadataLabel": { "message": "Bookmark X 已保存帖子的详细信息" },
-  "bookmarkMetadataMapped": { "message": "已由 Bookmark X 整理" },
   "bookmarkMetadataArchived": { "message": "已在本地归档" },
   "liveBookmarkPending": { "message": "正在等待 X 确认…" },
   "liveBookmarkSaved": { "message": "已保存到本地。可添加备注、文件夹或标签。" },
@@ -455,11 +452,36 @@
     "message": "$NAME$，$COUNT$ 个书签",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "folderUsageLabelOne": {
+    "message": "$NAME$，$COUNT$ 个书签",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagUsageLabel": {
     "message": "$NAME$，$COUNT$ 个书签",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "tagUsageLabelOne": {
+    "message": "$NAME$，$COUNT$ 个书签",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagsManageHelp": { "message": "打开一个书签以添加或移除标签。" },
+  "organizationTrashTitle": { "message": "回收站" },
+  "organizationTrashHelp": {
+    "message": "恢复已删除的文件夹和标签，并保留它们与书签的关联。"
+  },
+  "organizationTrashEmpty": { "message": "回收站为空。" },
+  "organizationTrashError": { "message": "无法加载回收站。" },
+  "organizationRestoring": { "message": "正在恢复…" },
+  "organizationRestored": { "message": "已恢复。" },
+  "organizationRestoreError": { "message": "无法恢复此项目。" },
+  "restoreTag": {
+    "message": "恢复标签 $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "恢复文件夹 $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "返回收藏库" },
   "settingsViewHelp": { "message": "导出、备份、语言和偏好设置。" }
 }

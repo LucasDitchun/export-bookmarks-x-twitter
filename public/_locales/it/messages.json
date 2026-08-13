@@ -401,15 +401,12 @@
   "bookmarkPromptClose": { "message": "Chiudi" },
   "bookmarkPromptSave": { "message": "Salva nota" },
   "bookmarkPromptTags": { "message": "Tag" },
-  "bookmarkPromptTagsHelp": { "message": "Separa più tag con le virgole." },
+  "bookmarkPromptTagsHelp": { "message": "Premi Invio dopo ogni tag." },
   "bookmarkPromptFolder": { "message": "Cartella" },
-  "bookmarkPromptChooseFolder": { "message": "Scegli una cartella esistente" },
-  "bookmarkPromptChooseTag": { "message": "Scegli un tag esistente" },
   "bookmarkPromptNote": { "message": "Nota privata" },
   "bookmarkCategorized": { "message": "Categorizzato" },
   "bookmarkNeedsCategory": { "message": "Da categorizzare" },
   "bookmarkMetadataLabel": { "message": "Dettagli del post salvato in Bookmark X" },
-  "bookmarkMetadataMapped": { "message": "Organizzato con Bookmark X" },
   "bookmarkMetadataArchived": { "message": "Archiviato localmente" },
   "liveBookmarkPending": { "message": "In attesa della conferma di X…" },
   "liveBookmarkSaved": {
@@ -491,11 +488,38 @@
     "message": "$NAME$, $COUNT$ segnalibri",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "folderUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ segnalibro",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagUsageLabel": {
     "message": "$NAME$, $COUNT$ segnalibri",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "tagUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ segnalibro",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagsManageHelp": { "message": "Apri un segnalibro per aggiungere o rimuovere tag." },
+  "organizationTrashTitle": { "message": "Cestino" },
+  "organizationTrashHelp": {
+    "message": "Ripristina cartelle e tag eliminati con le relative associazioni ai segnalibri."
+  },
+  "organizationTrashEmpty": { "message": "Il cestino è vuoto." },
+  "organizationTrashError": { "message": "Impossibile caricare il cestino." },
+  "organizationRestoring": { "message": "Ripristino…" },
+  "organizationRestored": { "message": "Ripristinato." },
+  "organizationRestoreError": {
+    "message": "Impossibile ripristinare questo elemento."
+  },
+  "restoreTag": {
+    "message": "Ripristina tag $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "Ripristina cartella $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "Torna alla raccolta" },
   "settingsViewHelp": { "message": "Esportazione, backup, lingua e preferenze." }
 }

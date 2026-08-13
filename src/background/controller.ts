@@ -12,6 +12,7 @@ import {
   type BookmarkRecord,
   type BookmarkSnapshot,
   type FolderRecord,
+  type SaveBookmarkMetadataInput,
   type ScrapeRun,
   type SupportedLocale,
 } from "../domain/types";
@@ -35,6 +36,7 @@ import type {
   LiveBookmarkEvent,
 } from "../shared/protocol";
 import { BookmarkXError } from "../shared/errors";
+import type { BookmarkMetadataMessages } from "../shared/bookmark-metadata-messages";
 import {
   isSettingsPatch,
   type ExtensionSettings,
@@ -42,11 +44,22 @@ import {
   type SettingsPatch,
 } from "../settings/settings-repository";
 import type { ArchiveRepository } from "../storage/archive-repository";
+import type { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
 import type { ExtensionStateRepository } from "../storage/extension-state";
 import {
   BackupSettingsWriteError,
   type BackupRepository,
 } from "../storage/backup-repository";
+import {
+  isBookmarkId,
+  isBookmarksUrl,
+  isFolderName,
+  isLocalEntityId,
+  isRecord,
+  isTagName,
+  isXUrl,
+} from "./request-guards";
+import { isOrganizationRequest, OrganizationRouter } from "./organization-router";
 
 interface ActiveTab {
   id: number;
@@ -65,6 +78,24 @@ interface MessageSender {
   id?: string | undefined;
   url?: string | undefined;
   tab?: { id?: number | undefined; url?: string | undefined } | undefined;
+}
+
+class AsyncSnapshot<T> {
+  private current: Promise<T> | null = null;
+
+  get(load: () => Promise<T>): Promise<T> {
+    if (this.current) return this.current;
+    const loading = load();
+    this.current = loading;
+    void loading.catch(() => {
+      if (this.current === loading) this.current = null;
+    });
+    return loading;
+  }
+
+  invalidate(): void {
+    this.current = null;
+  }
 }
 
 interface BackgroundDependencies {
@@ -99,6 +130,7 @@ interface BackgroundDependencies {
     getMany(ids: string[]): Promise<BookmarkRecord[]>;
     saveNote(id: string, note: string): Promise<unknown>;
   };
+  metadata: Pick<BookmarkMetadataRepository, "save">;
   search: {
     search(options: {
       query: string;
@@ -114,18 +146,22 @@ interface BackgroundDependencies {
   };
   tags: {
     list(): Promise<unknown>;
+    listDeleted(): Promise<unknown>;
     usage?(): Promise<Record<string, number>>;
     add(bookmarkId: string, name: string): Promise<unknown>;
     remove(bookmarkId: string, tagId: string): Promise<unknown>;
     rename(id: string, name: string): Promise<unknown>;
     delete(id: string): Promise<unknown>;
+    restore(id: string): Promise<unknown>;
   };
   folders: {
     list(): Promise<unknown>;
+    listDeleted(): Promise<unknown>;
     usage?(): Promise<Record<string, number>>;
     create(input: { name: string; parentId: string | null }): Promise<unknown>;
     rename(id: string, name: string): Promise<unknown>;
     delete(id: string): Promise<unknown>;
+    restore(id: string): Promise<unknown>;
     assignBookmark(bookmarkId: string, folderId: string | null): Promise<unknown>;
   };
   settings: {
@@ -135,7 +171,7 @@ interface BackgroundDependencies {
   locale: {
     get(): Promise<{
       locale: SupportedLocale;
-      messages: Record<string, string>;
+      messages: BookmarkMetadataMessages;
     }>;
   };
   backup: Pick<BackupRepository, "export" | "restore">;
@@ -147,18 +183,6 @@ interface BackgroundDependencies {
   extensionId: string;
   now?: () => Date;
   createId?: () => string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isBookmarkId(value: unknown): value is string {
-  return typeof value === "string" && /^\d+$/.test(value);
-}
-
-function isLocalEntityId(value: unknown): value is string {
-  return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 }
 
 function collectCheckpointCandidates(
@@ -199,43 +223,42 @@ function collectCheckpointMatches(
   return matches;
 }
 
-function isFolderName(value: unknown): value is string {
-  const hasControlCharacters =
-    typeof value === "string" &&
-    Array.from(value).some((character) => {
-      const codePoint = character.codePointAt(0) ?? 0;
-      return codePoint <= 31 || codePoint === 127;
-    });
+function isSaveBookmarkMetadataInput(
+  value: unknown,
+): value is SaveBookmarkMetadataInput {
+  const isTagSelection = (tag: unknown): boolean =>
+    isRecord(tag) &&
+    (tag.id === null || isLocalEntityId(tag.id)) &&
+    isTagName(tag.name);
+  const isFolderSelection = (folder: unknown): boolean =>
+    folder === null ||
+    (isRecord(folder) &&
+      (folder.id === null || isLocalEntityId(folder.id)) &&
+      Array.isArray(folder.path) &&
+      folder.path.length <= 32 &&
+      folder.path.every(isFolderName) &&
+      (folder.newSegments === undefined ||
+        (folder.id !== null &&
+          Array.isArray(folder.newSegments) &&
+          folder.newSegments.length <= 32 &&
+          folder.newSegments.every(isFolderName))));
   return (
-    typeof value === "string" &&
-    value.trim().length >= 1 &&
-    value.trim().length <= 100 &&
-    !hasControlCharacters
+    isRecord(value) &&
+    isBookmarkId(value.id) &&
+    typeof value.note === "string" &&
+    value.note.length <= 20_000 &&
+    Array.isArray(value.tags) &&
+    value.tags.length <= 50 &&
+    value.tags.every(isTagSelection) &&
+    isFolderSelection(value.folder) &&
+    (value.organizationChanges === undefined ||
+      (isRecord(value.organizationChanges) &&
+        typeof value.organizationChanges.tags === "boolean" &&
+        typeof value.organizationChanges.folder === "boolean"))
   );
 }
 
-export function isBookmarksUrl(value: string | undefined): boolean {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    return (
-      (url.hostname === "x.com" || url.hostname === "www.x.com") &&
-      (url.pathname === "/i/bookmarks" || url.pathname.startsWith("/i/bookmarks/"))
-    );
-  } catch {
-    return false;
-  }
-}
-
-export function isXUrl(value: string | undefined): boolean {
-  if (!value) return false;
-  try {
-    const hostname = new URL(value).hostname;
-    return hostname === "x.com" || hostname === "www.x.com";
-  } catch {
-    return false;
-  }
-}
+export { isBookmarksUrl, isXUrl } from "./request-guards";
 
 function isUiRequest(value: unknown): value is UiRequest {
   if (!isRecord(value) || typeof value.type !== "string") return false;
@@ -249,6 +272,7 @@ function isUiRequest(value: unknown): value is UiRequest {
     value.type === "CLEAR_ARCHIVE" ||
     value.type === "EXPORT_BACKUP" ||
     value.type === "LIST_TAGS" ||
+    value.type === "LIST_ORGANIZATION_TRASH" ||
     value.type === "LIST_FOLDERS"
   ) {
     return true;
@@ -319,6 +343,9 @@ function isUiRequest(value: unknown): value is UiRequest {
       value.payload.note.length <= 20_000
     );
   }
+  if (value.type === "SAVE_BOOKMARK_METADATA") {
+    return isSaveBookmarkMetadataInput(value.payload);
+  }
   if (value.type === "ADD_BOOKMARK_TAG") {
     return (
       isRecord(value.payload) &&
@@ -345,7 +372,7 @@ function isUiRequest(value: unknown): value is UiRequest {
       value.payload.name.trim().normalize("NFKC").length <= 50
     );
   }
-  if (value.type === "DELETE_TAG") {
+  if (value.type === "DELETE_TAG" || value.type === "RESTORE_TAG") {
     return isRecord(value.payload) && isLocalEntityId(value.payload.id);
   }
   if (value.type === "CREATE_FOLDER") {
@@ -362,7 +389,7 @@ function isUiRequest(value: unknown): value is UiRequest {
       isFolderName(value.payload.name)
     );
   }
-  if (value.type === "DELETE_FOLDER") {
+  if (value.type === "DELETE_FOLDER" || value.type === "RESTORE_FOLDER") {
     return isRecord(value.payload) && isLocalEntityId(value.payload.id);
   }
   if (value.type === "ASSIGN_BOOKMARK_FOLDER") {
@@ -539,10 +566,56 @@ function exportFields(settings: ExtensionSettings): BookmarkExportFields {
 export class BackgroundController {
   private readonly now: () => Date;
   private readonly createId: () => string;
+  private readonly decorationOrganization = new AsyncSnapshot<{
+    tags: BookmarkTag[];
+    folders: FolderRecord[];
+  }>();
+  private readonly decorationSettings = new AsyncSnapshot<ExtensionSettings>();
+  private readonly decorationLocalization = new AsyncSnapshot<{
+    locale: SupportedLocale;
+    messages: BookmarkMetadataMessages;
+  }>();
+  private readonly organization: OrganizationRouter;
 
   constructor(private readonly dependencies: BackgroundDependencies) {
     this.now = dependencies.now ?? (() => new Date());
     this.createId = dependencies.createId ?? (() => crypto.randomUUID());
+    this.organization = new OrganizationRouter({
+      tags: dependencies.tags,
+      folders: dependencies.folders,
+      invalidateSearch: () => dependencies.search.invalidate(),
+      invalidateDecorationOrganization: () => this.invalidateDecorationOrganization(),
+    });
+  }
+
+  invalidateDecorationLocalization(): void {
+    this.decorationLocalization.invalidate();
+  }
+
+  private invalidateDecorationOrganization(): void {
+    this.decorationOrganization.invalidate();
+  }
+
+  private invalidateAllDecorationContext(): void {
+    this.invalidateDecorationOrganization();
+    this.decorationSettings.invalidate();
+    this.invalidateDecorationLocalization();
+  }
+
+  private getDecorationOrganization(): Promise<{
+    tags: BookmarkTag[];
+    folders: FolderRecord[];
+  }> {
+    return this.decorationOrganization.get(async () => {
+      const [rawTags, rawFolders] = await Promise.all([
+        this.dependencies.tags.list(),
+        this.dependencies.folders.list(),
+      ]);
+      return {
+        tags: rawTags as BookmarkTag[],
+        folders: rawFolders as FolderRecord[],
+      };
+    });
   }
 
   async handle(
@@ -559,6 +632,9 @@ export class BackgroundController {
     }
 
     try {
+      if (isOrganizationRequest(request)) {
+        return success(await this.organization.handle(request));
+      }
       switch (request.type) {
         case "GET_STATUS":
           return success(await this.getStatus());
@@ -570,7 +646,14 @@ export class BackgroundController {
           const settings = await this.dependencies.settings.save(
             request.payload.settings,
           );
-          await this.dependencies.browser.configureSurface(settings.behavior.surface);
+          this.decorationSettings.invalidate();
+          try {
+            await this.dependencies.browser.configureSurface(settings.behavior.surface);
+          } catch {
+            // Settings are already committed. Chrome reapplies the canonical
+            // surface on startup; this disposable UI effect must not make the
+            // save look retryable or suppress metadata refresh broadcasts.
+          }
           return success({ settings });
         }
         case "OPEN_SELECTED_SURFACE": {
@@ -621,16 +704,13 @@ export class BackgroundController {
           });
         case "GET_BOOKMARK_DECORATIONS": {
           const ids = [...new Set(request.payload.ids)];
-          const [bookmarks, rawTags, rawFolders, settings, localization] =
-            await Promise.all([
-              this.dependencies.bookmarks.getMany(ids),
-              this.dependencies.tags.list(),
-              this.dependencies.folders.list(),
-              this.dependencies.settings.get(),
-              this.dependencies.locale.get(),
-            ]);
-          const tags = rawTags as BookmarkTag[];
-          const folders = rawFolders as FolderRecord[];
+          const [bookmarks, organization, settings, localization] = await Promise.all([
+            this.dependencies.bookmarks.getMany(ids),
+            this.getDecorationOrganization(),
+            this.decorationSettings.get(() => this.dependencies.settings.get()),
+            this.decorationLocalization.get(() => this.dependencies.locale.get()),
+          ]);
+          const { tags, folders } = organization;
           const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
           return success({
             ...localization,
@@ -654,72 +734,9 @@ export class BackgroundController {
           this.dependencies.search.invalidate();
           return success({ bookmark });
         }
-        case "LIST_TAGS": {
-          const [tags, usage] = await Promise.all([
-            this.dependencies.tags.list(),
-            this.dependencies.tags.usage?.() ?? Promise.resolve({}),
-          ]);
-          return success({ tags, usage });
-        }
-        case "ADD_BOOKMARK_TAG": {
-          const result = await this.dependencies.tags.add(
-            request.payload.id,
-            request.payload.name,
-          );
-          this.dependencies.search.invalidate();
-          return success(result);
-        }
-        case "REMOVE_BOOKMARK_TAG": {
-          const bookmark = await this.dependencies.tags.remove(
-            request.payload.id,
-            request.payload.tagId,
-          );
-          this.dependencies.search.invalidate();
-          return success({ bookmark });
-        }
-        case "RENAME_TAG": {
-          const tag = await this.dependencies.tags.rename(
-            request.payload.id,
-            request.payload.name,
-          );
-          this.dependencies.search.invalidate();
-          return success({ tag });
-        }
-        case "DELETE_TAG": {
-          const result = await this.dependencies.tags.delete(request.payload.id);
-          this.dependencies.search.invalidate();
-          return success(result);
-        }
-        case "LIST_FOLDERS": {
-          const [folders, usage] = await Promise.all([
-            this.dependencies.folders.list(),
-            this.dependencies.folders.usage?.() ?? Promise.resolve({}),
-          ]);
-          return success({ folders, usage });
-        }
-        case "CREATE_FOLDER": {
-          const folder = await this.dependencies.folders.create(request.payload);
-          this.dependencies.search.invalidate();
-          return success({ folder });
-        }
-        case "RENAME_FOLDER": {
-          const folder = await this.dependencies.folders.rename(
-            request.payload.id,
-            request.payload.name,
-          );
-          this.dependencies.search.invalidate();
-          return success({ folder });
-        }
-        case "DELETE_FOLDER": {
-          const result = await this.dependencies.folders.delete(request.payload.id);
-          this.dependencies.search.invalidate();
-          return success(result);
-        }
-        case "ASSIGN_BOOKMARK_FOLDER": {
-          const bookmark = await this.dependencies.folders.assignBookmark(
-            request.payload.bookmarkId,
-            request.payload.folderId,
-          );
+        case "SAVE_BOOKMARK_METADATA": {
+          const bookmark = await this.dependencies.metadata.save(request.payload);
+          this.invalidateDecorationOrganization();
           this.dependencies.search.invalidate();
           return success({ bookmark });
         }
@@ -738,6 +755,7 @@ export class BackgroundController {
             this.dependencies.state.clearScrapeCheckpoints(),
           ]);
           this.dependencies.search.invalidate();
+          this.invalidateAllDecorationContext();
           return success(null);
         case "EXPORT_BACKUP":
           return success(await this.dependencies.backup.export());
@@ -754,6 +772,7 @@ export class BackgroundController {
               request.payload.content,
               request.payload.mode,
             );
+            this.invalidateAllDecorationContext();
             this.dependencies.search.invalidate();
             await Promise.all([
               this.dependencies.state.clearScrapeRun(),
@@ -772,6 +791,7 @@ export class BackgroundController {
             return success(restored);
           } catch (error) {
             if (error instanceof BackupSettingsWriteError) {
+              this.invalidateAllDecorationContext();
               this.dependencies.search.invalidate();
               await Promise.all([
                 this.dependencies.state.clearScrapeRun(),
@@ -1090,7 +1110,16 @@ export class BackgroundController {
         const surface = settings.behavior.surface;
         const opened = prompt && surface === "sidePanel";
         if (opened) await this.dependencies.browser.openSidePanel(tabId);
-        return success({ prompt, surface, opened });
+        const localization =
+          prompt && surface === "modal"
+            ? await this.dependencies.locale.get().catch(() => undefined)
+            : undefined;
+        return success({
+          prompt,
+          surface,
+          opened,
+          ...(localization && { localization }),
+        });
       }
 
       const pending = await this.dependencies.liveState.get(tabId, event.intentId);

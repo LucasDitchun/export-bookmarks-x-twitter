@@ -10,13 +10,26 @@ export interface BookmarkModalLabels {
 
 export interface BookmarkModalValues {
   description: string;
-  folder: string;
-  tags: string;
+  folder: BookmarkModalFolderToken | null;
+  tags: BookmarkModalTagToken[];
+  organizationChanges?: { tags: boolean; folder: boolean };
+}
+
+export interface BookmarkModalTagToken {
+  id: string | null;
+  name: string;
+}
+
+export interface BookmarkModalFolderToken {
+  id: string | null;
+  path: string[];
+  /** Segments to create below an existing ID-backed folder. */
+  newSegments?: string[];
 }
 
 export interface BookmarkModalChoices {
-  folders: string[];
-  tags: string[];
+  folders: Array<BookmarkModalFolderToken & { id: string }>;
+  tags: Array<BookmarkModalTagToken & { id: string }>;
 }
 
 export interface BookmarkModalOptions {
@@ -36,6 +49,7 @@ export interface BookmarkModalController {
   destroy(): void;
   setValues(values: Partial<BookmarkModalValues>): void;
   setChoices(choices: Partial<BookmarkModalChoices>): void;
+  setLabels(labels: { title: string; labels: BookmarkModalLabels }): void;
   setState(state: "pending" | "ready" | "success" | "error", message: string): void;
 }
 
@@ -119,6 +133,17 @@ const MODAL_STYLES = `
   }
   .metadata-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .field { min-width: 0; }
+  .tokens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+  .token {
+    align-items: center;
+    background: var(--modal-subtle);
+    border: 1px solid var(--modal-line);
+    color: var(--modal-text);
+    display: inline-flex;
+    font-size: 0.75rem;
+    min-height: 30px;
+    padding: 5px 9px;
+  }
   input, select, textarea {
     background: var(--modal-bg);
     border: 1px solid var(--modal-line);
@@ -260,26 +285,33 @@ export function createBookmarkModal(
     metadataGrid,
     "bookmark-x-modal-tags",
     options.labels.tags,
-    options.values?.tags ?? "",
+    "",
   );
+  const tagsFieldLabel = tags.parentElement?.querySelector("label");
+  const selectedTagList = document.createElement("div");
+  selectedTagList.className = "tokens";
+  tags.parentElement?.append(selectedTagList);
   const tagChoices = document.createElement("datalist");
   tagChoices.id = "bookmark-x-modal-tag-choices";
   tags.setAttribute("list", tagChoices.id);
-  if (options.labels.tagsHelp) {
-    const tagsHelp = document.createElement("p");
-    tagsHelp.className = "field-help";
-    tagsHelp.id = "bookmark-x-modal-tags-help";
-    tagsHelp.textContent = options.labels.tagsHelp;
-    tags.setAttribute("aria-describedby", tagsHelp.id);
-    tags.parentElement?.append(tagsHelp);
-  }
+  const tagsHelp = document.createElement("p");
+  tagsHelp.className = "field-help";
+  tagsHelp.id = "bookmark-x-modal-tags-help";
+  tagsHelp.textContent = options.labels.tagsHelp ?? "";
+  tagsHelp.hidden = !options.labels.tagsHelp;
+  tags.setAttribute("aria-describedby", tagsHelp.id);
+  tags.parentElement?.append(tagsHelp);
   const folder = appendLabelledInput(
     document,
     metadataGrid,
     "bookmark-x-modal-folder",
     options.labels.folder,
-    options.values?.folder ?? "",
+    "",
   );
+  const folderFieldLabel = folder.parentElement?.querySelector("label");
+  const selectedFolderList = document.createElement("div");
+  selectedFolderList.className = "tokens folder-tokens";
+  folder.parentElement?.append(selectedFolderList);
   const folderChoices = document.createElement("datalist");
   folderChoices.id = "bookmark-x-modal-folder-choices";
   folder.setAttribute("list", folderChoices.id);
@@ -295,6 +327,97 @@ export function createBookmarkModal(
   document.body.append(host);
 
   let returnFocus: HTMLElement | null = null;
+  let selectedTags = [...(options.values?.tags ?? [])];
+  let selectedFolder = options.values?.folder ?? null;
+  let tagsChanged = false;
+  let folderChanged = false;
+  let availableTags: BookmarkModalChoices["tags"] = [];
+  let availableFolders: BookmarkModalChoices["folders"] = [];
+
+  const comparable = (value: string): string =>
+    value.trim().normalize("NFKC").toLocaleLowerCase("und");
+  const formatFolderLabel = (value: BookmarkModalFolderToken): string =>
+    value.path.join(" / ");
+  const renderSelectedFolder = (): void => {
+    selectedFolderList.replaceChildren();
+    if (!selectedFolder) return;
+    const token = document.createElement("button");
+    token.className = "token folder-token";
+    token.type = "button";
+    token.textContent = `${formatFolderLabel(selectedFolder)} ×`;
+    token.setAttribute("aria-label", `Remove ${formatFolderLabel(selectedFolder)}`);
+    token.addEventListener("click", () => {
+      selectedFolder = null;
+      folderChanged = true;
+      renderSelectedFolder();
+      folder.focus();
+    });
+    selectedFolderList.append(token);
+  };
+  const renderSelectedTags = (): void => {
+    selectedTagList.replaceChildren(
+      ...selectedTags.map((tag) => {
+        const token = document.createElement("button");
+        token.className = "token";
+        token.type = "button";
+        token.textContent = `${tag.name} ×`;
+        token.setAttribute("aria-label", `Remove ${tag.name}`);
+        token.addEventListener("click", () => {
+          selectedTags = selectedTags.filter((candidate) => candidate !== tag);
+          tagsChanged = true;
+          renderSelectedTags();
+          tags.focus();
+        });
+        return token;
+      }),
+    );
+  };
+  const addPendingTag = (): void => {
+    const name = tags.value.trim().normalize("NFKC");
+    if (!name) return;
+    const existing = availableTags.find(
+      (candidate) => comparable(candidate.name) === comparable(name),
+    );
+    const token: BookmarkModalTagToken = existing ?? { id: null, name };
+    if (
+      !selectedTags.some((candidate) => comparable(candidate.name) === comparable(name))
+    ) {
+      selectedTags = [...selectedTags, token];
+      tagsChanged = true;
+      renderSelectedTags();
+    }
+    tags.value = "";
+  };
+  const addPendingFolder = (): void => {
+    const label = folder.value.trim();
+    if (!label) return;
+    const existing = availableFolders.find(
+      (candidate) => formatFolderLabel(candidate) === label,
+    );
+    const baseFolderId = selectedFolder?.id ?? null;
+    selectedFolder = existing ?? {
+      id: baseFolderId,
+      path: [...(selectedFolder?.path ?? []), label],
+      ...(baseFolderId === null
+        ? {}
+        : { newSegments: [...(selectedFolder?.newSegments ?? []), label] }),
+    };
+    folderChanged = true;
+    folder.value = "";
+    renderSelectedFolder();
+  };
+  renderSelectedTags();
+  renderSelectedFolder();
+  tags.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    addPendingTag();
+  });
+  folder.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    addPendingFolder();
+  });
 
   const close = (): void => {
     if (host.hidden) return;
@@ -334,11 +457,14 @@ export function createBookmarkModal(
     if (submitting) return;
     submitting = true;
     saveButton.disabled = true;
+    addPendingTag();
+    addPendingFolder();
     void Promise.resolve(
       options.onSave?.({
         description: description.value,
-        folder: folder.value,
-        tags: tags.value,
+        folder: selectedFolder,
+        tags: [...selectedTags],
+        organizationChanges: { tags: tagsChanged, folder: folderChanged },
       }),
     )
       .then((saved) => {
@@ -360,26 +486,52 @@ export function createBookmarkModal(
     },
     close,
     setValues(values) {
-      if (values.tags !== undefined) tags.value = values.tags;
-      if (values.folder !== undefined) folder.value = values.folder;
+      if (values.tags !== undefined) {
+        selectedTags = [...values.tags];
+        tagsChanged = false;
+        tags.value = "";
+        renderSelectedTags();
+      }
+      if (values.folder !== undefined) {
+        selectedFolder = values.folder;
+        folderChanged = false;
+        folder.value = "";
+        renderSelectedFolder();
+      }
       if (values.description !== undefined) description.value = values.description;
     },
     setChoices(choices) {
-      const replaceOptions = (
+      const replaceOptions = <T>(
         target: HTMLDataListElement,
-        values: readonly string[] | undefined,
+        values: readonly T[] | undefined,
+        labelFor: (value: T) => string,
       ): void => {
         if (!values) return;
         target.replaceChildren(
-          ...[...new Set(values)].map((value) => {
+          ...[...new Set(values.map(labelFor))].map((value) => {
             const option = document.createElement("option");
             option.value = value;
             return option;
           }),
         );
       };
-      replaceOptions(tagChoices, choices.tags);
-      replaceOptions(folderChoices, choices.folders);
+      if (choices.tags) availableTags = [...choices.tags];
+      if (choices.folders) availableFolders = [...choices.folders];
+      replaceOptions(tagChoices, choices.tags, (choice) => choice.name);
+      replaceOptions(folderChoices, choices.folders, formatFolderLabel);
+    },
+    setLabels(next) {
+      title.textContent = next.title;
+      closeButton.textContent = next.labels.close;
+      descriptionLabel.textContent = next.labels.description;
+      if (tagsFieldLabel) tagsFieldLabel.textContent = next.labels.tags;
+      if (folderFieldLabel) folderFieldLabel.textContent = next.labels.folder;
+      tagsHelp.textContent = next.labels.tagsHelp ?? "";
+      tagsHelp.hidden = !next.labels.tagsHelp;
+      saveButton.textContent = next.labels.save;
+      if (status.dataset.state === "pending" && next.labels.pending) {
+        status.textContent = next.labels.pending;
+      }
     },
     setState(state, message) {
       status.dataset.state = state;

@@ -403,18 +403,13 @@
   "bookmarkPromptClose": { "message": "Schließen" },
   "bookmarkPromptSave": { "message": "Notiz speichern" },
   "bookmarkPromptTags": { "message": "Tags" },
-  "bookmarkPromptTagsHelp": { "message": "Trenne mehrere Tags durch Kommas." },
+  "bookmarkPromptTagsHelp": { "message": "Drücke nach jedem Tag die Eingabetaste." },
   "bookmarkPromptFolder": { "message": "Ordner" },
-  "bookmarkPromptChooseFolder": { "message": "Vorhandenen Ordner auswählen" },
-  "bookmarkPromptChooseTag": { "message": "Vorhandenen Tag auswählen" },
   "bookmarkPromptNote": { "message": "Private Notiz" },
   "bookmarkCategorized": { "message": "Kategorisiert" },
   "bookmarkNeedsCategory": { "message": "Kategorie fehlt" },
   "bookmarkMetadataLabel": {
     "message": "Details zum mit Bookmark X gespeicherten Beitrag"
-  },
-  "bookmarkMetadataMapped": {
-    "message": "Von Bookmark X in der lokalen Sammlung erfasst"
   },
   "bookmarkMetadataArchived": { "message": "Lokal archiviert" },
   "liveBookmarkPending": { "message": "Warten auf die Bestätigung von X…" },
@@ -501,12 +496,41 @@
     "message": "$NAME$, $COUNT$ Lesezeichen",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "folderUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ Lesezeichen",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagUsageLabel": {
+    "message": "$NAME$, $COUNT$ Lesezeichen",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabelOne": {
     "message": "$NAME$, $COUNT$ Lesezeichen",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": {
     "message": "Öffne ein Lesezeichen, um Tags hinzuzufügen oder zu entfernen."
+  },
+  "organizationTrashTitle": { "message": "Papierkorb" },
+  "organizationTrashHelp": {
+    "message": "Gelöschte Ordner und Tags mit ihren Lesezeichen-Zuordnungen wiederherstellen."
+  },
+  "organizationTrashEmpty": { "message": "Der Papierkorb ist leer." },
+  "organizationTrashError": {
+    "message": "Der Papierkorb konnte nicht geladen werden."
+  },
+  "organizationRestoring": { "message": "Wird wiederhergestellt…" },
+  "organizationRestored": { "message": "Wiederhergestellt." },
+  "organizationRestoreError": {
+    "message": "Dieses Element konnte nicht wiederhergestellt werden."
+  },
+  "restoreTag": {
+    "message": "Tag $NAME$ wiederherstellen",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "Ordner $NAME$ wiederherstellen",
+    "placeholders": { "name": { "content": "$1" } }
   },
   "backToLibrary": { "message": "Zurück zur Bibliothek" },
   "settingsViewHelp": { "message": "Export, Sicherung, Sprache und Einstellungen." }

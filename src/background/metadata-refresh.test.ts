@@ -12,6 +12,12 @@ describe("metadataRefreshRequest", () => {
     ).toEqual({ type: "REFRESH_BOOKMARK_METADATA", bookmarkIds: ["123"] });
     expect(
       metadataRefreshRequest({
+        type: "SAVE_BOOKMARK_METADATA",
+        payload: { id: "321", note: "", tags: [], folder: null },
+      }),
+    ).toEqual({ type: "REFRESH_BOOKMARK_METADATA", bookmarkIds: ["321"] });
+    expect(
+      metadataRefreshRequest({
         type: "ASSIGN_BOOKMARK_FOLDER",
         payload: { bookmarkId: "456", folderId: null },
       }),
@@ -38,6 +44,12 @@ describe("metadataRefreshRequest", () => {
       type: "REFRESH_BOOKMARK_METADATA",
     });
     expect(metadataRefreshRequest({ type: "DELETE_FOLDER" })).toEqual({
+      type: "REFRESH_BOOKMARK_METADATA",
+    });
+    expect(metadataRefreshRequest({ type: "RESTORE_TAG" })).toEqual({
+      type: "REFRESH_BOOKMARK_METADATA",
+    });
+    expect(metadataRefreshRequest({ type: "RESTORE_FOLDER" })).toEqual({
       type: "REFRESH_BOOKMARK_METADATA",
     });
   });

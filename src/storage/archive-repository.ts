@@ -5,6 +5,7 @@ import type {
   BookmarkRecord,
   BookmarkSnapshot,
   HydratedBookmarkRecord,
+  FolderRecord,
 } from "../domain/types";
 import type { LiveBookmarkAction } from "../shared/protocol";
 import { emptyBookmarkMedia, mergeBookmarkMedia } from "../domain/bookmark-media";
@@ -226,12 +227,16 @@ export class ArchiveRepository {
         >,
       ),
       requestAsPromise(
-        transaction.objectStore(FOLDERS_STORE).getAll() as IDBRequest<BookmarkFolder[]>,
+        transaction.objectStore(FOLDERS_STORE).getAll() as IDBRequest<FolderRecord[]>,
       ),
     ]);
     await transactionDone(transaction);
 
-    const foldersById = new Map(folders.map((folder) => [folder.id, folder]));
+    const foldersById = new Map(
+      folders
+        .filter((folder) => folder.deletedAt === undefined)
+        .map((folder) => [folder.id, folder]),
+    );
     const folderIdsByBookmark = new Map<string, Set<string>>();
     for (const { bookmarkId, folderId } of memberships) {
       const folderIds = folderIdsByBookmark.get(bookmarkId) ?? new Set<string>();
@@ -244,7 +249,8 @@ export class ArchiveRepository {
       if (bookmark.folderId !== null) folderIds.add(bookmark.folderId);
       const resolvedFolders = Array.from(folderIds)
         .map((folderId) => foldersById.get(folderId))
-        .filter((folder): folder is BookmarkFolder => folder !== undefined);
+        .filter((folder): folder is FolderRecord => folder !== undefined)
+        .map(({ id, name }) => ({ id, name }) satisfies BookmarkFolder);
       return { ...bookmark, folders: resolvedFolders };
     });
   }

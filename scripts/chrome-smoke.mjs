@@ -442,7 +442,11 @@ const metadataSetupScenario = String.raw`
         payload: { bookmarkId: "111", folderId: created.data.folder.id },
       })
     : null;
-  return { created, tagged, assigned };
+  const decorations = await chrome.runtime.sendMessage({
+    type: "GET_BOOKMARK_DECORATIONS",
+    payload: { ids: ["111"] },
+  });
+  return { created, tagged, assigned, decorations };
 })()
 `;
 
@@ -487,7 +491,14 @@ const metadataStateScenario = (expectedState) => String.raw`
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
-  return { state: "timeout", hosts: 0, text: "", role: null };
+  const hosts = Array.from(document.querySelectorAll("bookmark-x-metadata"));
+  const host = hosts[0] ?? null;
+  return {
+    state: host?.dataset.state ?? "timeout",
+    hosts: hosts.length,
+    text: host?.shadowRoot?.textContent ?? "",
+    role: host?.getAttribute("role") ?? null,
+  };
 })()
 `;
 
@@ -857,7 +868,7 @@ function assertScenario(
   const parsedBackup = backup.ok ? JSON.parse(backup.data.content) : null;
   if (
     !backup.ok ||
-    parsedBackup?.schemaVersion !== 2 ||
+    parsedBackup?.schemaVersion !== 3 ||
     parsedBackup?.data?.bookmarks?.length !== 3 ||
     parsedBackup?.data?.bookmarks?.[0]?.media === undefined ||
     parsedBackup?.data?.settings?.extension?.schemaVersion !== 2 ||
@@ -1305,7 +1316,13 @@ async function main() {
           mappedEvaluation.exceptionDetails.text,
       );
     }
-    assertMetadataCheckpoint(mappedEvaluation.result.value, "mapped", "Ordner:");
+    try {
+      assertMetadataCheckpoint(mappedEvaluation.result.value, "mapped", "Ordner:");
+    } catch (error) {
+      throw new Error(
+        `${error instanceof Error ? error.message : String(error)}; canonical=${JSON.stringify(metadataSetupEvaluation.result.value.decorations)}`,
+      );
+    }
     await captureVisualCheckpoint(pageDevTools, "metadata-mapped-de.png", {
       width: 760,
       height: 900,

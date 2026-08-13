@@ -329,15 +329,12 @@
   "bookmarkPromptClose": { "message": "Fechar" },
   "bookmarkPromptSave": { "message": "Salvar nota" },
   "bookmarkPromptTags": { "message": "Tags" },
-  "bookmarkPromptTagsHelp": { "message": "Separe várias tags com vírgulas." },
+  "bookmarkPromptTagsHelp": { "message": "Pressione Enter após cada tag." },
   "bookmarkPromptFolder": { "message": "Pasta" },
-  "bookmarkPromptChooseFolder": { "message": "Escolher pasta existente" },
-  "bookmarkPromptChooseTag": { "message": "Escolher tag existente" },
   "bookmarkPromptNote": { "message": "Nota privada" },
   "bookmarkCategorized": { "message": "Categorizado" },
   "bookmarkNeedsCategory": { "message": "Precisa de categoria" },
   "bookmarkMetadataLabel": { "message": "Detalhes da postagem salva no Bookmark X" },
-  "bookmarkMetadataMapped": { "message": "Mapeado pelo Bookmark X" },
   "bookmarkMetadataArchived": { "message": "Arquivado localmente" },
   "liveBookmarkPending": { "message": "Aguardando a confirmação do X…" },
   "liveBookmarkSaved": {
@@ -416,14 +413,39 @@
     "placeholders": { "folders": { "content": "$1" }, "tags": { "content": "$2" } }
   },
   "folderUsageLabel": {
-    "message": "$NAME$, $COUNT$ bookmarks",
+    "message": "$NAME$, $COUNT$ favoritos",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "folderUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ favorito",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagUsageLabel": {
-    "message": "$NAME$, $COUNT$ bookmarks",
+    "message": "$NAME$, $COUNT$ favoritos",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "tagUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ favorito",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
   "tagsManageHelp": { "message": "Abra um bookmark para adicionar ou remover tags." },
+  "organizationTrashTitle": { "message": "Lixeira" },
+  "organizationTrashHelp": {
+    "message": "Restaure pastas e tags excluídas com os vínculos dos bookmarks."
+  },
+  "organizationTrashEmpty": { "message": "A lixeira está vazia." },
+  "organizationTrashError": { "message": "Não foi possível carregar a lixeira." },
+  "organizationRestoring": { "message": "Restaurando…" },
+  "organizationRestored": { "message": "Restaurado." },
+  "organizationRestoreError": { "message": "Não foi possível restaurar este item." },
+  "restoreTag": {
+    "message": "Restaurar tag $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "Restaurar pasta $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
   "backToLibrary": { "message": "Voltar para a biblioteca" },
   "settingsViewHelp": {
     "message": "Exporte, faça backup, altere o idioma e as preferências."

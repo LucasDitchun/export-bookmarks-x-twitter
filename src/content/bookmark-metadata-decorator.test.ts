@@ -2,27 +2,20 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { BookmarkRecord } from "../domain/types";
+import type { BookmarkDecorationReadModel } from "../domain/types";
 import { DEFAULT_SETTINGS } from "../settings/settings-repository";
 import {
   startBookmarkMetadataDecorator,
   type BookmarkDecorationLookupResult,
 } from "./bookmark-metadata-decorator";
 
-const categorizedBookmark: BookmarkRecord = {
+const categorizedBookmark: BookmarkDecorationReadModel = {
   id: "123",
   text: "Useful post",
   url: "https://x.com/alice/status/123",
-  author: { id: "alice", username: "alice", name: "Alice" },
-  postCreatedAt: "2026-08-09T09:00:00.000Z",
-  media: { images: [], videos: [] },
   note: '<img src=x onerror="alert(1)">Keep this for the launch plan.',
   folderId: "folder-ai",
   tagIds: ["tag-ai", "tag-research"],
-  firstSavedAt: "2026-08-09T09:01:00.000Z",
-  lastSeenAt: "2026-08-09T09:01:00.000Z",
-  archivedAt: null,
-  metadataUpdatedAt: "2026-08-09T09:01:00.000Z",
   status: "current",
 };
 
@@ -63,6 +56,24 @@ function result(): BookmarkDecorationLookupResult {
   };
 }
 
+function resultForIds(
+  ids: readonly string[],
+  note: string,
+): BookmarkDecorationLookupResult {
+  return {
+    ...result(),
+    items: ids.map((id) => ({
+      ...result().items[0]!,
+      bookmark: {
+        ...categorizedBookmark,
+        id,
+        url: `https://x.com/alice/status/${id}`,
+        note,
+      },
+    })),
+  };
+}
+
 function uncategorizedResult(
   overrides: Partial<BookmarkDecorationLookupResult> = {},
 ): BookmarkDecorationLookupResult {
@@ -98,6 +109,52 @@ afterEach(() => {
 });
 
 describe("startBookmarkMetadataDecorator", () => {
+  it("waits for localized settings before rendering a pending bookmark", async () => {
+    const article = renderArticle("123");
+    let resolveLookup!: (value: BookmarkDecorationLookupResult) => void;
+    const lookupResult = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveLookup = resolve;
+    });
+    const lookup = vi.fn(() => lookupResult);
+    const decorator = startBookmarkMetadataDecorator({ document, lookup });
+
+    const pending = decorator.setPending(article, "123");
+    expect(article.querySelector("bookmark-x-metadata")).toBeNull();
+    resolveLookup(
+      uncategorizedResult({ messages: { liveBookmarkPending: "Salvando…" } }),
+    );
+    await pending;
+
+    const host = article.querySelector<HTMLElement>("bookmark-x-metadata");
+    expect(host?.dataset.state).toBe("pending");
+    expect(host?.shadowRoot?.textContent).toContain("Salvando…");
+    expect(host?.shadowRoot?.textContent).not.toContain("liveBookmarkPending");
+    decorator.stop();
+  });
+
+  it("does not render pending metadata when context fails or summary is disabled", async () => {
+    const failedArticle = renderArticle("123");
+    const failed = startBookmarkMetadataDecorator({
+      document,
+      lookup: async () => Promise.reject(new Error("temporary lookup failure")),
+    });
+    await failed.setPending(failedArticle, "123");
+    expect(failedArticle.querySelector("bookmark-x-metadata")).toBeNull();
+    failed.stop();
+
+    document.body.replaceChildren();
+    const hiddenArticle = renderArticle("123");
+    const settings = structuredClone(DEFAULT_SETTINGS);
+    settings.behavior.metadata.summary = false;
+    const hidden = startBookmarkMetadataDecorator({
+      document,
+      lookup: async () => uncategorizedResult({ settings }),
+    });
+    await hidden.setPending(hiddenArticle, "123");
+    expect(hiddenArticle.querySelector("bookmark-x-metadata")).toBeNull();
+    hidden.stop();
+  });
+
   it("injects safe, isolated metadata after the actions only for a local bookmark", async () => {
     const local = renderArticle("123");
     const unknown = renderArticle("999");
@@ -143,6 +200,369 @@ describe("startBookmarkMetadataDecorator", () => {
     decorator.stop();
   });
 
+  it("refreshes a targeted ID batch with one scan and skips IDs absent from the page", async () => {
+    renderArticle("123");
+    renderArticle("456");
+    const lookup = vi.fn(async () => result());
+    const decorator = startBookmarkMetadataDecorator({ document, lookup });
+    await settle();
+    lookup.mockClear();
+
+    decorator.refresh(["123", "999"]);
+
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledOnce());
+    expect(lookup).toHaveBeenCalledWith(["123"]);
+    decorator.stop();
+  });
+
+  it("rerenders every mounted bookmark after a targeted refresh and locale change", async () => {
+    const first = renderArticle("123");
+    const second = renderArticle("456");
+    let targeted = false;
+    const lookup = vi.fn(async (ids: string[]) => ({
+      ...resultForIds(ids, targeted ? "targeted" : "initial"),
+      messages: { bookmarkPromptFolder: "Folder" },
+    }));
+    const decorator = startBookmarkMetadataDecorator({ document, lookup });
+    await vi.waitFor(() =>
+      expect(document.querySelectorAll("bookmark-x-metadata")).toHaveLength(2),
+    );
+
+    targeted = true;
+    decorator.refresh("123");
+    await vi.waitFor(() => expect(lookup).toHaveBeenLastCalledWith(["123"]));
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { bookmarkPromptFolder: "Pasta" },
+    });
+
+    expect(
+      first.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+    ).toContain("Pasta");
+    expect(
+      second.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+    ).toContain("Pasta");
+    decorator.stop();
+  });
+
+  it("serializes disjoint targeted refreshes without dropping an in-flight result", async () => {
+    const first = renderArticle("123");
+    const second = renderArticle("456");
+    const frames: FrameRequestCallback[] = [];
+    let refreshStarted = false;
+    let resolveFirst!: (value: BookmarkDecorationLookupResult) => void;
+    const firstRefresh = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const lookup = vi.fn((ids: string[]) => {
+      if (refreshStarted && ids[0] === "123") return firstRefresh;
+      return Promise.resolve(
+        resultForIds(ids, refreshStarted ? `latest-${ids.join("-")}` : "initial"),
+      );
+    });
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup,
+      scheduleFrame(callback) {
+        frames.push(callback);
+        return frames.length;
+      },
+    });
+    frames.shift()?.(performance.now());
+    await vi.waitFor(() =>
+      expect(document.querySelectorAll("bookmark-x-metadata")).toHaveLength(2),
+    );
+    lookup.mockClear();
+    refreshStarted = true;
+
+    decorator.refresh("123");
+    frames.shift()?.(performance.now());
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledWith(["123"]));
+    decorator.refresh("456");
+    frames.shift()?.(performance.now());
+
+    expect(lookup).toHaveBeenCalledOnce();
+    resolveFirst(resultForIds(["123"], "latest-123"));
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => {
+      expect(
+        first.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+      ).toContain("latest-123");
+      expect(
+        second.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+      ).toContain("latest-456");
+    });
+    decorator.stop();
+  });
+
+  it("lets a queued full refresh dominate targeted work after the active lookup", async () => {
+    const first = renderArticle("123");
+    const second = renderArticle("456");
+    const frames: FrameRequestCallback[] = [];
+    let refreshStarted = false;
+    let resolveTargeted!: (value: BookmarkDecorationLookupResult) => void;
+    const targeted = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveTargeted = resolve;
+    });
+    const lookup = vi.fn((ids: string[]) => {
+      if (refreshStarted && ids.length === 1 && ids[0] === "123") return targeted;
+      return Promise.resolve(
+        resultForIds(ids, refreshStarted ? "full-latest" : "initial"),
+      );
+    });
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup,
+      scheduleFrame(callback) {
+        frames.push(callback);
+        return frames.length;
+      },
+    });
+    frames.shift()?.(performance.now());
+    await vi.waitFor(() =>
+      expect(document.querySelectorAll("bookmark-x-metadata")).toHaveLength(2),
+    );
+    lookup.mockClear();
+    refreshStarted = true;
+
+    decorator.refresh("123");
+    frames.shift()?.(performance.now());
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledOnce());
+    decorator.refresh();
+    frames.shift()?.(performance.now());
+    expect(lookup).toHaveBeenCalledOnce();
+
+    resolveTargeted(resultForIds(["123"], "targeted-intermediate"));
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledTimes(2));
+    expect(lookup.mock.calls[1]?.[0]).toEqual(["123", "456"]);
+    await vi.waitFor(() => {
+      expect(
+        first.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+      ).toContain("full-latest");
+      expect(
+        second.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+      ).toContain("full-latest");
+    });
+    decorator.stop();
+  });
+
+  it("does not commit an in-flight selection after the article is recycled", async () => {
+    const article = renderArticle("123");
+    const frames: FrameRequestCallback[] = [];
+    let refreshStarted = false;
+    let resolveOld!: (value: BookmarkDecorationLookupResult) => void;
+    let resolveNew!: (value: BookmarkDecorationLookupResult) => void;
+    const oldLookup = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveOld = resolve;
+    });
+    const newLookup = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveNew = resolve;
+    });
+    const lookup = vi.fn((ids: string[]) => {
+      if (!refreshStarted) return Promise.resolve(resultForIds(ids, "initial"));
+      return ids[0] === "123" ? oldLookup : newLookup;
+    });
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup,
+      scheduleFrame(callback) {
+        frames.push(callback);
+        return frames.length;
+      },
+    });
+    frames.shift()?.(performance.now());
+    await settle();
+    lookup.mockClear();
+    refreshStarted = true;
+
+    decorator.refresh("123");
+    frames.shift()?.(performance.now());
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledOnce());
+    article.querySelector("a")!.setAttribute("href", "https://x.com/alice/status/456");
+    decorator.refresh("456");
+    frames.shift()?.(performance.now());
+    resolveOld(resultForIds(["123"], "stale-123"));
+
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledTimes(2));
+    expect(
+      article.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+    ).not.toContain("stale-123");
+    resolveNew(resultForIds(["456"], "latest-456"));
+    await vi.waitFor(() =>
+      expect(
+        article.querySelector("bookmark-x-metadata")?.shadowRoot?.textContent,
+      ).toContain("latest-456"),
+    );
+    decorator.stop();
+  });
+
+  it("discards the active lookup and queued refreshes when stopped", async () => {
+    renderArticle("123");
+    const frames: FrameRequestCallback[] = [];
+    let resolveRefresh!: (value: BookmarkDecorationLookupResult) => void;
+    let refreshStarted = false;
+    const pendingRefresh = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const lookup = vi.fn((ids: string[]) =>
+      refreshStarted ? pendingRefresh : Promise.resolve(resultForIds(ids, "initial")),
+    );
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup,
+      scheduleFrame(callback) {
+        frames.push(callback);
+        return frames.length;
+      },
+    });
+    frames.shift()?.(performance.now());
+    await settle();
+    lookup.mockClear();
+    refreshStarted = true;
+
+    decorator.refresh("123");
+    frames.shift()?.(performance.now());
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledOnce());
+    decorator.refresh();
+    decorator.stop();
+    resolveRefresh(resultForIds(["123"], "must-not-render"));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.querySelector("bookmark-x-metadata")).toBeNull();
+    expect(lookup).toHaveBeenCalledOnce();
+  });
+
+  it("rerenders an injected card with the latest localization", async () => {
+    const article = renderArticle("123");
+    const current = uncategorizedResult({
+      messages: { uncategorizedFolder: "Uncategorized" },
+    });
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup: async () => current,
+    });
+    await settle();
+    const host = article.querySelector<HTMLElement>("bookmark-x-metadata");
+    expect(host?.shadowRoot?.textContent).toContain("Uncategorized");
+
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { uncategorizedFolder: "Sem categoria" },
+    });
+
+    expect(host?.shadowRoot?.textContent).toContain("Sem categoria");
+    expect(host?.shadowRoot?.textContent).not.toContain("Uncategorized");
+    decorator.stop();
+  });
+
+  it("preserves a locale selected before the first decoration lookup resolves", async () => {
+    renderArticle("123");
+    let resolveLookup!: (value: BookmarkDecorationLookupResult) => void;
+    const lookupResult = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveLookup = resolve;
+    });
+    const lookup = vi.fn(() => lookupResult);
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup,
+    });
+
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledOnce());
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { bookmarkPromptFolder: "Pasta" },
+    });
+    resolveLookup({
+      ...result(),
+      locale: "en",
+      messages: { bookmarkPromptFolder: "Folder" },
+    });
+
+    await settle();
+    const host = document.querySelector("bookmark-x-metadata");
+    expect(host?.shadowRoot?.textContent).toContain("Pasta");
+    expect(host?.shadowRoot?.textContent).not.toContain("Folder");
+    decorator.stop();
+  });
+
+  it("merges the current locale into a subsequent stale metadata response", async () => {
+    renderArticle("123");
+    let resolveRefresh!: (value: BookmarkDecorationLookupResult) => void;
+    let refreshing = false;
+    const refreshResult = new Promise<BookmarkDecorationLookupResult>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup: () =>
+        refreshing
+          ? refreshResult
+          : Promise.resolve({
+              ...result(),
+              locale: "en",
+              messages: { bookmarkPromptFolder: "Folder" },
+            }),
+    });
+    await settle();
+    refreshing = true;
+
+    decorator.refresh("123");
+    await Promise.resolve();
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { bookmarkPromptFolder: "Pasta" },
+    });
+    resolveRefresh({
+      ...result(),
+      locale: "en",
+      messages: { bookmarkPromptFolder: "Folder" },
+    });
+
+    await vi.waitFor(() => {
+      const host = document.querySelector("bookmark-x-metadata");
+      expect(host?.shadowRoot?.textContent).toContain("Pasta");
+      expect(host?.shadowRoot?.textContent).not.toContain("Folder");
+    });
+    decorator.stop();
+  });
+
+  it("lets a fresh canonical lookup supersede an older locale override", async () => {
+    renderArticle("123");
+    let current: BookmarkDecorationLookupResult = {
+      ...result(),
+      locale: "en",
+      messages: { bookmarkPromptFolder: "Folder" },
+    };
+    const decorator = startBookmarkMetadataDecorator({
+      document,
+      lookup: async () => current,
+    });
+    await settle();
+
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { bookmarkPromptFolder: "Pasta" },
+    });
+    decorator.setLocalization({
+      locale: "pt_BR",
+      messages: { bookmarkPromptFolder: "Pasta" },
+    });
+    current = {
+      ...result(),
+      locale: "ja",
+      messages: { bookmarkPromptFolder: "フォルダー" },
+    };
+    decorator.refresh("123");
+
+    await vi.waitFor(() => {
+      const host = document.querySelector("bookmark-x-metadata");
+      expect(host?.shadowRoot?.textContent).toContain("フォルダー");
+      expect(host?.shadowRoot?.textContent).not.toContain("Pasta");
+    });
+    decorator.stop();
+  });
+
   it("moves through pending, uncategorized, mapped, and archived states without duplicate hosts", async () => {
     const article = renderArticle("123");
     let current = uncategorizedResult();
@@ -159,7 +579,7 @@ describe("startBookmarkMetadataDecorator", () => {
     expect(host.shadowRoot?.textContent).toContain("uncategorizedFolder");
     expect(host.shadowRoot?.querySelector(".status")?.textContent).not.toContain("!");
 
-    decorator.setPending(article, "123");
+    await decorator.setPending(article, "123");
     expect(article.querySelectorAll("bookmark-x-metadata")).toHaveLength(1);
     expect(host.dataset.state).toBe("pending");
     expect(host.shadowRoot?.textContent).toContain("liveBookmarkPending");
@@ -210,7 +630,6 @@ describe("startBookmarkMetadataDecorator", () => {
           bookmark: {
             ...categorizedBookmark,
             status: "archived",
-            archivedAt: "2026-08-09T10:00:00.000Z",
           },
         },
       ],

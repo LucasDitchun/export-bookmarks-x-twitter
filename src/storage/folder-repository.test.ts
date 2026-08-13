@@ -170,7 +170,7 @@ describe("FolderRepository", () => {
     verification.close();
   });
 
-  it("recursively deletes a subtree and uncategorizes affected bookmarks only", async () => {
+  it("recursively soft-deletes a subtree, preserves assignments, and restores it", async () => {
     const databaseName = `folders-delete-${crypto.randomUUID()}`;
     const affected = bookmark({ id: "123", folderId: "child" });
     const nested = bookmark({ id: "456", folderId: "grandchild" });
@@ -191,7 +191,7 @@ describe("FolderRepository", () => {
 
     await expect(repository.delete("child")).resolves.toEqual({
       deletedFolderIds: ["child", "grandchild"],
-      uncategorizedBookmarkCount: 2,
+      preservedBookmarkCount: 2,
     });
     await expect(repository.list()).resolves.toEqual([
       { id: "other", name: "Other", parentId: null },
@@ -212,21 +212,7 @@ describe("FolderRepository", () => {
       );
     });
     await transactionDone(read);
-    expect(stored).toEqual(
-      expect.arrayContaining([
-        {
-          ...affected,
-          folderId: null,
-          metadataUpdatedAt: "2026-08-09T07:00:00.000Z",
-        },
-        {
-          ...nested,
-          folderId: null,
-          metadataUpdatedAt: "2026-08-09T07:00:00.000Z",
-        },
-        untouched,
-      ]),
-    );
+    expect(stored).toEqual(expect.arrayContaining([affected, nested, untouched]));
 
     const folderRead = database.transaction("folders", "readonly");
     const storedFolders = await new Promise<FolderRecord[]>((resolve, reject) => {
@@ -257,6 +243,60 @@ describe("FolderRepository", () => {
       "deletedAt",
     );
     database.close();
+
+    await expect(repository.listDeleted()).resolves.toEqual([
+      expect.objectContaining({ id: "child" }),
+      expect.objectContaining({ id: "grandchild" }),
+    ]);
+    await expect(repository.restore("child")).resolves.toEqual({
+      restoredFolderIds: ["child", "grandchild"],
+      restoredBookmarkCount: 2,
+    });
+    await expect(repository.listDeleted()).resolves.toEqual([]);
+    await expect(repository.list()).resolves.toEqual([
+      { id: "other", name: "Other", parentId: null },
+      { id: "root", name: "Root", parentId: null },
+      { id: "child", name: "Child", parentId: "root" },
+      { id: "grandchild", name: "Grandchild", parentId: "child" },
+    ]);
+  });
+
+  it("requires restoring a deleted parent before an individual child", async () => {
+    const databaseName = `folders-restore-parent-${crypto.randomUUID()}`;
+    await seed(databaseName, [
+      { id: "root", name: "Root", parentId: null },
+      { id: "child", name: "Child", parentId: "root" },
+    ]);
+    const repository = new FolderRepository(databaseName);
+    await repository.delete("root");
+
+    await expect(repository.restore("child")).rejects.toThrow(/parent/i);
+    await expect(repository.listDeleted()).resolves.toHaveLength(2);
+  });
+
+  it("does not restore a descendant that was deleted in an earlier operation", async () => {
+    const databaseName = `folders-restore-batch-${crypto.randomUUID()}`;
+    await seed(databaseName, [
+      { id: "root", name: "Root", parentId: null },
+      { id: "child", name: "Child", parentId: "root" },
+    ]);
+    const timestamps = [
+      new Date("2026-08-13T01:00:00.000Z"),
+      new Date("2026-08-13T02:00:00.000Z"),
+    ];
+    const repository = new FolderRepository(databaseName, {
+      now: () => timestamps.shift() ?? new Date("2026-08-13T03:00:00.000Z"),
+    });
+    await repository.delete("child");
+    await repository.delete("root");
+
+    await expect(repository.restore("root")).resolves.toEqual({
+      restoredFolderIds: ["root"],
+      restoredBookmarkCount: 0,
+    });
+    await expect(repository.listDeleted()).resolves.toEqual([
+      expect.objectContaining({ id: "child" }),
+    ]);
   });
 
   it("serializes concurrent note and folder writes without clobbering either field", async () => {
@@ -295,7 +335,7 @@ describe("FolderRepository", () => {
     });
   });
 
-  it("moves complete bookmarks into and out of Inbox and removes deleted paths from export", async () => {
+  it("hides deleted paths from export and restores the original assignment", async () => {
     const databaseName = `folders-inbox-export-${crypto.randomUUID()}`;
     const original = bookmark({ folderId: null });
     await seed(
@@ -321,7 +361,7 @@ describe("FolderRepository", () => {
     const hydrated = await archive.getAll();
     expect(hydrated[0]).toMatchObject({
       id: original.id,
-      folderId: null,
+      folderId: "ai",
       folders: [],
       note: "Keep this note",
       tagIds: ["tag-1"],
@@ -352,5 +392,13 @@ describe("FolderRepository", () => {
     expect(exported).toContain("Folder: No folder");
     expect(exported).not.toContain("Research");
     expect(exported).not.toContain("AI");
+
+    await folders.restore("research");
+    await expect(bookmarks.get(original.id)).resolves.toMatchObject({
+      folderId: "ai",
+    });
+    const restored = await archive.getAll();
+    expect(restored[0]?.id).toBe(original.id);
+    expect(restored[0]?.folders.map(({ id }) => id)).toEqual(["ai"]);
   });
 });

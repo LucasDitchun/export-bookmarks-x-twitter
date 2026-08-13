@@ -1,5 +1,6 @@
 import type { BookmarkRecord, BookmarkSnapshot } from "../domain/types";
 import type {
+  BookmarkLocalizationResult,
   ContentEvent,
   LiveBookmarkAction,
   LiveBookmarkIntentResult,
@@ -13,16 +14,18 @@ import {
 import { extractBookmarks } from "./extract-bookmarks";
 import { loadBookmarkMetadataDraft, saveBookmarkMetadata } from "./bookmark-metadata";
 import { isContentBookmarkMedia } from "./bookmark-media";
+import type {
+  BookmarkMetadataMessageKey,
+  BookmarkMetadataTranslator,
+} from "../shared/bookmark-metadata-messages";
 
 const DEFAULT_STABLE_FOR_MS = 900;
 const DEFAULT_TIMEOUT_MS = 6_000;
 
-type Translate = (key: string) => string;
-
 export interface LiveBookmarkObserverOptions {
   document: Document;
   send: (event: ContentEvent | UiRequest) => Promise<RuntimeResponse<unknown>>;
-  translate: Translate;
+  translate: BookmarkMetadataTranslator;
   stableForMs?: number;
   timeoutMs?: number;
   onPending?: (article: Element, bookmarkId: string) => void;
@@ -30,6 +33,7 @@ export interface LiveBookmarkObserverOptions {
 }
 
 export interface LiveBookmarkObserverController {
+  setLocalization(localization: BookmarkLocalizationResult): void;
   stop(): void;
 }
 
@@ -39,6 +43,7 @@ interface ActiveIntent {
   metadataController: AbortController | null;
   modal: BookmarkModalController | null;
   prepareMetadata?: (bookmark: BookmarkRecord) => Promise<void>;
+  setLocalization?: (localization: BookmarkLocalizationResult) => void;
 }
 
 function isBookmarkRecord(value: unknown): value is BookmarkRecord {
@@ -136,7 +141,7 @@ function randomIntentId(): string {
   return crypto.randomUUID();
 }
 
-function modalLabels(translate: Translate) {
+function modalLabels(translate: BookmarkMetadataTranslator) {
   return {
     close: translate("bookmarkPromptClose"),
     description: translate("bookmarkPromptNote"),
@@ -146,6 +151,20 @@ function modalLabels(translate: Translate) {
     tagsHelp: translate("bookmarkPromptTagsHelp"),
     pending: translate("liveBookmarkPending"),
   };
+}
+
+function selectedLocaleTranslator(
+  localization: Partial<BookmarkLocalizationResult> | undefined,
+  fallback: BookmarkMetadataTranslator,
+): BookmarkMetadataTranslator {
+  if (
+    !localization ||
+    typeof localization.messages !== "object" ||
+    localization.messages === null
+  ) {
+    return fallback;
+  }
+  return (key) => localization.messages?.[key] ?? fallback(key);
 }
 
 export function startLiveBookmarkObserver(
@@ -198,12 +217,27 @@ export function startLiveBookmarkObserver(
     const intentResult = response?.ok
       ? (response.data as LiveBookmarkIntentResult)
       : null;
+    let translate = options.translate;
+    let modalState: Parameters<BookmarkModalController["setState"]>[0] = "pending";
+    let modalMessageKey: BookmarkMetadataMessageKey = "liveBookmarkPending";
+    const setTranslatedState = (
+      state: Parameters<BookmarkModalController["setState"]>[0],
+      messageKey: BookmarkMetadataMessageKey,
+    ): void => {
+      modalState = state;
+      modalMessageKey = messageKey;
+      active.modal?.setState(state, translate(messageKey));
+    };
     if (
       !stopped &&
       !active.controller.signal.aborted &&
       intentResult?.prompt &&
       intentResult.surface === "modal"
     ) {
+      translate = selectedLocaleTranslator(
+        intentResult.localization,
+        options.translate,
+      );
       let modal: BookmarkModalController | null = null;
       const metadataController = new AbortController();
       active.metadataController = metadataController;
@@ -236,19 +270,19 @@ export function startLiveBookmarkObserver(
       };
       modal = createBookmarkModal({
         document: options.document,
-        title: options.translate("bookmarkPromptTitle"),
+        title: translate("bookmarkPromptTitle"),
         bookmarkTitle: bookmark.text || bookmark.url,
-        labels: modalLabels(options.translate),
+        labels: modalLabels(translate),
         onSave: async (values) => {
-          active.modal?.setState("pending", options.translate("liveBookmarkPending"));
+          setTranslatedState("pending", "liveBookmarkPending");
           try {
             await persistValues(values);
             options.onChanged?.(bookmark.id);
-            active.modal?.setState("ready", options.translate("liveBookmarkSaved"));
+            setTranslatedState("ready", "liveBookmarkSaved");
             return true;
           } catch {
             if (!metadataController.signal.aborted) {
-              active.modal?.setState("ready", options.translate("liveBookmarkFailed"));
+              setTranslatedState("ready", "liveBookmarkFailed");
             }
             return false;
           }
@@ -260,12 +294,21 @@ export function startLiveBookmarkObserver(
             active.metadataController = null;
             active.modal = null;
             delete active.prepareMetadata;
+            delete active.setLocalization;
             modal.destroy();
             modal = null;
           }
         },
       });
       active.modal = modal;
+      active.setLocalization = (localization) => {
+        translate = selectedLocaleTranslator(localization, options.translate);
+        modal?.setLabels({
+          title: translate("bookmarkPromptTitle"),
+          labels: modalLabels(translate),
+        });
+        modal?.setState(modalState, translate(modalMessageKey));
+      };
       modalByBookmark.set(bookmark.id, active);
       modal.open();
 
@@ -289,7 +332,7 @@ export function startLiveBookmarkObserver(
       await options
         .send({ type: "LIVE_BOOKMARK_CANCELLED", intentId: active.intentId })
         .catch(() => undefined);
-      active.modal?.setState("error", options.translate("liveBookmarkFailed"));
+      setTranslatedState("error", "liveBookmarkFailed");
       options.onChanged?.(bookmark.id);
       activeByBookmark.delete(bookmark.id);
       return;
@@ -313,18 +356,18 @@ export function startLiveBookmarkObserver(
             await active.prepareMetadata?.(record);
           }
           if (!active.controller.signal.aborted) {
-            active.modal?.setState("ready", options.translate("liveBookmarkSaved"));
+            setTranslatedState("ready", "liveBookmarkSaved");
           }
         } catch {
           if (!active.controller.signal.aborted) {
-            active.modal?.setState("ready", options.translate("liveBookmarkFailed"));
+            setTranslatedState("ready", "liveBookmarkFailed");
           }
         }
       } else {
-        active.modal?.setState("success", options.translate("liveBookmarkArchived"));
+        setTranslatedState("success", "liveBookmarkArchived");
       }
     } else {
-      active.modal?.setState("error", options.translate("liveBookmarkFailed"));
+      setTranslatedState("error", "liveBookmarkFailed");
     }
     options.onChanged?.(bookmark.id);
     activeByBookmark.delete(bookmark.id);
@@ -347,6 +390,11 @@ export function startLiveBookmarkObserver(
 
   options.document.addEventListener("click", onClick, true);
   return {
+    setLocalization(localization) {
+      for (const active of new Set(modalByBookmark.values())) {
+        active.setLocalization?.(localization);
+      }
+    },
     stop() {
       if (stopped) return;
       stopped = true;

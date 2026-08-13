@@ -59,6 +59,38 @@ function openVersionTwo(
   });
 }
 
+function openVersionFourWithoutTagIndex(databaseName: string): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(databaseName, 4);
+    request.addEventListener("upgradeneeded", () => {
+      const bookmarks = request.result.createObjectStore("bookmarks", {
+        keyPath: "id",
+      });
+      bookmarks.createIndex("byStatusSaved", ["status", "firstSavedAt", "id"]);
+      bookmarks.createIndex("byFolder", "folderId");
+      const seen = request.result.createObjectStore("seen", { keyPath: "key" });
+      seen.createIndex("runId", "runId");
+      request.result.createObjectStore("meta", { keyPath: "key" });
+      const folders = request.result.createObjectStore("folders", { keyPath: "id" });
+      folders.createIndex("byName", "name");
+      folders.createIndex("byParent", "parentId");
+      const memberships = request.result.createObjectStore("bookmarkFolders", {
+        keyPath: ["bookmarkId", "folderId"],
+      });
+      memberships.createIndex("byBookmark", "bookmarkId");
+      memberships.createIndex("byFolder", "folderId");
+      const tags = request.result.createObjectStore("tags", { keyPath: "id" });
+      tags.createIndex("byName", "name");
+    });
+    request.addEventListener("success", () => resolve(request.result), {
+      once: true,
+    });
+    request.addEventListener("error", () => reject(indexedDbError(request.error)), {
+      once: true,
+    });
+  });
+}
+
 function transactionDone(transaction: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     transaction.addEventListener("complete", () => resolve(), { once: true });
@@ -73,7 +105,7 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
 }
 
 describe("BookmarkDatabase", () => {
-  it("creates the complete version 4 schema for a new database", async () => {
+  it("creates the complete current schema for a new database", async () => {
     const database = await new BookmarkDatabase(
       `fresh-v2-${crypto.randomUUID()}`,
     ).open();
@@ -108,6 +140,36 @@ describe("BookmarkDatabase", () => {
     expect(Array.from(transaction.objectStore("tags").indexNames)).toEqual(["byName"]);
     await transactionDone(transaction);
 
+    database.close();
+  });
+
+  it("adds the multi-entry tag index when migrating a version 4 database", async () => {
+    const databaseName = `migrate-v4-tag-index-${crypto.randomUUID()}`;
+    const versionFour = await openVersionFourWithoutTagIndex(databaseName);
+    const seed = versionFour.transaction("bookmarks", "readwrite");
+    seed.objectStore("bookmarks").put({
+      id: "post-1",
+      tagIds: ["tag-target", "tag-other"],
+    });
+    await transactionDone(seed);
+    versionFour.close();
+
+    const database = await new BookmarkDatabase(databaseName).open();
+    const transaction = database.transaction("bookmarks", "readonly");
+    const index = transaction.objectStore("bookmarks").index("byTag");
+    expect(index.multiEntry).toBe(true);
+    expect(
+      await new Promise<number>((resolve, reject) => {
+        const request = index.count(IDBKeyRange.only("tag-target"));
+        request.addEventListener("success", () => resolve(request.result), {
+          once: true,
+        });
+        request.addEventListener("error", () => reject(indexedDbError(request.error)), {
+          once: true,
+        });
+      }),
+    ).toBe(1);
+    await transactionDone(transaction);
     database.close();
   });
 
@@ -485,7 +547,9 @@ describe("BookmarkDatabase", () => {
     expect(onBlocked).toHaveBeenCalledOnce();
     versionOne.close();
 
-    await expect(opening).resolves.toMatchObject({ version: 4 });
+    await expect(opening).resolves.toMatchObject({
+      version: BOOKMARK_DATABASE_VERSION,
+    });
     await connection.close();
   });
 
@@ -495,7 +559,7 @@ describe("BookmarkDatabase", () => {
     await connection.open();
 
     const upgraded = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(databaseName, 5);
+      const request = indexedDB.open(databaseName, BOOKMARK_DATABASE_VERSION + 1);
       request.addEventListener("success", () => resolve(request.result), {
         once: true,
       });
@@ -507,14 +571,14 @@ describe("BookmarkDatabase", () => {
       });
     });
 
-    expect(upgraded.version).toBe(5);
+    expect(upgraded.version).toBe(BOOKMARK_DATABASE_VERSION + 1);
     upgraded.close();
   });
 
   it("allows retry after a rejected open request", async () => {
     const databaseName = `retry-${crypto.randomUUID()}`;
     const futureDatabase = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(databaseName, 5);
+      const request = indexedDB.open(databaseName, BOOKMARK_DATABASE_VERSION + 1);
       request.addEventListener("success", () => resolve(request.result), {
         once: true,
       });
@@ -534,7 +598,9 @@ describe("BookmarkDatabase", () => {
       });
     });
 
-    await expect(connection.open()).resolves.toMatchObject({ version: 4 });
+    await expect(connection.open()).resolves.toMatchObject({
+      version: BOOKMARK_DATABASE_VERSION,
+    });
     await connection.close();
   });
 });

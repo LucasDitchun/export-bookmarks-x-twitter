@@ -91,12 +91,14 @@ function sortById<T extends { id: string }>(items: readonly T[]): T[] {
   return [...items].sort((left, right) => left.id.localeCompare(right.id));
 }
 
-function activeTagSnapshot(tag: BookmarkTag): BookmarkTag {
-  return {
+function canonicalTagSnapshot(tag: BookmarkTag): BookmarkTag {
+  const snapshot: BookmarkTag = {
     id: tag.id,
     name: tag.name,
     normalizedName: tag.normalizedName,
   };
+  if (tag.deletedAt !== undefined) snapshot.deletedAt = tag.deletedAt;
+  return snapshot;
 }
 
 function exportFilename(now: Date): string {
@@ -134,12 +136,14 @@ function backupTagRemaps(
   localTags: readonly BookmarkTag[],
   backupTags: readonly BookmarkTag[],
 ): Map<string, string> {
+  const activeLocalTags = localTags.filter((tag) => tag.deletedAt === undefined);
+  const activeBackupTags = backupTags.filter((tag) => tag.deletedAt === undefined);
   const backupIds = new Set(backupTags.map(({ id }) => id));
   const backupByName = new Map(
-    backupTags.map(({ normalizedName, id }) => [normalizedName, id]),
+    activeBackupTags.map(({ normalizedName, id }) => [normalizedName, id]),
   );
   const remaps = new Map<string, string>();
-  for (const tag of localTags) {
+  for (const tag of activeLocalTags) {
     const backupId = backupByName.get(tag.normalizedName);
     if (!backupIds.has(tag.id) && backupId !== undefined) {
       remaps.set(tag.id, backupId);
@@ -159,6 +163,21 @@ function mergeBackup(
 
   const folders = new Map(local.folders.map((folder) => [folder.id, folder]));
   for (const folder of backup.data.folders) folders.set(folder.id, folder);
+
+  // Folder deletion is recursive in the live application. A merge can introduce
+  // a tombstoned backup parent above a local-only active descendant, so close the
+  // merged subtree before validating/persisting it.
+  let folderDeletionChanged = true;
+  while (folderDeletionChanged) {
+    folderDeletionChanged = false;
+    for (const [id, folder] of folders) {
+      if (folder.deletedAt !== undefined || folder.parentId === null) continue;
+      const parent = folders.get(folder.parentId);
+      if (parent?.deletedAt === undefined) continue;
+      folders.set(id, { ...folder, deletedAt: parent.deletedAt });
+      folderDeletionChanged = true;
+    }
+  }
 
   const bookmarks = new Map(
     local.bookmarks.map((bookmark) => [
@@ -232,16 +251,13 @@ export class BackupRepository {
       exportedAt: exportedAt.toISOString(),
       data: {
         bookmarks: sortById(bookmarks),
-        folders: sortById(folders.filter((folder) => folder.deletedAt === undefined)),
+        folders: sortById(folders),
         tags: sortById(
-          tags
-            .filter((tag) => tag.deletedAt === undefined)
-            .map(activeTagSnapshot)
-            .map((tag) => ({
-              ...tag,
-              name: tag.name.trim().normalize("NFKC"),
-              normalizedName: normalizeTagName(tag.name),
-            })),
+          tags.map(canonicalTagSnapshot).map((tag) => ({
+            ...tag,
+            name: tag.name.trim().normalize("NFKC"),
+            normalizedName: normalizeTagName(tag.name),
+          })),
         ),
         archive: { lastSuccessfulSyncAt },
         settings: settingsFromStorage(storedSettings, extensionSettings),
@@ -310,8 +326,8 @@ export class BackupRepository {
     return mergeBackup(
       {
         bookmarks,
-        folders: folders.filter((folder) => folder.deletedAt === undefined),
-        tags: tags.filter((tag) => tag.deletedAt === undefined).map(activeTagSnapshot),
+        folders,
+        tags: tags.map(canonicalTagSnapshot),
       },
       backup,
     );

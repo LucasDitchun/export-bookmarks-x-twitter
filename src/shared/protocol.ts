@@ -1,9 +1,11 @@
 import type {
   ArchiveStats,
+  BookmarkDecorationReadModel,
   BookmarkRecord,
   BookmarkSnapshot,
   BookmarkTag,
   FolderRecord,
+  SaveBookmarkMetadataInput,
   ScrapeMode,
   ScrapeRun,
   SupportedLocale,
@@ -15,6 +17,7 @@ import type {
   SettingsPatch,
 } from "../settings/settings-repository";
 import type { SemanticSourceDocument } from "../domain/semantic-search";
+import type { BookmarkMetadataMessages } from "./bookmark-metadata-messages";
 
 export interface PopupStatus {
   pageReady: boolean;
@@ -46,7 +49,7 @@ export interface BookmarkDetailResult {
 }
 
 export interface BookmarkDecorationItem {
-  bookmark: BookmarkRecord;
+  bookmark: BookmarkDecorationReadModel;
   breadcrumb: string[];
   tags: BookmarkTag[];
 }
@@ -54,8 +57,13 @@ export interface BookmarkDecorationItem {
 export interface BookmarkDecorationLookupResult {
   items: BookmarkDecorationItem[];
   locale: SupportedLocale;
-  messages: Record<string, string>;
+  messages: BookmarkMetadataMessages;
   settings: ExtensionSettings;
+}
+
+export interface BookmarkLocalizationResult {
+  locale: SupportedLocale;
+  messages: BookmarkMetadataMessages;
 }
 
 export interface TagListResult {
@@ -78,7 +86,7 @@ export interface TagRemovalResult {
 
 export interface TagDeleteResult {
   deletedTagId: string;
-  untaggedBookmarkCount: number;
+  preservedBookmarkCount: number;
 }
 
 export interface FolderListResult {
@@ -92,7 +100,17 @@ export interface FolderDetailResult {
 
 export interface FolderDeleteResult {
   deletedFolderIds: string[];
-  uncategorizedBookmarkCount: number;
+  preservedBookmarkCount: number;
+}
+
+export interface OrganizationTrashResult {
+  tags: BookmarkTag[];
+  folders: FolderRecord[];
+}
+
+export interface FolderRestoreResult {
+  restoredFolderIds: string[];
+  restoredBookmarkCount: number;
 }
 
 export interface SettingsResult {
@@ -130,6 +148,7 @@ export interface LiveBookmarkContext {
 
 export interface LiveBookmarkIntentResult extends OpenSurfaceResult {
   prompt: boolean;
+  localization?: BookmarkLocalizationResult;
 }
 
 export type UiRequest =
@@ -175,10 +194,16 @@ export type UiRequest =
   | { type: "GET_BOOKMARK"; payload: { id: string } }
   | { type: "GET_BOOKMARK_DECORATIONS"; payload: { ids: string[] } }
   | { type: "SAVE_BOOKMARK_NOTE"; payload: { id: string; note: string } }
+  | {
+      type: "SAVE_BOOKMARK_METADATA";
+      payload: SaveBookmarkMetadataInput;
+    }
   | { type: "LIST_TAGS" }
+  | { type: "LIST_ORGANIZATION_TRASH" }
   | { type: "ADD_BOOKMARK_TAG"; payload: { id: string; name: string } }
   | { type: "RENAME_TAG"; payload: { id: string; name: string } }
   | { type: "DELETE_TAG"; payload: { id: string } }
+  | { type: "RESTORE_TAG"; payload: { id: string } }
   | {
       type: "REMOVE_BOOKMARK_TAG";
       payload: { id: string; tagId: string };
@@ -190,6 +215,7 @@ export type UiRequest =
     }
   | { type: "RENAME_FOLDER"; payload: { id: string; name: string } }
   | { type: "DELETE_FOLDER"; payload: { id: string } }
+  | { type: "RESTORE_FOLDER"; payload: { id: string } }
   | {
       type: "ASSIGN_BOOKMARK_FOLDER";
       payload: { bookmarkId: string; folderId: string | null };
@@ -210,6 +236,10 @@ export type ContentControlRequest =
   | {
       type: "REFRESH_BOOKMARK_METADATA";
       bookmarkIds?: string[];
+    }
+  | {
+      type: "REFRESH_BOOKMARK_LOCALIZATION";
+      localization: BookmarkLocalizationResult;
     };
 
 export type ContentEvent =

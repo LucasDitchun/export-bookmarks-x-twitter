@@ -409,17 +409,14 @@
   "bookmarkPromptClose": { "message": "Fermer" },
   "bookmarkPromptSave": { "message": "Enregistrer la note" },
   "bookmarkPromptTags": { "message": "Tags" },
-  "bookmarkPromptTagsHelp": { "message": "Séparez plusieurs tags par des virgules." },
+  "bookmarkPromptTagsHelp": { "message": "Appuyez sur Entrée après chaque tag." },
   "bookmarkPromptFolder": { "message": "Dossier" },
-  "bookmarkPromptChooseFolder": { "message": "Choisir un dossier existant" },
-  "bookmarkPromptChooseTag": { "message": "Choisir un tag existant" },
   "bookmarkPromptNote": { "message": "Note privée" },
   "bookmarkCategorized": { "message": "Classé" },
   "bookmarkNeedsCategory": { "message": "À classer" },
   "bookmarkMetadataLabel": {
     "message": "Détails de la publication enregistrée dans Bookmark X"
   },
-  "bookmarkMetadataMapped": { "message": "Classée avec Bookmark X" },
   "bookmarkMetadataArchived": { "message": "Archivée localement" },
   "liveBookmarkPending": { "message": "En attente de la confirmation de X…" },
   "liveBookmarkSaved": {
@@ -507,12 +504,37 @@
     "message": "$NAME$, $COUNT$ signets",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "folderUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ signet",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagUsageLabel": {
     "message": "$NAME$, $COUNT$ signets",
     "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
   },
+  "tagUsageLabelOne": {
+    "message": "$NAME$, $COUNT$ signet",
+    "placeholders": { "name": { "content": "$1" }, "count": { "content": "$2" } }
+  },
   "tagsManageHelp": {
     "message": "Ouvrez un signet pour ajouter ou retirer des étiquettes."
+  },
+  "organizationTrashTitle": { "message": "Corbeille" },
+  "organizationTrashHelp": {
+    "message": "Restaurez les dossiers et étiquettes supprimés avec leurs associations aux favoris."
+  },
+  "organizationTrashEmpty": { "message": "La corbeille est vide." },
+  "organizationTrashError": { "message": "Impossible de charger la corbeille." },
+  "organizationRestoring": { "message": "Restauration…" },
+  "organizationRestored": { "message": "Restauré." },
+  "organizationRestoreError": { "message": "Impossible de restaurer cet élément." },
+  "restoreTag": {
+    "message": "Restaurer l’étiquette $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "restoreFolder": {
+    "message": "Restaurer le dossier $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
   },
   "backToLibrary": { "message": "Retour à la bibliothèque" },
   "settingsViewHelp": { "message": "Exportation, sauvegarde, langue et préférences." }

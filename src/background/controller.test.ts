@@ -19,6 +19,7 @@ import {
 } from "../settings/settings-repository";
 import { BackupSettingsWriteError } from "../storage/backup-repository";
 import { BackgroundController, isBookmarksUrl } from "./controller";
+import { metadataRefreshAfterResponse } from "./metadata-refresh";
 
 const EXTENSION_ID = "bookmark-x-extension";
 const POPUP_SENDER = { id: EXTENSION_ID };
@@ -77,6 +78,20 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       getMany: vi.fn(async (): Promise<BookmarkRecord[]> => []),
       saveNote: vi.fn(async (): Promise<unknown> => null),
     },
+    metadata: {
+      save: vi.fn(async (): Promise<BookmarkRecord> => ({
+        ...bookmark,
+        media: bookmark.media ?? { images: [], videos: [] },
+        note: "",
+        folderId: null,
+        tagIds: [],
+        firstSavedAt: "2026-07-29T11:00:01.000Z",
+        lastSeenAt: "2026-07-29T11:00:01.000Z",
+        archivedAt: null,
+        metadataUpdatedAt: "2026-07-29T11:00:01.000Z",
+        status: "current",
+      })),
+    },
     search: {
       search: vi.fn(async (): Promise<unknown> => ({
         items: [],
@@ -93,13 +108,16 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
     },
     tags: {
       list: vi.fn(async (): Promise<BookmarkTag[]> => []),
+      listDeleted: vi.fn(async (): Promise<BookmarkTag[]> => []),
       add: vi.fn(async (): Promise<unknown> => null),
       remove: vi.fn(async (): Promise<unknown> => null),
       rename: vi.fn(async (): Promise<unknown> => null),
       delete: vi.fn(async (): Promise<unknown> => null),
+      restore: vi.fn(async (): Promise<unknown> => null),
     },
     folders: {
       list: vi.fn(async (): Promise<FolderRecord[]> => []),
+      listDeleted: vi.fn(async (): Promise<FolderRecord[]> => []),
       create: vi.fn(async () => ({
         id: "folder-1",
         name: "Research",
@@ -112,7 +130,11 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       })),
       delete: vi.fn(async () => ({
         deletedFolderIds: ["folder-1"],
-        uncategorizedBookmarkCount: 1,
+        preservedBookmarkCount: 1,
+      })),
+      restore: vi.fn(async () => ({
+        restoredFolderIds: ["folder-1"],
+        restoredBookmarkCount: 1,
       })),
       assignBookmark: vi.fn(async () => ({
         ...bookmark,
@@ -206,6 +228,37 @@ describe("isBookmarksUrl", () => {
 });
 
 describe("BackgroundController", () => {
+  it("returns the selected locale with an automatic modal prompt", async () => {
+    const dependencies = createDependencies("https://x.com/home");
+    dependencies.locale.get.mockResolvedValue({
+      locale: "ja",
+      messages: { bookmarkPromptTitle: "なぜこれを保存しますか？" },
+    });
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle(
+        {
+          type: "LIVE_BOOKMARK_PENDING",
+          intentId: "localized-modal",
+          action: "save",
+          bookmark,
+        },
+        { id: EXTENSION_ID, tab: { id: 7, url: "https://x.com/home" } },
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: {
+        prompt: true,
+        surface: "modal",
+        localization: {
+          locale: "ja",
+          messages: { bookmarkPromptTitle: "なぜこれを保存しますか？" },
+        },
+      },
+    });
+  });
+
   it("opens the configured surface pending, then saves only after confirmation", async () => {
     const dependencies = createDependencies("https://x.com/home");
     dependencies.settings.get.mockResolvedValue({
@@ -580,6 +633,93 @@ describe("BackgroundController", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
   });
 
+  it("reuses decoration context snapshots and invalidates only the changed domains", async () => {
+    const dependencies = createDependencies("https://x.com/home");
+    const controller = new BackgroundController(dependencies);
+    const lookup = () =>
+      controller.handle(
+        { type: "GET_BOOKMARK_DECORATIONS", payload: { ids: ["123"] } },
+        CONTENT_SENDER,
+      );
+
+    await lookup();
+    await lookup();
+    expect(dependencies.bookmarks.getMany).toHaveBeenCalledTimes(2);
+    expect(dependencies.tags.list).toHaveBeenCalledOnce();
+    expect(dependencies.folders.list).toHaveBeenCalledOnce();
+    expect(dependencies.settings.get).toHaveBeenCalledOnce();
+    expect(dependencies.locale.get).toHaveBeenCalledOnce();
+
+    await controller.handle(
+      {
+        type: "SAVE_BOOKMARK_METADATA",
+        payload: {
+          id: "123",
+          note: "",
+          tags: [{ id: null, name: "AI" }],
+          folder: null,
+        },
+      },
+      CONTENT_SENDER,
+    );
+    await lookup();
+    expect(dependencies.tags.list).toHaveBeenCalledTimes(2);
+    expect(dependencies.folders.list).toHaveBeenCalledTimes(2);
+    expect(dependencies.settings.get).toHaveBeenCalledOnce();
+    expect(dependencies.locale.get).toHaveBeenCalledOnce();
+
+    await controller.handle(
+      {
+        type: "SAVE_SETTINGS",
+        payload: { settings: { behavior: { metadata: { summary: false } } } },
+      },
+      POPUP_SENDER,
+    );
+    await lookup();
+    expect(dependencies.tags.list).toHaveBeenCalledTimes(2);
+    expect(dependencies.settings.get).toHaveBeenCalledTimes(2);
+    expect(dependencies.locale.get).toHaveBeenCalledOnce();
+
+    controller.invalidateDecorationLocalization();
+    await lookup();
+    expect(dependencies.tags.list).toHaveBeenCalledTimes(2);
+    expect(dependencies.settings.get).toHaveBeenCalledTimes(2);
+    expect(dependencies.locale.get).toHaveBeenCalledTimes(2);
+
+    await controller.handle(
+      {
+        type: "RESTORE_BACKUP",
+        payload: { content: '{"schemaVersion":3}', mode: "merge" },
+      },
+      POPUP_SENDER,
+    );
+    await lookup();
+    expect(dependencies.tags.list).toHaveBeenCalledTimes(3);
+    expect(dependencies.folders.list).toHaveBeenCalledTimes(3);
+    expect(dependencies.settings.get).toHaveBeenCalledTimes(4);
+    expect(dependencies.locale.get).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries a decoration context snapshot after its loader rejects", async () => {
+    const dependencies = createDependencies("https://x.com/home");
+    dependencies.tags.list
+      .mockRejectedValueOnce(new Error("Temporary tag read failure"))
+      .mockResolvedValueOnce([]);
+    const controller = new BackgroundController(dependencies);
+    const request = {
+      type: "GET_BOOKMARK_DECORATIONS",
+      payload: { ids: ["123"] },
+    } as const;
+
+    await expect(controller.handle(request, CONTENT_SENDER)).resolves.toMatchObject({
+      ok: false,
+    });
+    await expect(controller.handle(request, CONTENT_SENDER)).resolves.toMatchObject({
+      ok: true,
+    });
+    expect(dependencies.tags.list).toHaveBeenCalledTimes(2);
+  });
+
   it("loads and saves settings, then applies the selected action surface", async () => {
     const dependencies = createDependencies();
     const controller = new BackgroundController(dependencies);
@@ -603,6 +743,55 @@ describe("BackgroundController", () => {
       data: { settings: { behavior: { surface: "sidePanel" } } },
     });
     expect(dependencies.browser.configureSurface).toHaveBeenCalledWith("sidePanel");
+  });
+
+  it("keeps a committed settings save successful when surface application fails", async () => {
+    const dependencies = createDependencies();
+    dependencies.browser.configureSurface.mockRejectedValueOnce(
+      new Error("Chrome surface temporarily unavailable"),
+    );
+    const controller = new BackgroundController(dependencies);
+    const request = {
+      type: "SAVE_SETTINGS",
+      payload: { settings: { behavior: { surface: "sidePanel" as const } } },
+    } as const;
+
+    await controller.handle(
+      { type: "GET_BOOKMARK_DECORATIONS", payload: { ids: ["123"] } },
+      CONTENT_SENDER,
+    );
+    expect(dependencies.settings.get).toHaveBeenCalledOnce();
+
+    const response = await controller.handle(request, POPUP_SENDER);
+    expect(response).toMatchObject({
+      ok: true,
+      data: { settings: { behavior: { surface: "sidePanel" } } },
+    });
+    expect(metadataRefreshAfterResponse(request, response)).toEqual({
+      type: "REFRESH_BOOKMARK_METADATA",
+    });
+    expect(dependencies.settings.save).toHaveBeenCalledOnce();
+
+    await controller.handle(
+      { type: "GET_BOOKMARK_DECORATIONS", payload: { ids: ["123"] } },
+      CONTENT_SENDER,
+    );
+    expect(dependencies.settings.get).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports a settings storage failure without applying the surface", async () => {
+    const dependencies = createDependencies();
+    dependencies.settings.save.mockRejectedValueOnce(new Error("storage failed"));
+    const controller = new BackgroundController(dependencies);
+
+    const request = {
+      type: "SAVE_SETTINGS",
+      payload: { settings: { behavior: { surface: "sidePanel" as const } } },
+    } as const;
+    const response = await controller.handle(request, POPUP_SENDER);
+    expect(response).toMatchObject({ ok: false });
+    expect(metadataRefreshAfterResponse(request, response)).toBeNull();
+    expect(dependencies.browser.configureSurface).not.toHaveBeenCalled();
   });
 
   it("rejects malformed and unknown settings before storage", async () => {
@@ -927,6 +1116,37 @@ describe("BackgroundController", () => {
     expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
   });
 
+  it("saves modal metadata through one atomic storage operation", async () => {
+    const dependencies = createDependencies();
+    const storedBookmark: BookmarkRecord = {
+      ...bookmark,
+      media: bookmark.media ?? { images: [], videos: [] },
+      note: "Context",
+      folderId: "folder-ai",
+      tagIds: ["tag-research"],
+      firstSavedAt: "2026-07-29T11:00:01.000Z",
+      lastSeenAt: "2026-07-29T11:00:01.000Z",
+      archivedAt: null,
+      metadataUpdatedAt: "2026-08-13T05:30:00.000Z",
+      status: "current",
+    };
+    dependencies.metadata.save.mockResolvedValueOnce(storedBookmark);
+    const controller = new BackgroundController(dependencies);
+    const payload = {
+      id: "123",
+      note: "Context",
+      tags: [{ id: "tag-research", name: "Research" }],
+      folder: { id: "folder-ai", path: ["Topics", "AI"] },
+      organizationChanges: { tags: false, folder: false },
+    };
+
+    await expect(
+      controller.handle({ type: "SAVE_BOOKMARK_METADATA", payload }, POPUP_SENDER),
+    ).resolves.toEqual({ ok: true, data: { bookmark: storedBookmark } });
+    expect(dependencies.metadata.save).toHaveBeenCalledWith(payload);
+    expect(dependencies.search.invalidate).toHaveBeenCalledOnce();
+  });
+
   it("lists, assigns, removes, renames, and soft-deletes validated bookmark tags", async () => {
     const dependencies = createDependencies();
     const tag = {
@@ -941,7 +1161,7 @@ describe("BackgroundController", () => {
     dependencies.tags.rename.mockResolvedValueOnce({ ...tag, name: "References" });
     dependencies.tags.delete.mockResolvedValueOnce({
       deletedTagId: tag.id,
-      untaggedBookmarkCount: 2,
+      preservedBookmarkCount: 2,
     });
     const controller = new BackgroundController(dependencies);
 
@@ -988,13 +1208,55 @@ describe("BackgroundController", () => {
       controller.handle({ type: "DELETE_TAG", payload: { id: tag.id } }, POPUP_SENDER),
     ).resolves.toEqual({
       ok: true,
-      data: { deletedTagId: tag.id, untaggedBookmarkCount: 2 },
+      data: { deletedTagId: tag.id, preservedBookmarkCount: 2 },
     });
     expect(dependencies.tags.add).toHaveBeenCalledWith("123", " Research ");
     expect(dependencies.tags.remove).toHaveBeenCalledWith("123", "tag-research");
     expect(dependencies.tags.rename).toHaveBeenCalledWith(tag.id, "References");
     expect(dependencies.tags.delete).toHaveBeenCalledWith(tag.id);
     expect(dependencies.search.invalidate).toHaveBeenCalledTimes(4);
+  });
+
+  it("lists and restores recoverable organization trash", async () => {
+    const dependencies = createDependencies();
+    const controller = new BackgroundController(dependencies);
+    const deletedTag: BookmarkTag = {
+      id: "tag-deleted",
+      name: "Research",
+      normalizedName: "research",
+      deletedAt: "2026-08-13T00:00:00.000Z",
+    };
+    const deletedFolder: FolderRecord = {
+      id: "folder-deleted",
+      name: "Research",
+      parentId: null,
+      deletedAt: "2026-08-13T00:00:00.000Z",
+    };
+    dependencies.tags.listDeleted.mockResolvedValue([deletedTag]);
+    dependencies.folders.listDeleted.mockResolvedValue([deletedFolder]);
+    dependencies.tags.restore.mockResolvedValue({
+      ...deletedTag,
+      deletedAt: undefined,
+    });
+
+    await expect(
+      controller.handle({ type: "LIST_ORGANIZATION_TRASH" }, POPUP_SENDER),
+    ).resolves.toEqual({
+      ok: true,
+      data: { tags: [deletedTag], folders: [deletedFolder] },
+    });
+    await controller.handle(
+      { type: "RESTORE_TAG", payload: { id: deletedTag.id } },
+      POPUP_SENDER,
+    );
+    await controller.handle(
+      { type: "RESTORE_FOLDER", payload: { id: deletedFolder.id } },
+      POPUP_SENDER,
+    );
+
+    expect(dependencies.tags.restore).toHaveBeenCalledWith(deletedTag.id);
+    expect(dependencies.folders.restore).toHaveBeenCalledWith(deletedFolder.id);
+    expect(dependencies.search.invalidate).toHaveBeenCalledTimes(2);
   });
 
   it("rejects invalid tag requests at the extension boundary", async () => {
@@ -1017,6 +1279,7 @@ describe("BackgroundController", () => {
       },
       { type: "RENAME_TAG", payload: { id: "tag-1", name: "   " } },
       { type: "DELETE_TAG", payload: { id: "<script>" } },
+      { type: "RESTORE_TAG", payload: { id: "<script>" } },
     ]) {
       await expect(controller.handle(request, POPUP_SENDER)).resolves.toMatchObject({
         ok: false,
@@ -1106,6 +1369,7 @@ describe("BackgroundController", () => {
       },
       { type: "RENAME_FOLDER", payload: { id: "folder-1", name: "x".repeat(101) } },
       { type: "DELETE_FOLDER", payload: { id: "<script>" } },
+      { type: "RESTORE_FOLDER", payload: { id: "<script>" } },
       {
         type: "ASSIGN_BOOKMARK_FOLDER",
         payload: { bookmarkId: "123", folderId: "<script>" },
@@ -1137,14 +1401,58 @@ describe("BackgroundController", () => {
     await expect(
       controller.handle(
         {
+          type: "SAVE_BOOKMARK_METADATA",
+          payload: {
+            id: "123",
+            note: "valid",
+            tags: [],
+            folder: null,
+            organizationChanges: { tags: "yes", folder: false },
+          },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
+    await expect(
+      controller.handle(
+        {
           type: "SAVE_BOOKMARK_NOTE",
           payload: { id: "123", note: "x".repeat(20_001) },
         },
         POPUP_SENDER,
       ),
     ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
+    await expect(
+      controller.handle(
+        {
+          type: "SAVE_BOOKMARK_METADATA",
+          payload: {
+            id: "123",
+            note: "valid",
+            tags: [{ id: null, name: "\u0000unsafe" }],
+            folder: null,
+          },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
+    await expect(
+      controller.handle(
+        {
+          type: "SAVE_BOOKMARK_METADATA",
+          payload: {
+            id: "123",
+            note: "valid",
+            tags: [{ id: "<script>", name: "Research" }],
+            folder: { id: "folder-safe", path: ["Research"] },
+          },
+        },
+        POPUP_SENDER,
+      ),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_request" } });
     expect(dependencies.bookmarks.get).not.toHaveBeenCalled();
     expect(dependencies.bookmarks.saveNote).not.toHaveBeenCalled();
+    expect(dependencies.metadata.save).not.toHaveBeenCalled();
   });
 
   it("rejects unsafe or unbounded local search requests", async () => {

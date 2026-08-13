@@ -1,4 +1,4 @@
-import type { ContentControlRequest } from "../shared/protocol";
+import type { ContentControlRequest, RuntimeResponse } from "../shared/protocol";
 
 interface MetadataMutationMessage {
   type?: unknown;
@@ -11,7 +11,9 @@ function validBookmarkId(value: unknown): value is string {
   return typeof value === "string" && /^\d+$/.test(value);
 }
 
-export function metadataRefreshRequest(request: unknown): ContentControlRequest | null {
+export function metadataRefreshRequest(
+  request: unknown,
+): Extract<ContentControlRequest, { type: "REFRESH_BOOKMARK_METADATA" }> | null {
   if (typeof request !== "object" || request === null) return null;
   const message = request as MetadataMutationMessage;
   const id =
@@ -24,6 +26,7 @@ export function metadataRefreshRequest(request: unknown): ContentControlRequest 
           : null;
   if (
     message.type === "SAVE_BOOKMARK_NOTE" ||
+    message.type === "SAVE_BOOKMARK_METADATA" ||
     message.type === "ADD_BOOKMARK_TAG" ||
     message.type === "REMOVE_BOOKMARK_TAG" ||
     message.type === "ASSIGN_BOOKMARK_FOLDER" ||
@@ -50,12 +53,21 @@ export function metadataRefreshRequest(request: unknown): ContentControlRequest 
     message.type === "CREATE_FOLDER" ||
     message.type === "RENAME_TAG" ||
     message.type === "DELETE_TAG" ||
+    message.type === "RESTORE_TAG" ||
     message.type === "RENAME_FOLDER" ||
     message.type === "DELETE_FOLDER" ||
+    message.type === "RESTORE_FOLDER" ||
     message.type === "CLEAR_ARCHIVE" ||
     message.type === "RESTORE_BACKUP"
   ) {
     return { type: "REFRESH_BOOKMARK_METADATA" };
   }
   return null;
+}
+
+export function metadataRefreshAfterResponse(
+  request: unknown,
+  response: RuntimeResponse<unknown>,
+): Extract<ContentControlRequest, { type: "REFRESH_BOOKMARK_METADATA" }> | null {
+  return response.ok ? metadataRefreshRequest(request) : null;
 }
