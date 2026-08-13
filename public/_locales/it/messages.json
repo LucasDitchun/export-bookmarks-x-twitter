@@ -403,13 +403,10 @@
   "bookmarkPromptTags": { "message": "Tag" },
   "bookmarkPromptTagsHelp": { "message": "Separa più tag con le virgole." },
   "bookmarkPromptFolder": { "message": "Cartella" },
-  "bookmarkPromptChooseFolder": { "message": "Scegli una cartella esistente" },
-  "bookmarkPromptChooseTag": { "message": "Scegli un tag esistente" },
   "bookmarkPromptNote": { "message": "Nota privata" },
   "bookmarkCategorized": { "message": "Categorizzato" },
   "bookmarkNeedsCategory": { "message": "Da categorizzare" },
   "bookmarkMetadataLabel": { "message": "Dettagli del post salvato in Bookmark X" },
-  "bookmarkMetadataMapped": { "message": "Organizzato con Bookmark X" },
   "bookmarkMetadataArchived": { "message": "Archiviato localmente" },
   "liveBookmarkPending": { "message": "In attesa della conferma di X…" },
   "liveBookmarkSaved": {

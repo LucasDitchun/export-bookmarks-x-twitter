@@ -6,6 +6,7 @@ import type {
 import type { ExtensionSettings } from "../settings/settings-repository";
 import { DEFAULT_QUICK_STOP_THRESHOLD } from "../domain/quick-update";
 import { createIconButton } from "../ui/icons";
+import type { BookmarkMetadataTranslator } from "../shared/bookmark-metadata-messages";
 
 export type {
   BookmarkDecorationItem,
@@ -55,7 +56,7 @@ export interface BookmarkMetadataDecoratorOptions {
   cancelFrame?: (handle: number) => void;
   onOrganize?: (
     item: BookmarkDecorationItem,
-    translate: Translate,
+    translate: BookmarkMetadataTranslator,
     trigger: HTMLButtonElement,
   ) => void;
 }
@@ -71,8 +72,6 @@ interface MountedDecoration {
   bookmarkId: string;
   host: HTMLElement;
 }
-
-type Translate = (key: string) => string;
 
 const componentStyles = String.raw`
   :host {
@@ -239,7 +238,7 @@ function renderDecoration(options: {
   host: HTMLElement;
   item: BookmarkDecorationItem;
   settings: ExtensionSettings;
-  translate: Translate;
+  translate: BookmarkMetadataTranslator;
   pending?: boolean;
   onOrganize?: BookmarkMetadataDecoratorOptions["onOrganize"];
 }): void {
@@ -427,7 +426,7 @@ export function startBookmarkMetadataDecorator(
   let frame: number | null = null;
   let generation = 0;
   let lastResult: BookmarkDecorationLookupResult | null = null;
-  let lastTranslator: Translate = (key) => key;
+  let lastTranslator: BookmarkMetadataTranslator = (key) => key;
 
   const removeMounted = (article: Element): void => {
     mounted.get(article)?.host.remove();
@@ -486,7 +485,8 @@ export function startBookmarkMetadataDecorator(
       }
       if (!result) return;
       result = { ...result, items: collectedItems };
-      const translate: Translate = (key) => result.messages[key] ?? key;
+      const translate: BookmarkMetadataTranslator = (key) =>
+        result.messages[key] ?? key;
       if (stopped || run !== generation) return;
       lastResult = result;
       lastTranslator = translate;

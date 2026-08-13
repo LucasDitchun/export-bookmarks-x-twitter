@@ -14,16 +14,15 @@ import {
 import { extractBookmarks } from "./extract-bookmarks";
 import { loadBookmarkMetadataDraft, saveBookmarkMetadata } from "./bookmark-metadata";
 import { isContentBookmarkMedia } from "./bookmark-media";
+import type { BookmarkMetadataTranslator } from "../shared/bookmark-metadata-messages";
 
 const DEFAULT_STABLE_FOR_MS = 900;
 const DEFAULT_TIMEOUT_MS = 6_000;
 
-type Translate = (key: string) => string;
-
 export interface LiveBookmarkObserverOptions {
   document: Document;
   send: (event: ContentEvent | UiRequest) => Promise<RuntimeResponse<unknown>>;
-  translate: Translate;
+  translate: BookmarkMetadataTranslator;
   stableForMs?: number;
   timeoutMs?: number;
   onPending?: (article: Element, bookmarkId: string) => void;
@@ -139,7 +138,7 @@ function randomIntentId(): string {
   return crypto.randomUUID();
 }
 
-function modalLabels(translate: Translate) {
+function modalLabels(translate: BookmarkMetadataTranslator) {
   return {
     close: translate("bookmarkPromptClose"),
     description: translate("bookmarkPromptNote"),
@@ -153,8 +152,8 @@ function modalLabels(translate: Translate) {
 
 function selectedLocaleTranslator(
   localization: Partial<BookmarkLocalizationResult> | undefined,
-  fallback: Translate,
-): Translate {
+  fallback: BookmarkMetadataTranslator,
+): BookmarkMetadataTranslator {
   if (
     !localization ||
     typeof localization.messages !== "object" ||

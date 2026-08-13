@@ -15,6 +15,7 @@ import type {
   SettingsPatch,
 } from "../settings/settings-repository";
 import type { SemanticSourceDocument } from "../domain/semantic-search";
+import type { BookmarkMetadataMessages } from "./bookmark-metadata-messages";
 
 export interface PopupStatus {
   pageReady: boolean;
@@ -54,13 +55,13 @@ export interface BookmarkDecorationItem {
 export interface BookmarkDecorationLookupResult {
   items: BookmarkDecorationItem[];
   locale: SupportedLocale;
-  messages: Record<string, string>;
+  messages: BookmarkMetadataMessages;
   settings: ExtensionSettings;
 }
 
 export interface BookmarkLocalizationResult {
   locale: SupportedLocale;
-  messages: Record<string, string>;
+  messages: BookmarkMetadataMessages;
 }
 
 export interface TagListResult {

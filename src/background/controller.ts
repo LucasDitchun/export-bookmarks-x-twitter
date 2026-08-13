@@ -35,6 +35,7 @@ import type {
   LiveBookmarkEvent,
 } from "../shared/protocol";
 import { BookmarkXError } from "../shared/errors";
+import type { BookmarkMetadataMessages } from "../shared/bookmark-metadata-messages";
 import {
   isSettingsPatch,
   type ExtensionSettings,
@@ -144,7 +145,7 @@ interface BackgroundDependencies {
   locale: {
     get(): Promise<{
       locale: SupportedLocale;
-      messages: Record<string, string>;
+      messages: BookmarkMetadataMessages;
     }>;
   };
   backup: Pick<BackupRepository, "export" | "restore">;
