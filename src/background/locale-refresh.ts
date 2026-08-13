@@ -37,20 +37,24 @@ export function createLocaleRefreshBroadcaster(
       .then(async () => {
         while (queued) {
           queued = false;
-          dependencies.invalidateLocalization();
-          const localization = await dependencies.loadLocalization();
-          const tabs = await dependencies.queryTabs({ url: X_TAB_URL_PATTERNS });
-          const request: ContentControlRequest = {
-            type: "REFRESH_BOOKMARK_LOCALIZATION",
-            localization,
-          };
-          await Promise.allSettled(
-            tabs.flatMap((tab) =>
-              typeof tab.id === "number"
-                ? [dependencies.sendToTab(tab.id, request)]
-                : [],
-            ),
-          );
+          try {
+            dependencies.invalidateLocalization();
+            const localization = await dependencies.loadLocalization();
+            const tabs = await dependencies.queryTabs({ url: X_TAB_URL_PATTERNS });
+            const request: ContentControlRequest = {
+              type: "REFRESH_BOOKMARK_LOCALIZATION",
+              localization,
+            };
+            await Promise.allSettled(
+              tabs.flatMap((tab) =>
+                typeof tab.id === "number"
+                  ? [dependencies.sendToTab(tab.id, request)]
+                  : [],
+              ),
+            );
+          } catch (error) {
+            if (!queued) throw error;
+          }
         }
       })
       .finally(() => {

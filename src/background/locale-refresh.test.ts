@@ -45,4 +45,42 @@ describe("createLocaleRefreshBroadcaster", () => {
       localization,
     });
   });
+
+  it("retries a queued locale change after an in-flight catalog load fails", async () => {
+    let rejectFirst!: (reason: Error) => void;
+    const firstLoad = new Promise<never>((_resolve, reject) => {
+      rejectFirst = reject;
+    });
+    const localization = {
+      locale: "de" as const,
+      messages: { bookmarkPromptTitle: "Warum speichern Sie das?" },
+    };
+    const loadLocalization = vi
+      .fn<() => Promise<typeof localization>>()
+      .mockImplementationOnce(() => firstLoad)
+      .mockResolvedValueOnce(localization);
+    const sendToTab = vi.fn(async () => undefined);
+    const schedule = createLocaleRefreshBroadcaster({
+      invalidateLocalization: vi.fn(),
+      loadLocalization,
+      queryTabs: vi.fn(async () => [{ id: 9, url: "https://x.com/home" }]),
+      sendToTab,
+    });
+
+    const first = schedule();
+    await vi.waitFor(() => expect(loadLocalization).toHaveBeenCalledOnce());
+    const queued = schedule();
+    rejectFirst(new Error("transient catalog failure"));
+
+    await expect(Promise.all([first, queued])).resolves.toEqual([
+      undefined,
+      undefined,
+    ]);
+    expect(loadLocalization).toHaveBeenCalledTimes(2);
+    expect(sendToTab).toHaveBeenCalledOnce();
+    expect(sendToTab).toHaveBeenCalledWith(9, {
+      type: "REFRESH_BOOKMARK_LOCALIZATION",
+      localization,
+    });
+  });
 });
