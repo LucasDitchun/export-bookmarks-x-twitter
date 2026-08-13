@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createLocaleRefreshBroadcaster,
   isLocaleStorageChange,
-  X_TAB_URL_PATTERNS,
 } from "./locale-refresh";
 
 describe("createLocaleRefreshBroadcaster", () => {
@@ -16,15 +15,12 @@ describe("createLocaleRefreshBroadcaster", () => {
     ).toBe(false);
   });
 
-  it("coalesces locale changes and notifies only tabs matched by X URL patterns", async () => {
+  it("coalesces locale changes without requiring permission to read tab URLs", async () => {
     const localization = {
       locale: "pt_BR" as const,
       messages: { bookmarkPromptTitle: "Por que você está salvando isto?" },
     };
-    const queryTabs = vi.fn(async () => [
-      { id: 7, url: "https://x.com/home" },
-      { id: undefined, url: "https://x.com/explore" },
-    ]);
+    const queryTabs = vi.fn(async () => [{ id: 7 }, { id: undefined }]);
     const sendToTab = vi.fn(async () => undefined);
     const invalidateLocalization = vi.fn();
     const schedule = createLocaleRefreshBroadcaster({
@@ -38,7 +34,7 @@ describe("createLocaleRefreshBroadcaster", () => {
 
     expect(queryTabs).toHaveBeenCalledOnce();
     expect(invalidateLocalization).toHaveBeenCalledOnce();
-    expect(queryTabs).toHaveBeenCalledWith({ url: X_TAB_URL_PATTERNS });
+    expect(queryTabs).toHaveBeenCalledWith();
     expect(sendToTab).toHaveBeenCalledOnce();
     expect(sendToTab).toHaveBeenCalledWith(7, {
       type: "REFRESH_BOOKMARK_LOCALIZATION",

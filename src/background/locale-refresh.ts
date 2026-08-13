@@ -3,8 +3,6 @@ import type {
   ContentControlRequest,
 } from "../shared/protocol";
 
-export const X_TAB_URL_PATTERNS = ["https://x.com/*", "https://www.x.com/*"] as const;
-
 export function isLocaleStorageChange(
   changes: Record<string, chrome.storage.StorageChange>,
   areaName: string,
@@ -15,13 +13,12 @@ export function isLocaleStorageChange(
 
 interface LocaleRefreshTab {
   id?: number | undefined;
-  url?: string | undefined;
 }
 
 interface LocaleRefreshDependencies {
   invalidateLocalization(): void;
   loadLocalization(): Promise<BookmarkLocalizationResult>;
-  queryTabs(query: { url: readonly string[] }): Promise<LocaleRefreshTab[]>;
+  queryTabs(): Promise<LocaleRefreshTab[]>;
   sendToTab(tabId: number, request: ContentControlRequest): Promise<unknown>;
 }
 
@@ -40,7 +37,7 @@ export function createLocaleRefreshBroadcaster(
           try {
             dependencies.invalidateLocalization();
             const localization = await dependencies.loadLocalization();
-            const tabs = await dependencies.queryTabs({ url: X_TAB_URL_PATTERNS });
+            const tabs = await dependencies.queryTabs();
             const request: ContentControlRequest = {
               type: "REFRESH_BOOKMARK_LOCALIZATION",
               localization,
