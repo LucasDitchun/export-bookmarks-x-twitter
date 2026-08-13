@@ -168,6 +168,9 @@ export class BookmarkMetadataRepository {
     }
 
     const activeTags = storedTags.filter((tag) => tag.deletedAt === undefined);
+    const tombstonedTagIds = new Set(
+      storedTags.filter((tag) => tag.deletedAt !== undefined).map((tag) => tag.id),
+    );
     const tagsChanged = input.organizationChanges?.tags ?? true;
     const folderChanged = input.organizationChanges?.folder ?? true;
     const missingTag = tagsChanged
@@ -195,8 +198,8 @@ export class BookmarkMetadataRepository {
     }
     const tagIds = tagsChanged
       ? [
-          ...new Set(
-            input.tags.map((selection) => {
+          ...new Set([
+            ...input.tags.map((selection) => {
               if (selection.id !== null) {
                 return selection.id;
               }
@@ -227,7 +230,8 @@ export class BookmarkMetadataRepository {
               activeTags.push(tag);
               return tag.id;
             }),
-          ),
+            ...bookmark.tagIds.filter((tagId) => tombstonedTagIds.has(tagId)),
+          ]),
         ]
       : bookmark.tagIds;
 
