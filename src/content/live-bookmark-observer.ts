@@ -31,6 +31,7 @@ export interface LiveBookmarkObserverOptions {
 }
 
 export interface LiveBookmarkObserverController {
+  setLocalization(localization: BookmarkLocalizationResult): void;
   stop(): void;
 }
 
@@ -40,6 +41,7 @@ interface ActiveIntent {
   metadataController: AbortController | null;
   modal: BookmarkModalController | null;
   prepareMetadata?: (bookmark: BookmarkRecord) => Promise<void>;
+  setLocalization?: (localization: BookmarkLocalizationResult) => void;
 }
 
 function isBookmarkRecord(value: unknown): value is BookmarkRecord {
@@ -214,6 +216,16 @@ export function startLiveBookmarkObserver(
       ? (response.data as LiveBookmarkIntentResult)
       : null;
     let translate = options.translate;
+    let modalState: Parameters<BookmarkModalController["setState"]>[0] = "pending";
+    let modalMessageKey = "liveBookmarkPending";
+    const setTranslatedState = (
+      state: Parameters<BookmarkModalController["setState"]>[0],
+      messageKey: string,
+    ): void => {
+      modalState = state;
+      modalMessageKey = messageKey;
+      active.modal?.setState(state, translate(messageKey));
+    };
     if (
       !stopped &&
       !active.controller.signal.aborted &&
@@ -260,15 +272,15 @@ export function startLiveBookmarkObserver(
         bookmarkTitle: bookmark.text || bookmark.url,
         labels: modalLabels(translate),
         onSave: async (values) => {
-          active.modal?.setState("pending", translate("liveBookmarkPending"));
+          setTranslatedState("pending", "liveBookmarkPending");
           try {
             await persistValues(values);
             options.onChanged?.(bookmark.id);
-            active.modal?.setState("ready", translate("liveBookmarkSaved"));
+            setTranslatedState("ready", "liveBookmarkSaved");
             return true;
           } catch {
             if (!metadataController.signal.aborted) {
-              active.modal?.setState("ready", translate("liveBookmarkFailed"));
+              setTranslatedState("ready", "liveBookmarkFailed");
             }
             return false;
           }
@@ -280,12 +292,21 @@ export function startLiveBookmarkObserver(
             active.metadataController = null;
             active.modal = null;
             delete active.prepareMetadata;
+            delete active.setLocalization;
             modal.destroy();
             modal = null;
           }
         },
       });
       active.modal = modal;
+      active.setLocalization = (localization) => {
+        translate = selectedLocaleTranslator(localization, options.translate);
+        modal?.setLabels({
+          title: translate("bookmarkPromptTitle"),
+          labels: modalLabels(translate),
+        });
+        modal?.setState(modalState, translate(modalMessageKey));
+      };
       modalByBookmark.set(bookmark.id, active);
       modal.open();
 
@@ -309,7 +330,7 @@ export function startLiveBookmarkObserver(
       await options
         .send({ type: "LIVE_BOOKMARK_CANCELLED", intentId: active.intentId })
         .catch(() => undefined);
-      active.modal?.setState("error", translate("liveBookmarkFailed"));
+      setTranslatedState("error", "liveBookmarkFailed");
       options.onChanged?.(bookmark.id);
       activeByBookmark.delete(bookmark.id);
       return;
@@ -333,18 +354,18 @@ export function startLiveBookmarkObserver(
             await active.prepareMetadata?.(record);
           }
           if (!active.controller.signal.aborted) {
-            active.modal?.setState("ready", translate("liveBookmarkSaved"));
+            setTranslatedState("ready", "liveBookmarkSaved");
           }
         } catch {
           if (!active.controller.signal.aborted) {
-            active.modal?.setState("ready", translate("liveBookmarkFailed"));
+            setTranslatedState("ready", "liveBookmarkFailed");
           }
         }
       } else {
-        active.modal?.setState("success", translate("liveBookmarkArchived"));
+        setTranslatedState("success", "liveBookmarkArchived");
       }
     } else {
-      active.modal?.setState("error", translate("liveBookmarkFailed"));
+      setTranslatedState("error", "liveBookmarkFailed");
     }
     options.onChanged?.(bookmark.id);
     activeByBookmark.delete(bookmark.id);
@@ -367,6 +388,11 @@ export function startLiveBookmarkObserver(
 
   options.document.addEventListener("click", onClick, true);
   return {
+    setLocalization(localization) {
+      for (const active of new Set(modalByBookmark.values())) {
+        active.setLocalization?.(localization);
+      }
+    },
     stop() {
       if (stopped) return;
       stopped = true;

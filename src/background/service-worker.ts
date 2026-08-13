@@ -16,6 +16,10 @@ import { metadataRefreshRequest } from "./metadata-refresh";
 import { SemanticIndexRepository } from "../semantic/semantic-index-repository";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { createLocaleCatalogCache } from "./locale-catalog-cache";
+import {
+  createLocaleRefreshBroadcaster,
+  isLocaleStorageChange,
+} from "./locale-refresh";
 
 const state = new ExtensionStateRepository({
   get: (keys) => chrome.storage.local.get(keys),
@@ -109,6 +113,11 @@ const locale = {
     return { locale: selectedLocale, messages: { ...english, ...selected } };
   },
 };
+const broadcastLocaleRefresh = createLocaleRefreshBroadcaster({
+  loadLocalization: () => locale.get(),
+  queryTabs: ({ url }) => chrome.tabs.query({ url: [...url] }),
+  sendToTab: (tabId, request) => chrome.tabs.sendMessage(tabId, request),
+});
 const controller = new BackgroundController({
   archive,
   exports,
@@ -152,6 +161,11 @@ function scheduleSurfaceRestore(): void {
 scheduleSurfaceRestore();
 chrome.runtime.onInstalled.addListener(scheduleSurfaceRestore);
 chrome.runtime.onStartup.addListener(scheduleSurfaceRestore);
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (isLocaleStorageChange(changes, areaName, LOCALE_STORAGE_KEY)) {
+    void broadcastLocaleRefresh().catch(() => undefined);
+  }
+});
 
 void chrome.storage.local.setAccessLevel({
   accessLevel: "TRUSTED_CONTEXTS",

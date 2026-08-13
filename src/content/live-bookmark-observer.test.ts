@@ -225,6 +225,69 @@ describe("startLiveBookmarkObserver", () => {
     expect(title).toBe("Por que você está salvando isto?");
   });
 
+  it("relocalizes an already open automatic modal without clearing its note", async () => {
+    const button = renderTweet();
+    const observer = startLiveBookmarkObserver({
+      document,
+      stableForMs: 40,
+      timeoutMs: 500,
+      send: async (event): Promise<RuntimeResponse<unknown>> =>
+        event.type === "LIVE_BOOKMARK_PENDING"
+          ? {
+              ok: true,
+              data: {
+                prompt: true,
+                surface: "modal",
+                opened: false,
+                localization: {
+                  locale: "en",
+                  messages: {
+                    bookmarkPromptTitle: "Why are you saving this?",
+                    bookmarkPromptClose: "Close",
+                    bookmarkPromptNote: "Private note",
+                    bookmarkPromptFolder: "Folder",
+                    bookmarkPromptSave: "Save note",
+                    bookmarkPromptTags: "Tags",
+                    bookmarkPromptTagsHelp: "Separate tags with commas.",
+                    liveBookmarkPending: "Saving…",
+                  },
+                },
+              },
+            }
+          : { ok: true, data: null },
+      translate: (key) => key,
+    });
+
+    button.click();
+    await settleMutation();
+    const modal = document.querySelector("bookmark-x-note-modal")?.shadowRoot;
+    const note = modal?.querySelector<HTMLTextAreaElement>(
+      "#bookmark-x-modal-description",
+    );
+    if (!note) throw new Error("Missing active modal note");
+    note.value = "Keep this draft";
+
+    observer.setLocalization({
+      locale: "pt_BR",
+      messages: {
+        bookmarkPromptTitle: "Por que você está salvando isto?",
+        bookmarkPromptClose: "Fechar",
+        bookmarkPromptNote: "Nota privada",
+        bookmarkPromptFolder: "Pasta",
+        bookmarkPromptSave: "Salvar nota",
+        bookmarkPromptTags: "Tags",
+        bookmarkPromptTagsHelp: "Separe tags com vírgulas.",
+        liveBookmarkPending: "Salvando…",
+      },
+    });
+
+    expect(modal?.querySelector("h2")?.textContent).toBe(
+      "Por que você está salvando isto?",
+    );
+    expect(note.value).toBe("Keep this draft");
+    observer.stop();
+  });
+
   it("persists modal note, tags, and folder after X confirms the bookmark", async () => {
     const button = renderTweet();
     const metadataRequests: UiRequest[] = [];

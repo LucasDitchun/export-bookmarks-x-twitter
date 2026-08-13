@@ -1,6 +1,7 @@
 import type {
   BookmarkDecorationItem,
   BookmarkDecorationLookupResult,
+  BookmarkLocalizationResult,
 } from "../shared/protocol";
 import type { ExtensionSettings } from "../settings/settings-repository";
 import { DEFAULT_QUICK_STOP_THRESHOLD } from "../domain/quick-update";
@@ -61,6 +62,7 @@ export interface BookmarkMetadataDecoratorOptions {
 
 export interface BookmarkMetadataDecoratorController {
   refresh(bookmarkId?: string): void;
+  setLocalization(localization: BookmarkLocalizationResult): void;
   setPending(article: Element, bookmarkId: string): void;
   stop(): void;
 }
@@ -583,6 +585,27 @@ export function startBookmarkMetadataDecorator(
         if (!bookmarkId || bookmarkIdFromArticle(article) === bookmarkId) {
           queueArticle(article);
         }
+      }
+    },
+    setLocalization(localization) {
+      if (!lastResult) return;
+      lastResult = { ...lastResult, ...localization };
+      lastTranslator = (key) => localization.messages[key] ?? key;
+      const itemsById = new Map(
+        lastResult.items.map((item) => [item.bookmark.id, item]),
+      );
+      for (const [article, mountedDecoration] of mounted) {
+        const item = itemsById.get(mountedDecoration.bookmarkId);
+        if (!item) continue;
+        renderDecoration({
+          document: options.document,
+          host: mountedDecoration.host,
+          item,
+          settings: lastResult.settings,
+          translate: lastTranslator,
+          pending: pending.get(article) === mountedDecoration.bookmarkId,
+          onOrganize: options.onOrganize,
+        });
       }
     },
     setPending(article, bookmarkId) {

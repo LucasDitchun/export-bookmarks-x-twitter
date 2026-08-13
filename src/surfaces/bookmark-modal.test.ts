@@ -134,6 +134,52 @@ describe("createBookmarkModal", () => {
     modal.destroy();
   });
 
+  it("relabels an open dialog without replacing its entered values", () => {
+    const modal = createBookmarkModal({
+      document,
+      title: "Why are you saving this?",
+      bookmarkTitle: "A useful post",
+      labels: {
+        close: "Close",
+        description: "Private note",
+        folder: "Folder",
+        save: "Save note",
+        tags: "Tags",
+        tagsHelp: "Separate multiple tags with commas.",
+      },
+    });
+    modal.open();
+    const shadow = modal.host.shadowRoot;
+    const note = shadow?.querySelector<HTMLTextAreaElement>(
+      "#bookmark-x-modal-description",
+    );
+    if (!note) throw new Error("Missing note field");
+    note.value = "Do not lose this draft";
+
+    modal.setLabels({
+      title: "Por que você está salvando isto?",
+      labels: {
+        close: "Fechar",
+        description: "Nota privada",
+        folder: "Pasta",
+        save: "Salvar nota",
+        tags: "Tags",
+        tagsHelp: "Separe várias tags com vírgulas.",
+      },
+    });
+
+    expect(shadow?.querySelector("h2")?.textContent).toBe(
+      "Por que você está salvando isto?",
+    );
+    expect(shadow?.querySelector(".close")?.textContent).toBe("Fechar");
+    expect(
+      shadow?.querySelector('label[for="bookmark-x-modal-folder"]')?.textContent,
+    ).toBe("Pasta");
+    expect(shadow?.querySelector(".save")?.textContent).toBe("Salvar nota");
+    expect(note.value).toBe("Do not lose this draft");
+    modal.destroy();
+  });
+
   it("submits plain values and keeps keyboard focus inside the dialog", async () => {
     const onSave = vi.fn(async () => undefined);
     const modal = createBookmarkModal({
