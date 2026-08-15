@@ -7,6 +7,7 @@ import {
   EXPECTED_CONTENT_SCRIPT_MATCHES,
   EXPECTED_MINIMUM_CHROME_VERSION,
   EXPECTED_MANIFEST_HOST_PERMISSIONS,
+  EXPECTED_MANIFEST_OPTIONAL_HOST_PERMISSIONS,
   EXPECTED_MANIFEST_PERMISSIONS,
   EXPECTED_OPTIONS_PAGE,
   EXPECTED_SIDE_PANEL_PATH,
@@ -160,21 +161,27 @@ describe("extension package permission policy", () => {
     );
   });
 
-  it("allows only GitHub plus the pinned model host and its data CDN", () => {
-    expect(EXPECTED_MANIFEST_HOST_PERMISSIONS).toEqual([
-      "https://api.github.com/*",
+  it("keeps only GitHub as required host access", () => {
+    expect(EXPECTED_MANIFEST_HOST_PERMISSIONS).toEqual(["https://api.github.com/*"]);
+    expect(() =>
+      validateExactStringArray(
+        ["https://api.github.com/*"],
+        EXPECTED_MANIFEST_HOST_PERMISSIONS,
+        "host_permissions",
+      ),
+    ).not.toThrow();
+  });
+
+  it("allows only the pinned model host and its data CDN as optional access", () => {
+    expect(EXPECTED_MANIFEST_OPTIONAL_HOST_PERMISSIONS).toEqual([
       "https://huggingface.co/*",
       "https://*.cdn.hf.co/*",
     ]);
     expect(() =>
       validateExactStringArray(
-        [
-          "https://*.cdn.hf.co/*",
-          "https://api.github.com/*",
-          "https://huggingface.co/*",
-        ],
-        EXPECTED_MANIFEST_HOST_PERMISSIONS,
-        "host_permissions",
+        ["https://*.cdn.hf.co/*", "https://huggingface.co/*"],
+        EXPECTED_MANIFEST_OPTIONAL_HOST_PERMISSIONS,
+        "optional_host_permissions",
       ),
     ).not.toThrow();
   });
@@ -182,7 +189,7 @@ describe("extension package permission policy", () => {
   it.each([
     { permissions: [] },
     { permissions: ["https://github.com/"] },
-    { permissions: ["https://huggingface.co/"] },
+    { permissions: ["https://huggingface.co/*"] },
     { permissions: [...EXPECTED_MANIFEST_HOST_PERMISSIONS, "https://x.com/*"] },
     { permissions: ["<all_urls>"] },
   ])(
@@ -194,8 +201,29 @@ describe("extension package permission policy", () => {
           EXPECTED_MANIFEST_HOST_PERMISSIONS,
           "host_permissions",
         ),
+      ).toThrow("Manifest host_permissions must be exactly: https://api.github.com/*.");
+    },
+  );
+
+  it.each([
+    { permissions: [] },
+    { permissions: ["https://huggingface.co/"] },
+    { permissions: ["https://*.cdn.hf.co/"] },
+    {
+      permissions: [...EXPECTED_MANIFEST_OPTIONAL_HOST_PERMISSIONS, "https://x.com/*"],
+    },
+    { permissions: ["<all_urls>"] },
+  ])(
+    "rejects broad or incomplete optional model access: $permissions",
+    ({ permissions }) => {
+      expect(() =>
+        validateExactStringArray(
+          permissions,
+          EXPECTED_MANIFEST_OPTIONAL_HOST_PERMISSIONS,
+          "optional_host_permissions",
+        ),
       ).toThrow(
-        "Manifest host_permissions must be exactly: https://*.cdn.hf.co/*, https://api.github.com/*, https://huggingface.co/*.",
+        "Manifest optional_host_permissions must be exactly: https://*.cdn.hf.co/*, https://huggingface.co/*.",
       );
     },
   );

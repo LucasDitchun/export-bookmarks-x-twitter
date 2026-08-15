@@ -16,6 +16,12 @@ const readyState: SemanticSearchState = {
   errorCode: null,
 };
 
+const grantedModelAccess = {
+  contains: vi.fn(async () => true),
+  request: vi.fn(async () => true),
+  remove: vi.fn(async () => true),
+};
+
 function markup(): void {
   document.body.innerHTML = `
     <input id="semantic-enabled" type="checkbox">
@@ -54,6 +60,7 @@ describe("semantic search options", () => {
     const ui = createSemanticOptionsUi({
       document,
       client,
+      modelAccess: grantedModelAccess,
       translate: (key, ...args) => `${key}:${args.join(",")}`,
       estimateStorage: async () => ({ usage: 50, quota: 200 }),
     });
@@ -91,6 +98,7 @@ describe("semantic search options", () => {
     const ui = createSemanticOptionsUi({
       document,
       client,
+      modelAccess: grantedModelAccess,
       translate: (key, ...args) => `${key}:${args.join(",")}`,
       estimateStorage: async () => ({}),
     });
@@ -111,6 +119,49 @@ describe("semantic search options", () => {
     ui.destroy();
   });
 
+  it("does not record consent or start a download when model access is denied", async () => {
+    const notInstalledState: SemanticSearchState = {
+      enabled: false,
+      consentGrantedAt: null,
+      modelStatus: "notInstalled",
+      backend: null,
+      indexedBookmarks: 0,
+      updatedAt: null,
+      errorCode: null,
+    };
+    const client = {
+      getState: vi.fn(async () => notInstalledState),
+      installWithConsent: vi.fn(async () => readyState),
+      reindex: vi.fn(),
+      cancel: vi.fn(),
+      remove: vi.fn(),
+      setEnabled: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
+    };
+    const modelAccess = {
+      contains: vi.fn(async () => false),
+      request: vi.fn(async () => false),
+      remove: vi.fn(async () => true),
+    };
+    const ui = createSemanticOptionsUi({
+      document,
+      client,
+      modelAccess,
+      translate: (key) => key,
+      estimateStorage: async () => ({}),
+    });
+    await ui.ready;
+
+    expect(modelAccess.contains).toHaveBeenCalledOnce();
+    expect(modelAccess.request).not.toHaveBeenCalled();
+    document.getElementById("semantic-install")?.click();
+
+    await vi.waitFor(() => expect(modelAccess.request).toHaveBeenCalledOnce());
+    expect(client.installWithConsent).not.toHaveBeenCalled();
+    expect(await client.getState()).toEqual(notInstalledState);
+    ui.destroy();
+  });
+
   it("cancels, removes, and toggles without losing accessible status feedback", async () => {
     const client = {
       getState: vi.fn(async () => readyState),
@@ -124,6 +175,7 @@ describe("semantic search options", () => {
     const ui = createSemanticOptionsUi({
       document,
       client,
+      modelAccess: grantedModelAccess,
       translate: (key) => key,
       estimateStorage: async () => ({}),
     });
@@ -138,6 +190,75 @@ describe("semantic search options", () => {
     expect(document.getElementById("semantic-status")?.getAttribute("aria-live")).toBe(
       "polite",
     );
+    ui.destroy();
+  });
+
+  it("revokes optional model access after local model removal succeeds", async () => {
+    const client = {
+      getState: vi.fn(async () => readyState),
+      installWithConsent: vi.fn(),
+      reindex: vi.fn(),
+      cancel: vi.fn(),
+      remove: vi.fn(async () => {}),
+      setEnabled: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
+    };
+    const modelAccess = {
+      contains: vi.fn(async () => true),
+      request: vi.fn(async () => true),
+      remove: vi.fn(async () => true),
+    };
+    const ui = createSemanticOptionsUi({
+      document,
+      client,
+      modelAccess,
+      translate: (key) => key,
+      estimateStorage: async () => ({}),
+    });
+    await ui.ready;
+    document.getElementById("semantic-remove")?.click();
+
+    await vi.waitFor(() => expect(modelAccess.remove).toHaveBeenCalledOnce());
+    expect(client.remove).toHaveBeenCalledOnce();
+    expect(client.remove.mock.invocationCallOrder[0]!).toBeLessThan(
+      modelAccess.remove.mock.invocationCallOrder[0]!,
+    );
+    ui.destroy();
+  });
+
+  it("keeps optional access when local model removal fails", async () => {
+    const client = {
+      getState: vi.fn(async () => readyState),
+      installWithConsent: vi.fn(),
+      reindex: vi.fn(),
+      cancel: vi.fn(),
+      remove: vi.fn(async () => {
+        throw new Error("cache cleanup failed");
+      }),
+      setEnabled: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
+    };
+    const modelAccess = {
+      contains: vi.fn(async () => true),
+      request: vi.fn(async () => true),
+      remove: vi.fn(async () => true),
+    };
+    const ui = createSemanticOptionsUi({
+      document,
+      client,
+      modelAccess,
+      translate: (key) => key,
+      estimateStorage: async () => ({}),
+    });
+    await ui.ready;
+    document.getElementById("semantic-remove")?.click();
+
+    await vi.waitFor(() =>
+      expect(document.getElementById("semantic-status")?.textContent).toBe(
+        "semanticRemoveError",
+      ),
+    );
+    expect(modelAccess.remove).not.toHaveBeenCalled();
     ui.destroy();
   });
 
@@ -163,6 +284,7 @@ describe("semantic search options", () => {
     const ui = createSemanticOptionsUi({
       document,
       client,
+      modelAccess: grantedModelAccess,
       translate: (key) => key,
       estimateStorage: async () => ({}),
     });
@@ -203,6 +325,7 @@ describe("semantic search options", () => {
     const ui = createSemanticOptionsUi({
       document,
       client,
+      modelAccess: grantedModelAccess,
       translate: (key) => key,
       estimateStorage: async () => ({}),
     });

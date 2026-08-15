@@ -6,11 +6,15 @@ bookmark content never crosses a network boundary.
 
 ## Consent and network boundary
 
-The **Download and enable** button is the only operation that allows a model
-download. It records a device-local consent timestamp and starts a dedicated
-module Web Worker. Normal searches read the pinned files from Browser Cache and
-replace the Transformers.js remote fetch hook with a cache-miss response, so a
-missing asset cannot start a network request.
+Hugging Face and its model-data CDN are declared as optional host permissions.
+The options page checks the current permission state with
+`chrome.permissions.contains()`. The **Download and enable** click is the only
+operation that calls `chrome.permissions.request()`; a denied or dismissed
+prompt records no consent, starts no Worker, and downloads nothing. After access
+is granted, the extension records a device-local consent timestamp and starts a
+dedicated module Web Worker. Normal searches read the pinned files from Browser
+Cache and replace the Transformers.js remote fetch hook with a cache-miss
+response, so a missing asset cannot start a network request.
 
 The extension package contains all executable code:
 
@@ -100,7 +104,9 @@ the browser's current storage estimate.
 - **Cancel** terminates the Worker, which aborts an in-flight fetch or inference.
 - **Reindex saved posts** compares fingerprints and embeds only changed records.
 - **Remove model and index** clears the dedicated Cache Storage entry, vectors,
-  lifecycle state, and consent.
+  lifecycle state, and consent, then revokes the optional model-host permission.
+  Permission revocation is skipped if local cleanup fails so removal can be
+  retried safely.
 - JSON backup intentionally excludes weights, embeddings, and device consent.
 - The model truncates input after 512 tokens, and low-resource languages may
   have lower retrieval quality.

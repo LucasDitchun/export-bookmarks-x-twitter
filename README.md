@@ -256,9 +256,12 @@ The extension requests only the capabilities needed for capture:
 - `https://api.github.com/*` reads only this project's public star count for the
   open-source card in Settings. The result is cached locally for 24 hours, and
   no bookmark data or GitHub credentials are included;
-- `https://huggingface.co/*` and `https://*.cdn.hf.co/*` download only the
-  pinned model weights, tokenizer, and configuration after explicit consent.
-  All executable JavaScript and WebAssembly is packaged with the extension;
+- `https://huggingface.co/*` and `https://*.cdn.hf.co/*` are optional host
+  permissions requested only from the **Download and enable** click. They
+  download only the pinned model weights, tokenizer, and configuration after
+  Chrome grants access; removing the model revokes that access after local
+  cleanup succeeds. All executable JavaScript and WebAssembly is packaged with
+  the extension;
 - the content script is restricted to `https://x.com/*` and
   `https://www.x.com/*`; it compares visible numeric post IDs with the local
   library to decorate matches, and reads full post fields outside the bookmarks

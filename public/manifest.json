@@ -6,11 +6,8 @@
   "minimum_chrome_version": "116",
   "default_locale": "en",
   "permissions": ["activeTab", "sidePanel", "storage", "unlimitedStorage"],
-  "host_permissions": [
-    "https://api.github.com/*",
-    "https://huggingface.co/*",
-    "https://*.cdn.hf.co/*"
-  ],
+  "host_permissions": ["https://api.github.com/*"],
+  "optional_host_permissions": ["https://huggingface.co/*", "https://*.cdn.hf.co/*"],
   "background": {
     "service_worker": "service-worker.js",
     "type": "module"
