@@ -2,7 +2,7 @@
 
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, resolve } from "node:path";
@@ -14,6 +14,10 @@ const STARTUP_TIMEOUT_MS = 20_000;
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const DIST_DIRECTORY = resolve(PROJECT_ROOT, "dist");
 const CACHE_KEY = "bookmark-x-transformers-v1";
+const SEMANTIC_MODEL_ORIGINS = Object.freeze([
+  "https://huggingface.co/*",
+  "https://*.cdn.hf.co/*",
+]);
 const MODEL_REVISION = "761b726dd34fb83930e26aab4e9ac3899aa1fa78";
 const EXPECTED_BOOKMARK_ID = "701";
 const SEMANTIC_QUERY = "Como consertar o pneu furado da bicicleta?";
@@ -44,6 +48,41 @@ export function parseArguments(args) {
     }
   }
   return { run, timeoutMs, keepProfile };
+}
+
+export function createHeadlessGateManifest(manifest) {
+  const required = [...(manifest.host_permissions ?? [])];
+  const optional = [...(manifest.optional_host_permissions ?? [])];
+  for (const origin of SEMANTIC_MODEL_ORIGINS) {
+    if (!optional.includes(origin) || required.includes(origin)) {
+      throw new Error(
+        `Production manifest must declare ${origin} only as an optional host permission.`,
+      );
+    }
+  }
+  const remainingOptional = optional.filter(
+    (origin) => !SEMANTIC_MODEL_ORIGINS.includes(origin),
+  );
+  const { optional_host_permissions: ignored, ...rest } = manifest;
+  return {
+    ...rest,
+    host_permissions: [...required, ...SEMANTIC_MODEL_ORIGINS],
+    ...(remainingOptional.length === 0
+      ? {}
+      : { optional_host_permissions: remainingOptional }),
+  };
+}
+
+async function stageHeadlessGateExtension(profileDirectory) {
+  const extensionDirectory = resolve(profileDirectory, "headless-extension");
+  await cp(DIST_DIRECTORY, extensionDirectory, { recursive: true });
+  const manifestPath = resolve(extensionDirectory, "manifest.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  await writeFile(
+    manifestPath,
+    `${JSON.stringify(createHeadlessGateManifest(manifest), null, 2)}\n`,
+  );
+  return extensionDirectory;
 }
 
 async function findChromeBinary() {
@@ -390,6 +429,9 @@ const seedScenario = String.raw`
   const beforeDatabases = typeof indexedDB.databases === "function"
     ? (await indexedDB.databases()).map(({ name }) => name)
     : [];
+  const disclosure = await chrome.runtime.sendMessage({
+    type: "ACCEPT_FIRST_USE_DISCLOSURE",
+  });
   const exported = await chrome.runtime.sendMessage({ type: "EXPORT_BACKUP" });
   if (!exported?.ok) throw new Error("Could not create an empty synthetic backup.");
   const backup = JSON.parse(exported.data.content);
@@ -402,6 +444,7 @@ const seedScenario = String.raw`
     beforeStateStored: Object.hasOwn(beforeState, "semanticSearchState"),
     beforeCaches,
     beforeDatabases,
+    disclosureAccepted: disclosure?.ok && disclosure.data?.accepted === true,
     restored,
   };
 })()
@@ -549,6 +592,9 @@ const removeScenario = String.raw`
 `;
 
 function assertGateResult(before, installed, offline, removed) {
+  if (before.disclosureAccepted !== true) {
+    throw new Error(`First-use disclosure was not accepted: ${JSON.stringify(before)}`);
+  }
   if (
     before.beforeStateStored ||
     before.beforeCaches.includes(CACHE_KEY) ||
@@ -648,6 +694,10 @@ export async function runBrowserGate(options) {
   const profileDirectory = await mkdtemp(
     resolve(tmpdir(), "bookmark-x-semantic-chrome-"),
   );
+  // Headless Chrome cannot surface or accept the native optional-permission
+  // prompt. The production manifest is validated above, then only this isolated
+  // runtime copy receives the model hosts so the real click path can proceed.
+  const extensionDirectory = await stageHeadlessGateExtension(profileDirectory);
   const chromeErrors = [];
   const chromeProcess = spawn(
     chromeBinary,
@@ -661,8 +711,8 @@ export async function runBrowserGate(options) {
       "--no-first-run",
       "--no-default-browser-check",
       `--user-data-dir=${profileDirectory}`,
-      `--disable-extensions-except=${DIST_DIRECTORY}`,
-      `--load-extension=${DIST_DIRECTORY}`,
+      `--disable-extensions-except=${extensionDirectory}`,
+      `--load-extension=${extensionDirectory}`,
       "--remote-debugging-port=0",
       "about:blank",
     ],
