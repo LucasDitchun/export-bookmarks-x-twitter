@@ -276,6 +276,22 @@
   "localOnlyNote": {
     "message": "仅保存在本地 · Bookmark X 不会上传任何数据"
   },
+  "firstUseDisclosureEyebrow": { "message": "你的数据，由你决定" },
+  "firstUseDisclosureTitle": { "message": "在 Bookmark X 读取帖子之前" },
+  "firstUseDisclosureSummary": {
+    "message": "Bookmark X 会读取 X 书签中显示的正文、作者、链接、日期和媒体，以创建私密的本地资料库。"
+  },
+  "firstUseDisclosureLocal": {
+    "message": "你的书签、文件夹、标签和笔记都保留在此浏览器中。"
+  },
+  "firstUseDisclosureNetwork": {
+    "message": "不会上传任何内容。只有在你选择“下载并启用”后，可选语义搜索才会连接 Hugging Face。"
+  },
+  "firstUseDisclosureErase": {
+    "message": "你可以随时在“更多选项”中选择“清除归档”来删除全部数据。"
+  },
+  "firstUseDisclosureAccept": { "message": "我已了解 — 继续" },
+  "firstUseDisclosureFailure": { "message": "无法保存你的选择，请重试。" },
   "clearArchiveButton": {
     "message": "清除存档"
   },

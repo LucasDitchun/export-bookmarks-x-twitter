@@ -734,6 +734,56 @@
       </div>
     </main>
 
+    <section
+      id="first-use-disclosure"
+      class="first-use-disclosure"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="first-use-disclosure-title"
+      aria-describedby="first-use-disclosure-summary first-use-disclosure-details"
+      hidden
+    >
+      <div class="first-use-disclosure-card">
+        <span class="first-use-eyebrow" data-i18n="firstUseDisclosureEyebrow">
+          Your data, your choice
+        </span>
+        <h2 id="first-use-disclosure-title" data-i18n="firstUseDisclosureTitle">
+          Before Bookmark X reads posts
+        </h2>
+        <p id="first-use-disclosure-summary" data-i18n="firstUseDisclosureSummary">
+          Bookmark X reads the text, author, link, date, and media shown in your X
+          bookmarks to build a private local library.
+        </p>
+        <ul id="first-use-disclosure-details">
+          <li data-i18n="firstUseDisclosureLocal">
+            Your bookmarks, folders, tags, and notes stay in this browser.
+          </li>
+          <li data-i18n="firstUseDisclosureNetwork">
+            Nothing is uploaded. Optional semantic search contacts Hugging Face only
+            after you choose Download and enable.
+          </li>
+          <li data-i18n="firstUseDisclosureErase">
+            Delete everything at any time from More options, Clear archive.
+          </li>
+        </ul>
+        <button
+          id="accept-first-use-disclosure"
+          class="button button-primary"
+          type="button"
+          data-i18n="firstUseDisclosureAccept"
+        >
+          I understand — continue
+        </button>
+        <p
+          id="first-use-disclosure-status"
+          class="quiet-status first-use-disclosure-status"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        ></p>
+      </div>
+    </section>
+
     <dialog id="clear-dialog" aria-labelledby="clear-dialog-title">
       <form method="dialog">
         <h2 id="clear-dialog-title" data-i18n="clearDialogTitle">

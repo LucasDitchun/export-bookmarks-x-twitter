@@ -105,6 +105,75 @@ button:disabled {
   display: none !important;
 }
 
+.first-use-disclosure {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+  background: rgb(20 20 15 / 72%);
+  backdrop-filter: blur(8px);
+}
+
+.first-use-disclosure-card {
+  width: min(100%, 520px);
+  padding: 24px;
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  background: var(--paper);
+  box-shadow: 8px 8px 0 rgb(20 20 15 / 22%);
+}
+
+.first-use-eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.first-use-disclosure-card > p {
+  margin-top: 12px;
+  color: var(--muted);
+}
+
+.first-use-disclosure-card ul {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding-left: 22px;
+}
+
+.first-use-disclosure-card li::marker {
+  color: var(--success);
+}
+
+.first-use-disclosure-card .button {
+  width: 100%;
+  min-height: 48px;
+}
+
+.first-use-disclosure-status {
+  min-height: 1.5em;
+  color: var(--danger) !important;
+}
+
+@media (forced-colors: active) {
+  .first-use-disclosure {
+    background: Canvas;
+  }
+
+  .first-use-eyebrow {
+    border: 1px solid ButtonText;
+  }
+}
+
 h1,
 h2,
 h3,

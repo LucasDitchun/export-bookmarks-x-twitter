@@ -10,7 +10,7 @@ import {
   resolvePreferredLocale,
 } from "./i18n";
 import type { SendMessage } from "./protocol";
-import type { SettingsResult } from "../shared/protocol";
+import type { FirstUseDisclosureResult, SettingsResult } from "../shared/protocol";
 import {
   DEFAULT_SETTINGS,
   SETTINGS_STORAGE_KEY,
@@ -30,6 +30,7 @@ import {
   loadDateTimePreferences,
   sanitizeDateTimePreferences,
 } from "../settings/date-time-preferences";
+import { createFirstUseDisclosureUi } from "./first-use-disclosure-ui";
 
 function applySurfaceContext(): void {
   const params = new URLSearchParams(window.location.search);
@@ -91,6 +92,24 @@ async function startPopup(): Promise<void> {
   }
 
   const sendMessage: SendMessage = (request) => chrome.runtime.sendMessage(request);
+  const disclosureUi = createFirstUseDisclosureUi({
+    document,
+    async loadAccepted() {
+      const response = await sendMessage<FirstUseDisclosureResult>({
+        type: "GET_FIRST_USE_DISCLOSURE",
+      });
+      return response.ok && response.data.accepted;
+    },
+    async accept() {
+      const response = await sendMessage<FirstUseDisclosureResult>({
+        type: "ACCEPT_FIRST_USE_DISCLOSURE",
+      });
+      if (!response.ok) throw new Error(response.error.code);
+    },
+    onAccepted() {},
+    failureMessage: translate("firstUseDisclosureFailure"),
+  });
+  await disclosureUi.initialize();
   const semanticSearch = new SemanticSearchClient(
     new SemanticStateRepository({
       get: (key) => chrome.storage.local.get(key),
@@ -173,6 +192,7 @@ async function startPopup(): Promise<void> {
       settingsUi.destroy();
       semanticSearch.destroy();
       navigation.destroy();
+      disclosureUi.destroy();
       app?.destroy();
     },
     { once: true },

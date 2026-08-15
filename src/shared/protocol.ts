@@ -117,6 +117,11 @@ export interface SettingsResult {
   settings: ExtensionSettings;
 }
 
+export interface FirstUseDisclosureResult {
+  accepted: boolean;
+  version: number;
+}
+
 export interface OpenSurfaceResult {
   surface: LibrarySurface;
   opened: boolean;
@@ -154,6 +159,8 @@ export interface LiveBookmarkIntentResult extends OpenSurfaceResult {
 export type UiRequest =
   | { type: "GET_STATUS" }
   | { type: "GET_SETTINGS" }
+  | { type: "GET_FIRST_USE_DISCLOSURE" }
+  | { type: "ACCEPT_FIRST_USE_DISCLOSURE" }
   | { type: "GET_SEMANTIC_CORPUS" }
   | { type: "SAVE_SETTINGS"; payload: { settings: SettingsPatch } }
   | { type: "OPEN_SELECTED_SURFACE" }
@@ -225,6 +232,7 @@ export type UiRequest =
 export type PopupRequest = UiRequest;
 
 export type ContentControlRequest =
+  | { type: "ENABLE_POST_PROCESSING" }
   | {
       type: "START_SCRAPE";
       runId: string;

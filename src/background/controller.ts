@@ -46,6 +46,7 @@ import {
 import type { ArchiveRepository } from "../storage/archive-repository";
 import type { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
 import type { ExtensionStateRepository } from "../storage/extension-state";
+import type { FirstUseDisclosureRepository } from "../privacy/first-use-disclosure";
 import {
   BackupSettingsWriteError,
   type BackupRepository,
@@ -72,6 +73,7 @@ interface BrowserBridge {
   sendToTab(tabId: number, request: ContentControlRequest): Promise<unknown>;
   configureSurface(surface: LibrarySurface): Promise<void>;
   openSidePanel(tabId: number): Promise<void>;
+  enablePostProcessing(): Promise<void>;
 }
 
 interface MessageSender {
@@ -168,6 +170,7 @@ interface BackgroundDependencies {
     get(): Promise<ExtensionSettings>;
     save(patch: SettingsPatch): Promise<ExtensionSettings>;
   };
+  disclosure: Pick<FirstUseDisclosureRepository, "status" | "accept">;
   locale: {
     get(): Promise<{
       locale: SupportedLocale;
@@ -265,6 +268,8 @@ function isUiRequest(value: unknown): value is UiRequest {
   if (
     value.type === "GET_STATUS" ||
     value.type === "GET_SETTINGS" ||
+    value.type === "GET_FIRST_USE_DISCLOSURE" ||
+    value.type === "ACCEPT_FIRST_USE_DISCLOSURE" ||
     value.type === "GET_SEMANTIC_CORPUS" ||
     value.type === "OPEN_SELECTED_SURFACE" ||
     value.type === "OPEN_BOOKMARKS" ||
@@ -640,7 +645,42 @@ export class BackgroundController {
           return success(await this.getStatus());
         case "GET_SETTINGS":
           return success({ settings: await this.dependencies.settings.get() });
+        case "GET_FIRST_USE_DISCLOSURE":
+          return success(await this.dependencies.disclosure.status());
+        case "ACCEPT_FIRST_USE_DISCLOSURE": {
+          let extensionPage = false;
+          try {
+            const senderUrl = new URL(sender.url ?? "");
+            extensionPage =
+              senderUrl.protocol === "chrome-extension:" &&
+              senderUrl.hostname === this.dependencies.extensionId;
+          } catch {
+            extensionPage = false;
+          }
+          if (!extensionPage) {
+            throw new BookmarkXError(
+              "invalid_sender",
+              "Only an extension page can accept the first-use disclosure.",
+            );
+          }
+          let status;
+          try {
+            status = await this.dependencies.disclosure.accept(this.now());
+          } catch {
+            throw new BookmarkXError(
+              "first_use_disclosure_save_failed",
+              "Bookmark X could not save the first-use choice.",
+            );
+          }
+          try {
+            await this.dependencies.browser.enablePostProcessing();
+          } catch {
+            // The decision is already stored. Open X tabs also verify it on load.
+          }
+          return success(status);
+        }
         case "GET_SEMANTIC_CORPUS":
+          await this.requireFirstUseDisclosure();
           return success({ documents: await this.dependencies.search.listDocuments() });
         case "SAVE_SETTINGS": {
           const settings = await this.dependencies.settings.save(
@@ -825,6 +865,7 @@ export class BackgroundController {
   }
 
   private async startScrape(requestedMode: "quick" | "full"): Promise<ScrapeRun> {
+    await this.requireFirstUseDisclosure();
     const previous = await this.dependencies.state.getScrapeRun();
     if (previous?.status === "running") {
       throw new BookmarkXError(
@@ -952,6 +993,7 @@ export class BackgroundController {
     }
 
     try {
+      await this.requireFirstUseDisclosure();
       const run = await this.dependencies.state.getScrapeRun();
       if (
         !run ||
@@ -1095,6 +1137,7 @@ export class BackgroundController {
     }
 
     try {
+      await this.requireFirstUseDisclosure();
       const timestamp = this.now().toISOString();
       if (event.type === "LIVE_BOOKMARK_PENDING") {
         const settings = await this.dependencies.settings.get();
@@ -1165,6 +1208,16 @@ export class BackgroundController {
       return success({ bookmark });
     } catch (error) {
       return failure(error);
+    }
+  }
+
+  private async requireFirstUseDisclosure(): Promise<void> {
+    const disclosure = await this.dependencies.disclosure.status();
+    if (!disclosure.accepted) {
+      throw new BookmarkXError(
+        "first_use_disclosure_required",
+        "Review and accept the first-use disclosure before Bookmark X reads posts.",
+      );
     }
   }
 

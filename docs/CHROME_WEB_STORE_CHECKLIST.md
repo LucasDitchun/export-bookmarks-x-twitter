@@ -12,6 +12,8 @@
 - [ ] Data disclosures cover post text, authors, dates, URLs, capture metadata,
       private notes, tags/folders, local retention, and separately downloaded
       TXT, Markdown, and JSON files.
+- [ ] The first-use disclosure appears before any X post observation or capture,
+      explains local storage and deletion, and requires explicit acceptance.
 - [ ] The listing says semantic search is optional, downloads about 136 MB only
       after consent, runs locally, and can be removed completely.
 - [ ] English, Brazilian Portuguese, Japanese, Spanish, Simplified Chinese,
@@ -55,6 +57,11 @@
       data; it contains no sharp or libvips Node-only binaries/package trees.
 
 ## Manual acceptance
+
+- [ ] On a fresh profile, opening an X page does not start post observers,
+      decoration, live synchronization, or capture before disclosure acceptance.
+- [ ] Accepting the localized disclosure activates processing without a reload;
+      an older disclosure version requires acceptance again.
 
 - [ ] A signed-in user can open `x.com/i/bookmarks` and start capture.
 - [ ] The page scrolls, counts increase, and closing the popup does not stop the

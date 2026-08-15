@@ -218,6 +218,22 @@
   "localOnlyNote": {
     "message": "Stored locally · Nothing is uploaded by Bookmark X"
   },
+  "firstUseDisclosureEyebrow": { "message": "Your data, your choice" },
+  "firstUseDisclosureTitle": { "message": "Before Bookmark X reads posts" },
+  "firstUseDisclosureSummary": {
+    "message": "Bookmark X reads the text, author, link, date, and media shown in your X bookmarks to build a private local library."
+  },
+  "firstUseDisclosureLocal": {
+    "message": "Your bookmarks, folders, tags, and notes stay in this browser."
+  },
+  "firstUseDisclosureNetwork": {
+    "message": "Nothing is uploaded. Optional semantic search contacts Hugging Face only after you choose Download and enable."
+  },
+  "firstUseDisclosureErase": {
+    "message": "Delete everything at any time from More options, Clear archive."
+  },
+  "firstUseDisclosureAccept": { "message": "I understand — continue" },
+  "firstUseDisclosureFailure": { "message": "Could not save your choice. Try again." },
   "clearArchiveButton": { "message": "Clear archive" },
   "clearDialogTitle": { "message": "Clear the local archive?" },
   "clearDialogDescription": {

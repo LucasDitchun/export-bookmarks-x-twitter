@@ -16,6 +16,7 @@ import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { createLocaleCatalogCache } from "./locale-catalog-cache";
 import { bookmarkMetadataMessagesFromCatalog } from "../shared/bookmark-metadata-messages";
 import { BookmarkMetadataRepository } from "../storage/bookmark-metadata-repository";
+import { FirstUseDisclosureRepository } from "../privacy/first-use-disclosure";
 import {
   isGlobalSerializationBarrierAwareRead,
   isGlobalSerializationBarrier,
@@ -57,6 +58,10 @@ const settings = new SettingsRepository({
 });
 const liveState = new LiveBookmarkStateRepository({
   get: (keys) => chrome.storage.local.get(keys),
+  set: (items) => chrome.storage.local.set(items),
+});
+const disclosure = new FirstUseDisclosureRepository({
+  get: (key) => chrome.storage.local.get(key),
   set: (items) => chrome.storage.local.set(items),
 });
 
@@ -107,6 +112,7 @@ const controller = new BackgroundController({
   search,
   semantic,
   settings,
+  disclosure,
   locale,
   backup,
   liveState,
@@ -123,6 +129,20 @@ const controller = new BackgroundController({
     sendToTab: (tabId, request) => chrome.tabs.sendMessage(tabId, request),
     configureSurface,
     openSidePanel: (tabId) => chrome.sidePanel.open({ tabId }),
+    async enablePostProcessing() {
+      const tabs = await chrome.tabs.query({});
+      await Promise.allSettled(
+        tabs.flatMap((tab) =>
+          typeof tab.id === "number"
+            ? [
+                chrome.tabs.sendMessage(tab.id, {
+                  type: "ENABLE_POST_PROCESSING",
+                }),
+              ]
+            : [],
+        ),
+      );
+    },
   },
 });
 const broadcastLocaleRefresh = createLocaleRefreshBroadcaster({

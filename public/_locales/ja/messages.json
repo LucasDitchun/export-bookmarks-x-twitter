@@ -292,6 +292,24 @@
   "localOnlyNote": {
     "message": "ローカルに保存 · Bookmark Xがデータをアップロードすることはありません"
   },
+  "firstUseDisclosureEyebrow": { "message": "データはあなたのもの" },
+  "firstUseDisclosureTitle": { "message": "Bookmark X が投稿を読み取る前に" },
+  "firstUseDisclosureSummary": {
+    "message": "Bookmark X は、X のブックマークに表示される本文、投稿者、リンク、日時、メディアを読み取り、非公開のローカルライブラリを作成します。"
+  },
+  "firstUseDisclosureLocal": {
+    "message": "ブックマーク、フォルダー、タグ、メモはこのブラウザー内に保存されます。"
+  },
+  "firstUseDisclosureNetwork": {
+    "message": "データはアップロードされません。任意のセマンティック検索は「ダウンロードして有効化」を選んだ後にのみ Hugging Face に接続します。"
+  },
+  "firstUseDisclosureErase": {
+    "message": "「その他のオプション」から「アーカイブを消去」を選ぶと、いつでもすべて削除できます。"
+  },
+  "firstUseDisclosureAccept": { "message": "理解して続行" },
+  "firstUseDisclosureFailure": {
+    "message": "選択を保存できませんでした。もう一度お試しください。"
+  },
   "clearArchiveButton": {
     "message": "アーカイブを消去"
   },

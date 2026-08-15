@@ -290,6 +290,22 @@
   "localOnlyNote": {
     "message": "Salvato localmente · Bookmark X non carica alcun dato"
   },
+  "firstUseDisclosureEyebrow": { "message": "I tuoi dati, la tua scelta" },
+  "firstUseDisclosureTitle": { "message": "Prima che Bookmark X legga i post" },
+  "firstUseDisclosureSummary": {
+    "message": "Bookmark X legge testo, autore, link, data e contenuti multimediali mostrati nei tuoi segnalibri X per creare una libreria locale privata."
+  },
+  "firstUseDisclosureLocal": {
+    "message": "Segnalibri, cartelle, tag e note restano in questo browser."
+  },
+  "firstUseDisclosureNetwork": {
+    "message": "Non viene caricato nulla. La ricerca semantica facoltativa contatta Hugging Face solo dopo Scarica e attiva."
+  },
+  "firstUseDisclosureErase": {
+    "message": "Elimina tutto in qualsiasi momento da Altre opzioni, Cancella archivio."
+  },
+  "firstUseDisclosureAccept": { "message": "Ho capito — continua" },
+  "firstUseDisclosureFailure": { "message": "Impossibile salvare la scelta. Riprova." },
   "clearArchiveButton": {
     "message": "Cancella archivio"
   },
