@@ -336,6 +336,10 @@
   "bookmarkPromptTagsHelp": { "message": "Press Enter after each tag." },
   "bookmarkPromptFolder": { "message": "Folder" },
   "bookmarkPromptNote": { "message": "Private note" },
+  "bookmarkPromptPreferencesHint": {
+    "message": "You can turn off this prompt in Settings."
+  },
+  "bookmarkPromptPreferencesOpen": { "message": "Open settings" },
   "bookmarkCategorized": { "message": "Categorized" },
   "bookmarkNeedsCategory": { "message": "Needs category" },
   "bookmarkMetadataLabel": { "message": "Bookmark X saved-post details" },

@@ -424,6 +424,10 @@
   "bookmarkPromptTagsHelp": { "message": "タグごとに Enter キーを押してください。" },
   "bookmarkPromptFolder": { "message": "フォルダー" },
   "bookmarkPromptNote": { "message": "非公開メモ" },
+  "bookmarkPromptPreferencesHint": {
+    "message": "この確認画面は設定で無効にできます。"
+  },
+  "bookmarkPromptPreferencesOpen": { "message": "設定を開く" },
   "bookmarkCategorized": { "message": "分類済み" },
   "bookmarkNeedsCategory": { "message": "要分類" },
   "bookmarkMetadataLabel": { "message": "Bookmark X に保存した投稿の詳細" },

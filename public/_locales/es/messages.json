@@ -424,6 +424,10 @@
   "bookmarkPromptTagsHelp": { "message": "Pulsa Enter después de cada etiqueta." },
   "bookmarkPromptFolder": { "message": "Carpeta" },
   "bookmarkPromptNote": { "message": "Nota privada" },
+  "bookmarkPromptPreferencesHint": {
+    "message": "Puedes desactivar este aviso en Configuración."
+  },
+  "bookmarkPromptPreferencesOpen": { "message": "Abrir configuración" },
   "bookmarkCategorized": { "message": "Categorizado" },
   "bookmarkNeedsCategory": { "message": "Falta categorizar" },
   "bookmarkMetadataLabel": {

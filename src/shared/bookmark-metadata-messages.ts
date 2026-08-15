@@ -3,6 +3,8 @@ export const BOOKMARK_MODAL_MESSAGE_KEYS = [
   "bookmarkPromptClose",
   "bookmarkPromptNote",
   "bookmarkPromptFolder",
+  "bookmarkPromptPreferencesHint",
+  "bookmarkPromptPreferencesOpen",
   "bookmarkPromptSave",
   "bookmarkPromptTags",
   "bookmarkPromptTagsHelp",
