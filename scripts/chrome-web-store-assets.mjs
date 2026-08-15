@@ -27,11 +27,11 @@ export const CHROME_WEB_STORE_ASSET_DIRECTORY = "docs/chrome-web-store/assets";
 export const CHROME_WEB_STORE_ASSET_FILENAMES = Object.freeze({
   icon: "icon-128.png",
   screenshots: Object.freeze([
-    "screenshot-01-dashboard-overview.png",
-    "screenshot-02-library-inbox.png",
-    "screenshot-03-bookmark-detail-note-tags.png",
-    "screenshot-04-library-organization.png",
-    "screenshot-05-library-archived-search.png",
+    "screenshot-01-search-library.png",
+    "screenshot-02-organize-folders-tags.png",
+    "screenshot-03-note-folder-tags.png",
+    "screenshot-04-capture-recent.png",
+    "screenshot-05-export-private.png",
   ]),
   smallPromo: "small-promo-tile.png",
   marquee: "marquee-promo-tile.png",
@@ -42,95 +42,196 @@ const DIST_DIRECTORY = resolve(PROJECT_ROOT, "dist");
 const ICON_SOURCE_PATH = resolve(PROJECT_ROOT, "public/icons/icon-128.png");
 const STARTUP_TIMEOUT_MS = 20_000;
 const SCREENSHOT_SOURCES = Object.freeze({
-  homeDashboard: "home-dashboard.png",
-  libraryInbox: "library-inbox.png",
-  detailOrganizedBookmark: "detail-organized-bookmark.png",
+  librarySearch: "library-search.png",
   libraryOrganization: "library-organization.png",
-  libraryArchivedSearch: "library-archived-search.png",
+  detailOrganizedBookmark: "detail-organized-bookmark.png",
+  captureRecent: "capture-recent.png",
+  exportPrivate: "export-private.png",
 });
 export const CHROME_WEB_STORE_SCREENSHOT_SCENES = Object.freeze([
   Object.freeze({
     filename: CHROME_WEB_STORE_ASSET_FILENAMES.screenshots[0],
-    checkpoint: "home-dashboard",
+    checkpoint: "library-search",
+    step: "01 / FIND",
+    title: "Find it again.",
+    accent: "#d9ff45",
   }),
   Object.freeze({
     filename: CHROME_WEB_STORE_ASSET_FILENAMES.screenshots[1],
-    checkpoint: "library-inbox",
+    checkpoint: "library-organization",
+    step: "02 / ORGANIZE",
+    title: "Give it a place.",
+    accent: "#d9ff45",
   }),
   Object.freeze({
     filename: CHROME_WEB_STORE_ASSET_FILENAMES.screenshots[2],
     checkpoint: "detail-organized-bookmark",
+    step: "03 / REMEMBER",
+    title: "Keep the context.",
+    accent: "#d9ff45",
   }),
   Object.freeze({
     filename: CHROME_WEB_STORE_ASSET_FILENAMES.screenshots[3],
-    checkpoint: "library-organization",
+    checkpoint: "capture-recent",
+    step: "04 / CAPTURE",
+    title: "Only what’s new.",
+    accent: "#d9ff45",
   }),
   Object.freeze({
     filename: CHROME_WEB_STORE_ASSET_FILENAMES.screenshots[4],
-    checkpoint: "library-archived-search",
+    checkpoint: "export-private",
+    step: "05 / OWN",
+    title: "Local means local.",
+    accent: "#d9ff45",
   }),
 ]);
+
+function listingBookmark({
+  id,
+  text,
+  username,
+  name,
+  note = "",
+  folderId = null,
+  tagIds = [],
+  status = "current",
+  day,
+}) {
+  const savedAt = `2026-08-${String(day).padStart(2, "0")}T${String(
+    8 + (day % 9),
+  ).padStart(2, "0")}:15:00.000Z`;
+  return Object.freeze({
+    id,
+    text,
+    url: `https://x.com/bookmarkx/status/${id}`,
+    author: Object.freeze({ id: `author-${id}`, username, name }),
+    postCreatedAt: savedAt,
+    media: Object.freeze({ images: [], videos: [] }),
+    note,
+    folderId,
+    tagIds: Object.freeze(tagIds),
+    firstSavedAt: savedAt,
+    lastSeenAt: savedAt,
+    archivedAt: status === "archived" ? "2026-08-15T08:45:00.000Z" : null,
+    metadataUpdatedAt: savedAt,
+    status,
+  });
+}
+
 export const CHROME_WEB_STORE_LISTING_FIXTURE = Object.freeze({
   bookmarks: Object.freeze([
-    Object.freeze({
+    listingBookmark({
       id: "111",
-      text: "Offline reading checklist for a long train ride.",
-      url: "https://x.com/bookmarkx/status/111",
-      author: Object.freeze({
-        id: "author-111",
-        username: "bookmarkx",
-        name: "Bookmark X Notes",
-      }),
-      postCreatedAt: "2026-08-02T09:00:00.000Z",
-      media: Object.freeze({ images: [], videos: [] }),
-      note: "",
-      folderId: null,
-      tagIds: [],
-      firstSavedAt: "2026-08-10T09:00:00.000Z",
-      lastSeenAt: "2026-08-10T09:00:00.000Z",
-      archivedAt: null,
-      metadataUpdatedAt: "2026-08-10T09:00:00.000Z",
-      status: "current",
+      text: "A practical system for turning saved posts into weekly research notes.",
+      username: "fieldsystems",
+      name: "Field Systems",
+      tagIds: ["tag-research", "tag-workflow"],
+      folderId: "folder-ai",
+      note: "Compare this workflow with the Friday reading review.",
+      day: 3,
     }),
-    Object.freeze({
+    listingBookmark({
       id: "222",
       text: "How to keep a local research workflow organized across devices.",
-      url: "https://x.com/bookmarkx/status/222",
-      author: Object.freeze({
-        id: "author-222",
-        username: "localgraphs",
-        name: "Local Graphs",
-      }),
-      postCreatedAt: "2026-08-03T14:30:00.000Z",
-      media: Object.freeze({ images: [], videos: [] }),
+      username: "localgraphs",
+      name: "Local Graphs",
       note: "Pull quotes into the next reading review and compare with export filters.",
       folderId: "folder-ai",
       tagIds: ["tag-research", "tag-workflow"],
-      firstSavedAt: "2026-08-11T14:30:00.000Z",
-      lastSeenAt: "2026-08-11T14:30:00.000Z",
-      archivedAt: null,
-      metadataUpdatedAt: "2026-08-11T14:30:00.000Z",
-      status: "current",
+      day: 4,
     }),
-    Object.freeze({
+    listingBookmark({
+      id: "444",
+      text: "Why local-first software keeps personal knowledge portable and private.",
+      username: "ownyourdata",
+      name: "Own Your Data",
+      note: "Use this as a reference for the privacy section.",
+      folderId: "folder-reading",
+      tagIds: ["tag-research", "tag-open-source"],
+      day: 5,
+    }),
+    listingBookmark({
+      id: "555",
+      text: "Designing calm interfaces for tools people use every day.",
+      username: "quietinterfaces",
+      name: "Quiet Interfaces",
+      folderId: "folder-field-notes",
+      tagIds: ["tag-design"],
+      day: 6,
+    }),
+    listingBookmark({
+      id: "666",
+      text: "Search patterns that help you rediscover old research at the right moment.",
+      username: "librarysystems",
+      name: "Library Systems",
+      note: "Test these search terms against notes, authors, and folders.",
+      folderId: "folder-ai",
+      tagIds: ["tag-research", "tag-design"],
+      day: 7,
+    }),
+    listingBookmark({
+      id: "777",
+      text: "A compact checklist for evaluating open source browser extensions.",
+      username: "webtoolkit",
+      name: "Web Toolkit",
+      tagIds: ["tag-open-source", "tag-workflow"],
+      day: 8,
+    }),
+    listingBookmark({
+      id: "888",
+      text: "A reading queue works better when every saved link has a next action.",
+      username: "smallarchive",
+      name: "Small Archive",
+      note: "Turn the strongest ideas into the onboarding checklist.",
+      folderId: "folder-reading",
+      tagIds: ["tag-workflow"],
+      day: 9,
+    }),
+    listingBookmark({
+      id: "999",
+      text: "Visual hierarchy lessons from dense research dashboards.",
+      username: "signalstudio",
+      name: "Signal Studio",
+      folderId: "folder-field-notes",
+      tagIds: ["tag-design", "tag-research"],
+      day: 10,
+    }),
+    listingBookmark({
+      id: "1010",
+      text: "How maintainers make release notes useful instead of ceremonial.",
+      username: "releasefield",
+      name: "Release Field",
+      tagIds: ["tag-open-source", "tag-workflow"],
+      day: 11,
+    }),
+    listingBookmark({
+      id: "1111",
+      text: "A thoughtful thread about keeping annotations close to the source.",
+      username: "marginnotes",
+      name: "Margin Notes",
+      note: "Try this approach in the bookmark detail view.",
+      day: 12,
+    }),
+    listingBookmark({
       id: "333",
       text: "Night photography field notes for tripod setup and manual focus.",
-      url: "https://x.com/bookmarkx/status/333",
-      author: Object.freeze({
-        id: "author-333",
-        username: "midnightmanual",
-        name: "Midnight Manual",
-      }),
-      postCreatedAt: "2026-08-04T20:15:00.000Z",
-      media: Object.freeze({ images: [], videos: [] }),
+      username: "midnightmanual",
+      name: "Midnight Manual",
       note: "Archive after copying the lens checklist into the travel pack.",
       folderId: "folder-field-notes",
       tagIds: ["tag-photography"],
-      firstSavedAt: "2026-08-12T20:15:00.000Z",
-      lastSeenAt: "2026-08-12T20:15:00.000Z",
-      archivedAt: "2026-08-13T08:45:00.000Z",
-      metadataUpdatedAt: "2026-08-13T08:45:00.000Z",
       status: "archived",
+      day: 13,
+    }),
+    listingBookmark({
+      id: "1212",
+      text: "An older research thread about durable export formats and plain text.",
+      username: "portablearchives",
+      name: "Portable Archives",
+      folderId: "folder-reading",
+      tagIds: ["tag-research", "tag-open-source"],
+      status: "archived",
+      day: 14,
     }),
   ]),
   folders: Object.freeze([
@@ -157,6 +258,12 @@ export const CHROME_WEB_STORE_LISTING_FIXTURE = Object.freeze({
       id: "tag-photography",
       name: "Photography",
       normalizedName: "photography",
+    }),
+    Object.freeze({ id: "tag-design", name: "Design", normalizedName: "design" }),
+    Object.freeze({
+      id: "tag-open-source",
+      name: "Open source",
+      normalizedName: "open source",
     }),
   ]),
   archive: Object.freeze({
@@ -423,17 +530,25 @@ function waitForConditionExpression(predicate, failureMessage) {
 }
 
 async function waitForCondition(devTools, predicate, failureMessage) {
-  await devTools.send("Runtime.evaluate", {
-    expression: waitForConditionExpression(predicate, failureMessage),
-    awaitPromise: true,
-  });
+  await evaluateChromeExpression(
+    devTools,
+    waitForConditionExpression(predicate, failureMessage),
+  );
 }
 
-async function evaluate(devTools, expression) {
-  return devTools.send("Runtime.evaluate", {
+export async function evaluateChromeExpression(devTools, expression) {
+  const response = await devTools.send("Runtime.evaluate", {
     expression,
     awaitPromise: true,
   });
+  if (response.exceptionDetails) {
+    const description =
+      response.result?.description ??
+      response.exceptionDetails.exception?.description ??
+      response.exceptionDetails.text;
+    throw new Error(`Chrome checkpoint evaluation failed: ${description}`);
+  }
+  return response;
 }
 
 function listingSeedScenario() {
@@ -505,7 +620,7 @@ async function captureExtensionCheckpoints(checkpointDirectory) {
       String.raw`document.documentElement?.dataset.surface === "side-panel"`,
       "Side panel surface did not initialize.",
     );
-    await evaluate(sidePanelDevTools, listingSeedScenario());
+    await evaluateChromeExpression(sidePanelDevTools, listingSeedScenario());
     await sidePanelDevTools.send("Page.reload");
     await waitForCondition(
       sidePanelDevTools,
@@ -518,20 +633,44 @@ async function captureExtensionCheckpoints(checkpointDirectory) {
             document.querySelector('[data-app-view="home"]') &&
             (!loading || loading.hidden) &&
             (!disclosure || disclosure.hidden) &&
-            document.getElementById("current-count")?.textContent?.trim() === "2"
+            document.getElementById("current-count")?.textContent?.trim() === "10"
           );
         })()
       `,
       "Side panel dashboard did not become ready with the seeded listing data.",
     );
+    await evaluateChromeExpression(
+      sidePanelDevTools,
+      String.raw`
+        (() => {
+          const modeField = document.getElementById("capture-mode-field");
+          const mode = document.getElementById("capture-mode");
+          const label = document.getElementById("capture-button-label");
+          const button = document.getElementById("capture-button");
+          const openButton = document.getElementById("open-bookmarks-button");
+          const guidance = document.getElementById("page-guidance");
+          const help = document.getElementById("capture-mode-help");
+          if (modeField) modeField.hidden = false;
+          if (mode instanceof HTMLSelectElement) mode.value = "quick";
+          if (button) {
+            button.hidden = false;
+            button.disabled = false;
+          }
+          if (openButton) openButton.hidden = true;
+          if (label) label.textContent = "Capture";
+          if (guidance) guidance.textContent = "Add the newest bookmarks to your local library.";
+          if (help) help.textContent = "Stops after 15 bookmarks already saved in a row.";
+        })()
+      `,
+    );
     await captureVisualCheckpoint(
       sidePanelDevTools,
-      SCREENSHOT_SOURCES.homeDashboard,
-      { width: 1280, height: 800 },
+      SCREENSHOT_SOURCES.captureRecent,
+      { width: 760, height: 670 },
       checkpointDirectory,
     );
 
-    await evaluate(
+    await evaluateChromeExpression(
       sidePanelDevTools,
       String.raw`document.querySelector('[data-app-nav="library"]')?.click()`,
     );
@@ -544,23 +683,23 @@ async function captureExtensionCheckpoints(checkpointDirectory) {
             !document.querySelector('[data-app-view="library"]')?.hidden &&
             document.getElementById("library-view-panel")?.getAttribute("aria-labelledby") ===
               "view-inbox-button" &&
-            document.querySelector('[data-bookmark-id="111"]') &&
             (!loading || loading.hidden)
           );
         })()
       `,
-      "Inbox library view did not become ready.",
+      "Library view did not become ready.",
     );
-    await captureVisualCheckpoint(
+    await evaluateChromeExpression(
       sidePanelDevTools,
-      SCREENSHOT_SOURCES.libraryInbox,
-      { width: 1280, height: 800 },
-      checkpointDirectory,
-    );
-
-    await evaluate(
-      sidePanelDevTools,
-      String.raw`document.getElementById("view-current-button")?.click()`,
+      String.raw`
+        (() => {
+          document.getElementById("view-current-button")?.click();
+          const input = document.getElementById("library-search");
+          if (!(input instanceof HTMLInputElement)) return;
+          input.value = "research";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        })()
+      `,
     );
     await waitForCondition(
       sidePanelDevTools,
@@ -569,13 +708,21 @@ async function captureExtensionCheckpoints(checkpointDirectory) {
           return (
             document.getElementById("library-view-panel")?.getAttribute("aria-labelledby") ===
               "view-current-button" &&
+            document.getElementById("library-search")?.value === "research" &&
+            document.querySelectorAll("#bookmark-list [data-bookmark-id]").length >= 4 &&
             document.querySelector('[data-bookmark-id="222"]')
           );
         })()
       `,
-      "Current library view did not become ready.",
+      "Research search did not show the seeded matching bookmarks.",
     );
-    await evaluate(
+    await captureVisualCheckpoint(
+      sidePanelDevTools,
+      SCREENSHOT_SOURCES.librarySearch,
+      { width: 760, height: 670 },
+      checkpointDirectory,
+    );
+    await evaluateChromeExpression(
       sidePanelDevTools,
       String.raw`document.querySelector('[data-bookmark-id="222"]')?.click()`,
     );
@@ -595,14 +742,27 @@ async function captureExtensionCheckpoints(checkpointDirectory) {
       `,
       "Bookmark detail view did not show the organized fixture bookmark.",
     );
+    await evaluateChromeExpression(
+      sidePanelDevTools,
+      String.raw`
+        (() => {
+          const note = document.getElementById("selected-note");
+          if (note instanceof HTMLTextAreaElement) {
+            note.style.setProperty("min-height", "84px", "important");
+            note.style.setProperty("height", "84px", "important");
+          }
+          document.querySelector(".dashboard")?.scrollTo(0, 110);
+        })()
+      `,
+    );
     await captureVisualCheckpoint(
       sidePanelDevTools,
       SCREENSHOT_SOURCES.detailOrganizedBookmark,
-      { width: 1280, height: 800 },
+      { width: 760, height: 670 },
       checkpointDirectory,
     );
 
-    await evaluate(
+    await evaluateChromeExpression(
       sidePanelDevTools,
       String.raw`document.querySelector("[data-detail-back]")?.click()`,
     );
@@ -619,7 +779,7 @@ async function captureExtensionCheckpoints(checkpointDirectory) {
       `,
       "Library view did not reopen after closing detail.",
     );
-    await evaluate(
+    await evaluateChromeExpression(
       sidePanelDevTools,
       String.raw`
         (() => {
@@ -645,23 +805,16 @@ async function captureExtensionCheckpoints(checkpointDirectory) {
     await captureVisualCheckpoint(
       sidePanelDevTools,
       SCREENSHOT_SOURCES.libraryOrganization,
-      { width: 1280, height: 800 },
+      { width: 760, height: 670 },
       checkpointDirectory,
     );
 
-    await evaluate(
+    await evaluateChromeExpression(
       sidePanelDevTools,
       String.raw`
         (() => {
-          const panel = document.querySelector(".organization-panel");
-          if (panel?.open) {
-            document.querySelector(".organization-panel > summary")?.click();
-          }
-          document.getElementById("view-archived-button")?.click();
-          const input = document.getElementById("library-search");
-          if (!(input instanceof HTMLInputElement)) return;
-          input.value = "photography";
-          input.dispatchEvent(new Event("input", { bubbles: true }));
+          document.querySelector('[data-app-nav="settings"]')?.click();
+          document.querySelector(".more-actions > summary")?.click();
         })()
       `,
     );
@@ -669,27 +822,24 @@ async function captureExtensionCheckpoints(checkpointDirectory) {
       sidePanelDevTools,
       String.raw`
         (() => {
-          const panel = document.querySelector(".organization-panel");
-          const input = document.getElementById("library-search");
           return (
-            panel?.open === false &&
-            document.getElementById("library-view-panel")?.getAttribute("aria-labelledby") ===
-              "view-archived-button" &&
-            document.getElementById("view-archived-button")?.getAttribute("aria-selected") ===
-              "true" &&
-            input instanceof HTMLInputElement &&
-            input.value === "photography" &&
-            document.querySelectorAll("#bookmark-list [data-bookmark-id]").length === 1 &&
-            document.querySelector('[data-bookmark-id="333"]')
+            !document.querySelector('[data-app-view="settings"]')?.hidden &&
+            document.querySelector(".more-actions")?.open === true &&
+            document.getElementById("export-primary-button") &&
+            document.getElementById("export-backup-button")
           );
         })()
       `,
-      "Archived search did not narrow the seeded archive view.",
+      "Export and local backup controls did not become ready.",
+    );
+    await evaluateChromeExpression(
+      sidePanelDevTools,
+      String.raw`document.querySelector('[data-app-view="settings"]')?.scrollTo(0, 0)`,
     );
     await captureVisualCheckpoint(
       sidePanelDevTools,
-      SCREENSHOT_SOURCES.libraryArchivedSearch,
-      { width: 1280, height: 800 },
+      SCREENSHOT_SOURCES.exportPrivate,
+      { width: 760, height: 670 },
       checkpointDirectory,
     );
   } finally {
@@ -710,7 +860,7 @@ async function captureExtensionCheckpoints(checkpointDirectory) {
   }
 }
 
-function shellHtml(body, { width, height, background = "#f4f1e8" } = {}) {
+function shellHtml(body, { width, height, background = "#0c0d0b" } = {}) {
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -719,7 +869,7 @@ function shellHtml(body, { width, height, background = "#f4f1e8" } = {}) {
     <style>
       :root {
         color-scheme: light;
-        font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+        font-family: Verdana, Geneva, Tahoma, sans-serif;
       }
       * { box-sizing: border-box; }
       html, body {
@@ -738,50 +888,35 @@ function shellHtml(body, { width, height, background = "#f4f1e8" } = {}) {
         height: 100%;
         overflow: hidden;
       }
-      .glow {
-        position: absolute;
-        inset: auto;
-        border-radius: 999px;
-        filter: blur(28px);
-        opacity: 0.35;
-      }
       .frame {
         position: absolute;
-        border-radius: 28px;
         overflow: hidden;
-        border: 1px solid rgb(15 20 25 / 10%);
-        box-shadow:
-          0 22px 60px rgb(15 20 25 / 18%),
-          0 8px 20px rgb(15 20 25 / 10%);
-        background: #fff;
+        border: 2px solid #d9ff45;
+        border-radius: 18px;
+        background: #fffef5;
       }
       .frame img {
         display: block;
         width: 100%;
         height: 100%;
-        object-fit: contain;
-        background: #fff;
+        object-fit: cover;
+        background: #fffef5;
       }
-      .brand-chip {
+      .brand {
         position: absolute;
         display: inline-flex;
         align-items: center;
-        gap: 12px;
-        padding: 14px 18px;
-        border-radius: 999px;
-        background: rgb(255 255 255 / 88%);
-        box-shadow: 0 10px 24px rgb(15 20 25 / 12%);
-        backdrop-filter: blur(12px);
+        gap: 11px;
       }
-      .brand-chip img {
-        width: 36px;
-        height: 36px;
+      .brand img {
+        width: 40px;
+        height: 40px;
       }
-      .brand-chip span {
-        font-size: 18px;
+      .brand span {
+        font-size: 17px;
         font-weight: 700;
         letter-spacing: -0.02em;
-        color: #0f1419;
+        color: #fffef5;
       }
     </style>
   </head>
@@ -789,73 +924,87 @@ function shellHtml(body, { width, height, background = "#f4f1e8" } = {}) {
 </html>`;
 }
 
-function smallPromoScene({ icon, dashboard, sidePanel, metadata }) {
+function listingScreenshotScene({ icon, screenshot, step, title, accent }) {
   return shellHtml(
     `<main class="canvas">
-      <div class="glow" style="width: 240px; height: 240px; left: -60px; top: -80px; background: #d7c85b;"></div>
-      <div class="glow" style="width: 180px; height: 180px; right: -40px; bottom: -40px; background: #b8d8a8;"></div>
-      <div class="brand-chip" style="left: 24px; top: 20px; padding: 12px 16px;">
+      <div style="position:absolute; inset:0; background:linear-gradient(115deg, #0c0d0b 0 25%, #171914 25% 100%);"></div>
+      <div style="position:absolute; left:316px; top:0; width:8px; height:100%; background:${accent};"></div>
+      <div class="brand" style="left:42px; top:38px;">
         <img alt="" src="${icon}">
-        <span style="font-size: 16px;">Bookmark X</span>
+        <span>Bookmark X</span>
       </div>
-      <section class="frame" style="left: 24px; bottom: 22px; width: 146px; height: 194px;">
-        <img alt="" src="${dashboard}">
-      </section>
-      <section class="frame" style="left: 184px; top: 34px; width: 112px; height: 212px;">
-        <img alt="" src="${sidePanel}">
-      </section>
-      <section class="frame" style="right: 18px; top: 34px; width: 178px; height: 212px;">
-        <img alt="" src="${metadata}">
+      <div style="position:absolute; left:42px; bottom:46px; width:238px; color:#fffef5;">
+        <p style="margin:0 0 18px; color:${accent}; font:700 15px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing:.12em;">${step}</p>
+        <h1 style="margin:0; font-size:58px; line-height:.98; letter-spacing:-.065em;">${title}</h1>
+      </div>
+      <section class="frame" style="left:350px; top:24px; width:906px; height:752px;">
+        <img alt="" src="${screenshot}">
       </section>
     </main>`,
-    { width: 440, height: 280, background: "#f5f0df" },
+    { width: 1280, height: 800 },
   );
 }
 
-function marqueeScene({ icon, dashboard, detail, options, metadata }) {
+function smallPromoScene({ icon }) {
   return shellHtml(
     `<main class="canvas">
-      <div class="glow" style="width: 420px; height: 420px; left: -100px; top: 80px; background: #d7c85b;"></div>
-      <div class="glow" style="width: 360px; height: 360px; right: -80px; top: -120px; background: #b9d5f6;"></div>
-      <div class="brand-chip" style="left: 56px; top: 42px; padding: 16px 22px;">
+      <div style="position:absolute; inset:0; background:#0c0d0b;"></div>
+      <div style="position:absolute; right:0; top:0; width:28px; height:100%; background:#d9ff45;"></div>
+      <div class="brand" style="left:28px; top:24px;">
         <img alt="" src="${icon}">
-        <span style="font-size: 28px;">Bookmark X</span>
+        <span style="font-size:20px;">Bookmark X</span>
       </div>
-      <section class="frame" style="left: 60px; bottom: 48px; width: 244px; height: 340px;">
-        <img alt="" src="${dashboard}">
-      </section>
-      <section class="frame" style="left: 330px; bottom: 48px; width: 244px; height: 340px;">
-        <img alt="" src="${detail}">
-      </section>
-      <section class="frame" style="left: 610px; bottom: 48px; width: 360px; height: 340px;">
-        <img alt="" src="${options}">
-      </section>
-      <section class="frame" style="right: 54px; bottom: 48px; width: 360px; height: 340px;">
-        <img alt="" src="${metadata}">
-      </section>
+      <p style="position:absolute; left:28px; bottom:28px; margin:0; color:#fffef5; font-size:38px; font-weight:700; line-height:1; letter-spacing:-.055em;">Find what<br>you saved<span style="color:#d9ff45;">.</span></p>
     </main>`,
-    { width: 1400, height: 560, background: "#f5f0df" },
+    { width: 440, height: 280 },
   );
 }
 
-async function renderStoreScreenshots({ checkpointDirectory, assetDirectory }) {
-  const checkpointByScene = new Map(
-    CHROME_WEB_STORE_SCREENSHOT_SCENES.map(({ filename, checkpoint }) => [
-      filename,
+function marqueeScene({ icon, search }) {
+  return shellHtml(
+    `<main class="canvas">
+      <div style="position:absolute; inset:0; background:#0c0d0b;"></div>
+      <div style="position:absolute; left:0; top:0; width:100%; height:14px; background:#d9ff45;"></div>
+      <div class="brand" style="left:54px; top:48px;">
+        <img alt="" src="${icon}">
+        <span style="font-size:22px;">Bookmark X</span>
+      </div>
+      <div style="position:absolute; left:54px; bottom:52px; width:430px; color:#fffef5;">
+        <h1 style="margin:0 0 22px; font-size:68px; line-height:.94; letter-spacing:-.07em;">Find what<br>you saved<span style="color:#d9ff45;">.</span></h1>
+        <p style="margin:0; color:#d9ff45; font:700 16px/1.3 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing:.1em;">LOCAL · SEARCHABLE · YOURS</p>
+      </div>
+      <section class="frame" style="left:535px; top:38px; width:830px; height:486px;">
+        <img alt="" src="${search}">
+      </section>
+    </main>`,
+    { width: 1400, height: 560 },
+  );
+}
+
+async function renderStoreScreenshots({
+  chromeBinary,
+  checkpointDirectory,
+  assetDirectory,
+  icon,
+}) {
+  for (const scene of CHROME_WEB_STORE_SCREENSHOT_SCENES) {
+    const checkpointFilename =
       SCREENSHOT_SOURCES[
-        checkpoint.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
-      ],
-    ]),
-  );
-  for (const filename of CHROME_WEB_STORE_ASSET_FILENAMES.screenshots) {
-    const checkpointFilename = checkpointByScene.get(filename);
+        scene.checkpoint.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+      ];
     if (!checkpointFilename) {
-      throw new Error(`Missing checkpoint mapping for ${filename}.`);
+      throw new Error(`Missing checkpoint mapping for ${scene.filename}.`);
     }
-    await copyFile(
-      resolve(checkpointDirectory, checkpointFilename),
-      resolve(assetDirectory, filename),
+    const screenshot = dataUrl(
+      await readFile(resolve(checkpointDirectory, checkpointFilename)),
     );
+    await renderHtmlScene({
+      chromeBinary,
+      html: listingScreenshotScene({ icon, screenshot, ...scene }),
+      outputPath: resolve(assetDirectory, scene.filename),
+      width: 1280,
+      height: 800,
+    });
   }
 }
 
@@ -867,25 +1016,14 @@ async function renderPromotionalImages({
 }) {
   await renderHtmlScene({
     chromeBinary,
-    html: smallPromoScene({
-      icon,
-      dashboard: screenshotImages.dashboardOverview,
-      sidePanel: screenshotImages.libraryOrganization,
-      metadata: screenshotImages.bookmarkDetail,
-    }),
+    html: smallPromoScene({ icon }),
     outputPath: resolve(assetDirectory, CHROME_WEB_STORE_ASSET_FILENAMES.smallPromo),
     width: 440,
     height: 280,
   });
   await renderHtmlScene({
     chromeBinary,
-    html: marqueeScene({
-      icon,
-      dashboard: screenshotImages.dashboardOverview,
-      detail: screenshotImages.libraryInbox,
-      options: screenshotImages.bookmarkDetail,
-      metadata: screenshotImages.libraryArchivedSearch,
-    }),
+    html: marqueeScene({ icon, search: screenshotImages.search }),
     outputPath: resolve(assetDirectory, CHROME_WEB_STORE_ASSET_FILENAMES.marquee),
     width: 1400,
     height: 560,
@@ -910,33 +1048,15 @@ async function generateChromeWebStoreAssets(
     );
     const icon = dataUrl(await readFile(ICON_SOURCE_PATH));
     await renderStoreScreenshots({
+      chromeBinary,
       checkpointDirectory,
       assetDirectory: directory,
+      icon,
     });
     const screenshotImages = {
-      dashboardOverview: dataUrl(
+      search: dataUrl(
         await readFile(
           resolve(directory, CHROME_WEB_STORE_ASSET_FILENAMES.screenshots[0]),
-        ),
-      ),
-      libraryInbox: dataUrl(
-        await readFile(
-          resolve(directory, CHROME_WEB_STORE_ASSET_FILENAMES.screenshots[1]),
-        ),
-      ),
-      bookmarkDetail: dataUrl(
-        await readFile(
-          resolve(directory, CHROME_WEB_STORE_ASSET_FILENAMES.screenshots[2]),
-        ),
-      ),
-      libraryOrganization: dataUrl(
-        await readFile(
-          resolve(directory, CHROME_WEB_STORE_ASSET_FILENAMES.screenshots[3]),
-        ),
-      ),
-      libraryArchivedSearch: dataUrl(
-        await readFile(
-          resolve(directory, CHROME_WEB_STORE_ASSET_FILENAMES.screenshots[4]),
         ),
       ),
     };

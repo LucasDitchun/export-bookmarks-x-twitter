@@ -8,6 +8,7 @@ import {
   CHROME_WEB_STORE_ASSET_FILENAMES,
   CHROME_WEB_STORE_SCREENSHOT_SCENES,
   CHROME_WEB_STORE_LISTING_FIXTURE,
+  evaluateChromeExpression,
   readPngSize,
   validateChromeWebStoreAssets,
 } from "./chrome-web-store-assets.mjs";
@@ -47,45 +48,64 @@ afterEach(async () => {
 describe("Chrome Web Store asset contract", () => {
   it("pins screenshot filenames to the exact UI states shown in the listing", () => {
     expect(CHROME_WEB_STORE_ASSET_FILENAMES.screenshots).toEqual([
-      "screenshot-01-dashboard-overview.png",
-      "screenshot-02-library-inbox.png",
-      "screenshot-03-bookmark-detail-note-tags.png",
-      "screenshot-04-library-organization.png",
-      "screenshot-05-library-archived-search.png",
+      "screenshot-01-search-library.png",
+      "screenshot-02-organize-folders-tags.png",
+      "screenshot-03-note-folder-tags.png",
+      "screenshot-04-capture-recent.png",
+      "screenshot-05-export-private.png",
     ]);
     expect(
-      CHROME_WEB_STORE_SCREENSHOT_SCENES.map(({ filename, checkpoint }) => ({
-        filename,
-        checkpoint,
-      })),
+      CHROME_WEB_STORE_SCREENSHOT_SCENES.map(
+        ({ filename, checkpoint, step, title }) => ({
+          filename,
+          checkpoint,
+          step,
+          title,
+        }),
+      ),
     ).toEqual([
       {
-        filename: "screenshot-01-dashboard-overview.png",
-        checkpoint: "home-dashboard",
+        filename: "screenshot-01-search-library.png",
+        checkpoint: "library-search",
+        step: "01 / FIND",
+        title: "Find it again.",
       },
       {
-        filename: "screenshot-02-library-inbox.png",
-        checkpoint: "library-inbox",
-      },
-      {
-        filename: "screenshot-03-bookmark-detail-note-tags.png",
-        checkpoint: "detail-organized-bookmark",
-      },
-      {
-        filename: "screenshot-04-library-organization.png",
+        filename: "screenshot-02-organize-folders-tags.png",
         checkpoint: "library-organization",
+        step: "02 / ORGANIZE",
+        title: "Give it a place.",
       },
       {
-        filename: "screenshot-05-library-archived-search.png",
-        checkpoint: "library-archived-search",
+        filename: "screenshot-03-note-folder-tags.png",
+        checkpoint: "detail-organized-bookmark",
+        step: "03 / REMEMBER",
+        title: "Keep the context.",
+      },
+      {
+        filename: "screenshot-04-capture-recent.png",
+        checkpoint: "capture-recent",
+        step: "04 / CAPTURE",
+        title: "Only what’s new.",
+      },
+      {
+        filename: "screenshot-05-export-private.png",
+        checkpoint: "export-private",
+        step: "05 / OWN",
+        title: "Local means local.",
       },
     ]);
+
+    for (const scene of CHROME_WEB_STORE_SCREENSHOT_SCENES) {
+      expect(scene.title.trim().split(/\s+/).length).toBeLessThanOrEqual(4);
+      expect(scene.accent).toMatch(/^#[\da-f]{6}$/i);
+    }
   });
 
-  it("seeds a deterministic listing fixture with safe data across inbox, current, and archived views", () => {
+  it("seeds a credible, deterministic library without personal or remote content", () => {
     const { bookmarks, folders, tags } = CHROME_WEB_STORE_LISTING_FIXTURE;
 
-    expect(bookmarks).toHaveLength(3);
+    expect(bookmarks).toHaveLength(12);
     expect(folders.map(({ name, parentId }) => ({ name, parentId }))).toEqual([
       { name: "Reading", parentId: null },
       { name: "AI", parentId: "folder-reading" },
@@ -95,42 +115,38 @@ describe("Chrome Web Store asset contract", () => {
       "Research",
       "Workflow",
       "Photography",
+      "Design",
+      "Open source",
     ]);
+    expect(bookmarks.filter(({ status }) => status === "current")).toHaveLength(10);
+    expect(bookmarks.filter(({ status }) => status === "archived")).toHaveLength(2);
+    expect(bookmarks.filter(({ folderId }) => folderId === null)).toHaveLength(3);
     expect(
-      bookmarks.map(({ id, status, folderId, tagIds, note }) => ({
-        id,
-        status,
-        folderId,
-        tagCount: tagIds.length,
-        hasNote: note.length > 0,
-      })),
-    ).toEqual([
-      {
-        id: "111",
-        status: "current",
-        folderId: null,
-        tagCount: 0,
-        hasNote: false,
-      },
-      {
-        id: "222",
-        status: "current",
-        folderId: "folder-ai",
-        tagCount: 2,
-        hasNote: true,
-      },
-      {
-        id: "333",
-        status: "archived",
-        folderId: "folder-field-notes",
-        tagCount: 1,
-        hasNote: true,
-      },
-    ]);
+      bookmarks.filter(({ note }) => note.length > 0).length,
+    ).toBeGreaterThanOrEqual(5);
+    expect(
+      bookmarks.filter(({ tagIds }) => tagIds.length > 0).length,
+    ).toBeGreaterThanOrEqual(8);
+    expect(
+      bookmarks.every(({ url }) => url.startsWith("https://x.com/bookmarkx/")),
+    ).toBe(true);
   });
 
   it("reads PNG dimensions from the IHDR header", () => {
     expect(readPngSize(pngStub(1280, 800))).toEqual({ width: 1280, height: 800 });
+  });
+
+  it("fails generation when a Chrome checkpoint expression throws", async () => {
+    const devTools = {
+      send: async () => ({
+        result: { description: "Error: fixture restore failed" },
+        exceptionDetails: { text: "Uncaught" },
+      }),
+    };
+
+    await expect(evaluateChromeExpression(devTools, "broken()")).rejects.toThrow(
+      "Chrome checkpoint evaluation failed: Error: fixture restore failed",
+    );
   });
 
   it("accepts the generated asset set with five full-bleed screenshots", async () => {
