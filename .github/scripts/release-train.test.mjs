@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { test } from "node:test";
 
 import {
@@ -8,6 +10,8 @@ import {
   parseConventionalCommit,
   updateChangelog,
 } from "./release-train.mjs";
+
+const ROOT = resolve(import.meta.dirname, "..", "..");
 
 function commits(type, count) {
   return Array.from({ length: count }, (_, index) => `${type}: change ${index + 1}`);
@@ -179,5 +183,24 @@ test("rejects a prepared changelog that omits a commit from the release range", 
         ],
       }),
     /does not exactly match/i,
+  );
+});
+
+test("preserves the published 0.1.2 section when preparing the next release", async () => {
+  const contents = await readFile(resolve(ROOT, "CHANGELOG.md"), "utf8");
+
+  const updated = updateChangelog({
+    contents,
+    baseVersion: "0.1.2",
+    version: "0.1.3",
+    date: "2026-08-15",
+    commits: [{ sha: "eeeeeeee", subject: "fix: keep published ancestry" }],
+  });
+
+  assert.match(updated, /^## \[0\.1\.3\] - 2026-08-15$/m);
+  assert.match(updated, /^## \[0\.1\.2\] - 2026-08-13$/m);
+  assert.ok(
+    updated.indexOf("## [0.1.3] - 2026-08-15") <
+      updated.indexOf("## [0.1.2] - 2026-08-13"),
   );
 });
