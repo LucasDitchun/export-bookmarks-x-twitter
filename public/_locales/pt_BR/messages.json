@@ -350,6 +350,10 @@
   "bookmarkPromptTagsHelp": { "message": "Pressione Enter após cada tag." },
   "bookmarkPromptFolder": { "message": "Pasta" },
   "bookmarkPromptNote": { "message": "Nota privada" },
+  "bookmarkPromptPreferencesHint": {
+    "message": "Você pode desativar este aviso nas Configurações."
+  },
+  "bookmarkPromptPreferencesOpen": { "message": "Abrir configurações" },
   "bookmarkCategorized": { "message": "Categorizado" },
   "bookmarkNeedsCategory": { "message": "Precisa de categoria" },
   "bookmarkMetadataLabel": { "message": "Detalhes da postagem salva no Bookmark X" },

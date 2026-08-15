@@ -420,6 +420,10 @@
   "bookmarkPromptTagsHelp": { "message": "Premi Invio dopo ogni tag." },
   "bookmarkPromptFolder": { "message": "Cartella" },
   "bookmarkPromptNote": { "message": "Nota privata" },
+  "bookmarkPromptPreferencesHint": {
+    "message": "Puoi disattivare questo avviso nelle Impostazioni."
+  },
+  "bookmarkPromptPreferencesOpen": { "message": "Apri impostazioni" },
   "bookmarkCategorized": { "message": "Categorizzato" },
   "bookmarkNeedsCategory": { "message": "Da categorizzare" },
   "bookmarkMetadataLabel": { "message": "Dettagli del post salvato in Bookmark X" },

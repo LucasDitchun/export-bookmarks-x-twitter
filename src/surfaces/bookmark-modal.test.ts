@@ -2,7 +2,14 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createBookmarkModal } from "./bookmark-modal";
+import { createBookmarkModal, type BookmarkModalOptions } from "./bookmark-modal";
+
+function createTestBookmarkModal(
+  options: Omit<BookmarkModalOptions, "onOpenPreferences"> &
+    Partial<Pick<BookmarkModalOptions, "onOpenPreferences">>,
+) {
+  return createBookmarkModal({ onOpenPreferences: () => undefined, ...options });
+}
 
 describe("createBookmarkModal", () => {
   beforeEach(() => {
@@ -10,7 +17,7 @@ describe("createBookmarkModal", () => {
   });
 
   it("creates a compact isolated dialog that prioritizes the private note", () => {
-    const modal = createBookmarkModal({
+    const modal = createTestBookmarkModal({
       document,
       title: "Why are you saving this?",
       bookmarkTitle: "<img src=x onerror=alert(1)>",
@@ -92,7 +99,7 @@ describe("createBookmarkModal", () => {
     document.body.append(trigger);
     trigger.focus();
     const onClose = vi.fn();
-    const modal = createBookmarkModal({
+    const modal = createTestBookmarkModal({
       document,
       title: "Bookmark note",
       bookmarkTitle: "A useful post",
@@ -119,7 +126,7 @@ describe("createBookmarkModal", () => {
   });
 
   it("keeps metadata fields visually hidden while X is confirming the action", () => {
-    const modal = createBookmarkModal({
+    const modal = createTestBookmarkModal({
       document,
       title: "Bookmark note",
       bookmarkTitle: "A useful post",
@@ -141,7 +148,7 @@ describe("createBookmarkModal", () => {
   });
 
   it("relabels an open dialog without replacing its entered values", () => {
-    const modal = createBookmarkModal({
+    const modal = createTestBookmarkModal({
       document,
       title: "Why are you saving this?",
       bookmarkTitle: "A useful post",
@@ -186,9 +193,47 @@ describe("createBookmarkModal", () => {
     modal.destroy();
   });
 
+  it("opens prompt preferences without submitting, closing, or losing the draft", () => {
+    const onOpenPreferences = vi.fn();
+    const onSave = vi.fn();
+    const modal = createTestBookmarkModal({
+      document,
+      title: "Why are you saving this?",
+      bookmarkTitle: "A useful post",
+      labels: {
+        close: "Close",
+        description: "Private note",
+        folder: "Folder",
+        preferencesHint: "You can turn off this prompt in Settings.",
+        preferencesOpen: "Open settings",
+        save: "Save note",
+        tags: "Tags",
+      },
+      onOpenPreferences,
+      onSave,
+    });
+    modal.open();
+    const shadow = modal.host.shadowRoot;
+    const note = shadow?.querySelector<HTMLTextAreaElement>(
+      "#bookmark-x-modal-description",
+    );
+    const preferences = shadow?.querySelector<HTMLButtonElement>(".preferences-open");
+    if (!note || !preferences) throw new Error("Missing modal preference controls");
+    note.value = "Keep this draft";
+
+    preferences.click();
+
+    expect(preferences.type).toBe("button");
+    expect(onOpenPreferences).toHaveBeenCalledOnce();
+    expect(onSave).not.toHaveBeenCalled();
+    expect(modal.host.hidden).toBe(false);
+    expect(note.value).toBe("Keep this draft");
+    modal.destroy();
+  });
+
   it("submits existing and new structured tokens without splitting delimiters", async () => {
     const onSave = vi.fn(async () => undefined);
-    const modal = createBookmarkModal({
+    const modal = createTestBookmarkModal({
       document,
       title: "Bookmark note",
       bookmarkTitle: "A useful post",
@@ -252,7 +297,7 @@ describe("createBookmarkModal", () => {
   });
 
   it("keeps the dialog open when saving fails", async () => {
-    const modal = createBookmarkModal({
+    const modal = createTestBookmarkModal({
       document,
       title: "Bookmark note",
       bookmarkTitle: "A useful post",
@@ -282,7 +327,7 @@ describe("createBookmarkModal", () => {
 
   it("marks organizations unchanged when only the note is edited", async () => {
     const onSave = vi.fn(async () => undefined);
-    const modal = createBookmarkModal({
+    const modal = createTestBookmarkModal({
       document,
       title: "Bookmark note",
       bookmarkTitle: "A useful post",
@@ -324,7 +369,7 @@ describe("createBookmarkModal", () => {
 
   it("keeps a new folder name containing a slash as one structured segment", async () => {
     const onSave = vi.fn(async () => undefined);
-    const modal = createBookmarkModal({
+    const modal = createTestBookmarkModal({
       document,
       title: "Bookmark note",
       bookmarkTitle: "A useful post",
@@ -360,7 +405,7 @@ describe("createBookmarkModal", () => {
 
   it("keeps an existing folder ID when appending a new child segment", async () => {
     const onSave = vi.fn(async () => undefined);
-    const modal = createBookmarkModal({
+    const modal = createTestBookmarkModal({
       document,
       title: "Bookmark note",
       bookmarkTitle: "A useful post",

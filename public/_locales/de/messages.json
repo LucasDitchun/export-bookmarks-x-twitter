@@ -424,6 +424,10 @@
   "bookmarkPromptTagsHelp": { "message": "Drücke nach jedem Tag die Eingabetaste." },
   "bookmarkPromptFolder": { "message": "Ordner" },
   "bookmarkPromptNote": { "message": "Private Notiz" },
+  "bookmarkPromptPreferencesHint": {
+    "message": "Du kannst diesen Hinweis in den Einstellungen deaktivieren."
+  },
+  "bookmarkPromptPreferencesOpen": { "message": "Einstellungen öffnen" },
   "bookmarkCategorized": { "message": "Kategorisiert" },
   "bookmarkNeedsCategory": { "message": "Kategorie fehlt" },
   "bookmarkMetadataLabel": {

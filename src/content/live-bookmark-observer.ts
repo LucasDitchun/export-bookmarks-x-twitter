@@ -28,6 +28,7 @@ export interface LiveBookmarkObserverOptions {
   translate: BookmarkMetadataTranslator;
   stableForMs?: number;
   timeoutMs?: number;
+  onOpenPreferences?: () => void | Promise<void>;
   onPending?: (article: Element, bookmarkId: string) => void;
   onChanged?: (bookmarkId: string) => void;
 }
@@ -146,6 +147,8 @@ function modalLabels(translate: BookmarkMetadataTranslator) {
     close: translate("bookmarkPromptClose"),
     description: translate("bookmarkPromptNote"),
     folder: translate("bookmarkPromptFolder"),
+    preferencesHint: translate("bookmarkPromptPreferencesHint"),
+    preferencesOpen: translate("bookmarkPromptPreferencesOpen"),
     save: translate("bookmarkPromptSave"),
     tags: translate("bookmarkPromptTags"),
     tagsHelp: translate("bookmarkPromptTagsHelp"),
@@ -273,6 +276,7 @@ export function startLiveBookmarkObserver(
         title: translate("bookmarkPromptTitle"),
         bookmarkTitle: bookmark.text || bookmark.url,
         labels: modalLabels(translate),
+        onOpenPreferences: options.onOpenPreferences ?? (() => undefined),
         onSave: async (values) => {
           setTranslatedState("pending", "liveBookmarkPending");
           try {

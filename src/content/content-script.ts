@@ -19,6 +19,7 @@ import { createBookmarkModal } from "../surfaces/bookmark-modal";
 import { loadBookmarkMetadataDraft, saveBookmarkMetadata } from "./bookmark-metadata";
 import { isSupportedLocale } from "../domain/types";
 import { createPostProcessingConsentGate } from "./post-processing-consent";
+import { openOptionsPageSafely } from "./options-page-boundary";
 
 let activeCapture: { runId: string; controller: AbortController } | undefined;
 let activeOrganizer: {
@@ -29,6 +30,10 @@ let activeOrganizer: {
 
 function send(event: ContentEvent): Promise<unknown> {
   return chrome.runtime.sendMessage(event);
+}
+
+function openPromptPreferences(): void {
+  openOptionsPageSafely(() => chrome.runtime.openOptionsPage());
 }
 
 class CaptureDeliveryError extends Error {
@@ -218,11 +223,14 @@ function startPostProcessing() {
           close: currentTranslate("bookmarkPromptClose"),
           description: currentTranslate("bookmarkPromptNote"),
           folder: currentTranslate("bookmarkPromptFolder"),
+          preferencesHint: currentTranslate("bookmarkPromptPreferencesHint"),
+          preferencesOpen: currentTranslate("bookmarkPromptPreferencesOpen"),
           save: currentTranslate("bookmarkPromptSave"),
           tags: currentTranslate("bookmarkPromptTags"),
           tagsHelp: currentTranslate("bookmarkPromptTagsHelp"),
           pending: currentTranslate("liveBookmarkPending"),
         },
+        onOpenPreferences: openPromptPreferences,
         onSave: async (values) => {
           modal.setState("pending", currentTranslate("liveBookmarkPending"));
           try {
@@ -258,6 +266,8 @@ function startPostProcessing() {
               close: currentTranslate("bookmarkPromptClose"),
               description: currentTranslate("bookmarkPromptNote"),
               folder: currentTranslate("bookmarkPromptFolder"),
+              preferencesHint: currentTranslate("bookmarkPromptPreferencesHint"),
+              preferencesOpen: currentTranslate("bookmarkPromptPreferencesOpen"),
               save: currentTranslate("bookmarkPromptSave"),
               tags: currentTranslate("bookmarkPromptTags"),
               tagsHelp: currentTranslate("bookmarkPromptTagsHelp"),
@@ -295,6 +305,7 @@ function startPostProcessing() {
     document,
     send: (event) => chrome.runtime.sendMessage(event),
     translate: (key) => chrome.i18n.getMessage(key) || key,
+    onOpenPreferences: openPromptPreferences,
     onPending: (article, bookmarkId) => {
       void metadataDecorator.setPending(article, bookmarkId);
     },

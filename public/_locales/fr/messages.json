@@ -432,6 +432,10 @@
   "bookmarkPromptTagsHelp": { "message": "Appuyez sur Entrée après chaque tag." },
   "bookmarkPromptFolder": { "message": "Dossier" },
   "bookmarkPromptNote": { "message": "Note privée" },
+  "bookmarkPromptPreferencesHint": {
+    "message": "Vous pouvez désactiver cette invite dans les réglages."
+  },
+  "bookmarkPromptPreferencesOpen": { "message": "Ouvrir les réglages" },
   "bookmarkCategorized": { "message": "Classé" },
   "bookmarkNeedsCategory": { "message": "À classer" },
   "bookmarkMetadataLabel": {

@@ -6,6 +6,8 @@ export interface BookmarkModalLabels {
   tags: string;
   tagsHelp?: string;
   pending?: string;
+  preferencesHint?: string;
+  preferencesOpen?: string;
 }
 
 export interface BookmarkModalValues {
@@ -39,6 +41,7 @@ export interface BookmarkModalOptions {
   labels: BookmarkModalLabels;
   values?: Partial<BookmarkModalValues>;
   onClose?: () => void;
+  onOpenPreferences: () => void | Promise<void>;
   onSave?: (values: BookmarkModalValues) => boolean | void | Promise<boolean | void>;
 }
 
@@ -63,6 +66,7 @@ const MODAL_STYLES = `
     --modal-line: #cfd9de;
     --modal-action: #0f1419;
     --modal-action-text: #fff;
+    --modal-link: #0969a9;
     color-scheme: light dark;
     font-family: "Segoe UI Variable Text", "Helvetica Neue", Helvetica, sans-serif;
     font-size: 15px;
@@ -79,6 +83,7 @@ const MODAL_STYLES = `
     --modal-line: #2f3336;
     --modal-action: #eff3f4;
     --modal-action-text: #0f1419;
+    --modal-link: #8ecdf7;
   }
   :host([hidden]) { display: none; }
   *, *::before, *::after { box-sizing: border-box; }
@@ -175,6 +180,24 @@ const MODAL_STYLES = `
   }
   .close { background: transparent; color: var(--modal-text); flex: 0 0 auto; }
   .save { margin-top: 2px; width: 100%; }
+  .preferences {
+    align-items: center;
+    color: var(--modal-muted);
+    display: grid;
+    font-size: 0.75rem;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    line-height: 1.35;
+    margin: 0;
+  }
+  .preferences-open {
+    background: transparent;
+    border-color: transparent;
+    color: var(--modal-link);
+    padding: 8px 10px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
   :focus-visible { outline: 3px solid #1d9bf0; outline-offset: 2px; }
   @media (max-width: 520px) {
     .backdrop { align-items: end; padding: 8px; }
@@ -319,7 +342,18 @@ export function createBookmarkModal(
   saveButton.className = "save";
   saveButton.type = "submit";
   saveButton.textContent = options.labels.save;
-  form.append(metadataGrid, tagChoices, folderChoices, saveButton);
+  const preferences = document.createElement("p");
+  preferences.className = "preferences";
+  const preferencesHint = document.createElement("span");
+  preferencesHint.textContent = options.labels.preferencesHint ?? "";
+  const preferencesButton = document.createElement("button");
+  preferencesButton.className = "preferences-open";
+  preferencesButton.type = "button";
+  preferencesButton.textContent = options.labels.preferencesOpen ?? "";
+  preferences.hidden =
+    !options.labels.preferencesHint || !options.labels.preferencesOpen;
+  preferences.append(preferencesHint, preferencesButton);
+  form.append(metadataGrid, tagChoices, folderChoices, preferences, saveButton);
   form.hidden = options.labels.pending !== undefined;
   dialog.append(heading, bookmark, status, form);
   backdrop.append(dialog);
@@ -427,6 +461,13 @@ export function createBookmarkModal(
   };
 
   closeButton.addEventListener("click", close);
+  preferencesButton.addEventListener("click", () => {
+    try {
+      void Promise.resolve(options.onOpenPreferences()).catch(() => undefined);
+    } catch {
+      // The extension context may be invalidated while the isolated modal is open.
+    }
+  });
   backdrop.addEventListener("click", (event) => {
     if (event.target === backdrop) close();
   });
@@ -528,6 +569,9 @@ export function createBookmarkModal(
       if (folderFieldLabel) folderFieldLabel.textContent = next.labels.folder;
       tagsHelp.textContent = next.labels.tagsHelp ?? "";
       tagsHelp.hidden = !next.labels.tagsHelp;
+      preferencesHint.textContent = next.labels.preferencesHint ?? "";
+      preferencesButton.textContent = next.labels.preferencesOpen ?? "";
+      preferences.hidden = !next.labels.preferencesHint || !next.labels.preferencesOpen;
       saveButton.textContent = next.labels.save;
       if (status.dataset.state === "pending" && next.labels.pending) {
         status.textContent = next.labels.pending;

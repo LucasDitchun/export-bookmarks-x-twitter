@@ -227,6 +227,7 @@ describe("startLiveBookmarkObserver", () => {
 
   it("relocalizes an already open automatic modal without clearing its note", async () => {
     const button = renderTweet();
+    const onOpenPreferences = vi.fn();
     const observer = startLiveBookmarkObserver({
       document,
       stableForMs: 40,
@@ -246,6 +247,9 @@ describe("startLiveBookmarkObserver", () => {
                     bookmarkPromptClose: "Close",
                     bookmarkPromptNote: "Private note",
                     bookmarkPromptFolder: "Folder",
+                    bookmarkPromptPreferencesHint:
+                      "You can turn off this prompt in Settings.",
+                    bookmarkPromptPreferencesOpen: "Open settings",
                     bookmarkPromptSave: "Save note",
                     bookmarkPromptTags: "Tags",
                     bookmarkPromptTagsHelp: "Separate tags with commas.",
@@ -256,6 +260,7 @@ describe("startLiveBookmarkObserver", () => {
             }
           : { ok: true, data: null },
       translate: (key) => key,
+      onOpenPreferences,
     });
 
     button.click();
@@ -274,6 +279,9 @@ describe("startLiveBookmarkObserver", () => {
         bookmarkPromptClose: "Fechar",
         bookmarkPromptNote: "Nota privada",
         bookmarkPromptFolder: "Pasta",
+        bookmarkPromptPreferencesHint:
+          "Você pode desativar este aviso nas Configurações.",
+        bookmarkPromptPreferencesOpen: "Abrir configurações",
         bookmarkPromptSave: "Salvar nota",
         bookmarkPromptTags: "Tags",
         bookmarkPromptTagsHelp: "Separe tags com vírgulas.",
@@ -284,6 +292,11 @@ describe("startLiveBookmarkObserver", () => {
     expect(modal?.querySelector("h2")?.textContent).toBe(
       "Por que você está salvando isto?",
     );
+    expect(modal?.querySelector(".preferences")?.textContent).toContain(
+      "Você pode desativar este aviso nas Configurações.",
+    );
+    modal?.querySelector<HTMLButtonElement>(".preferences-open")?.click();
+    expect(onOpenPreferences).toHaveBeenCalledOnce();
     expect(note.value).toBe("Keep this draft");
     observer.stop();
   });

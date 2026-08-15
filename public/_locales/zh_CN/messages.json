@@ -400,6 +400,10 @@
   "bookmarkPromptTagsHelp": { "message": "输入每个标签后按 Enter 键。" },
   "bookmarkPromptFolder": { "message": "文件夹" },
   "bookmarkPromptNote": { "message": "私人笔记" },
+  "bookmarkPromptPreferencesHint": {
+    "message": "你可以在“设置”中关闭此提示。"
+  },
+  "bookmarkPromptPreferencesOpen": { "message": "打开设置" },
   "bookmarkCategorized": { "message": "已分类" },
   "bookmarkNeedsCategory": { "message": "待分类" },
   "bookmarkMetadataLabel": { "message": "Bookmark X 已保存帖子的详细信息" },
