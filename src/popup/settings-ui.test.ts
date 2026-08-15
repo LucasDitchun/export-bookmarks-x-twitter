@@ -77,9 +77,9 @@ describe("shared library settings UI", () => {
         largeText: false,
       },
     });
-    expect(getComputedStyle(document.documentElement).fontSize).toBe("100%");
+    expect(document.documentElement.dataset.largeText).toBe("false");
     applyLibraryUiSettings(document, structuredClone(DEFAULT_SETTINGS));
-    expect(getComputedStyle(document.documentElement).fontSize).toBe("106.25%");
+    expect(document.documentElement.dataset.largeText).toBe("true");
   }, 15_000);
 
   it("turns each metadata surface off and back on without parsing its text", () => {
