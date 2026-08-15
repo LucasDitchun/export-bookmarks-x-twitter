@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/chrome": "^0.1.33",
+    "@types/chrome": "^0.2.5",
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.0.15",
     "archiver": "^8.0.0",
