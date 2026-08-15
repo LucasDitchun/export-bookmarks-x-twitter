@@ -8,7 +8,7 @@ Markdown、または JSON バックアップとして書き出せます。
 
 ## インストールと更新
 
-1. [ビルド済み ZIP](../../../download/bookmark-x.zip?raw=1) をダウンロードし、
+1. [ビルド済み ZIP](https://github.com/LucasDitchun/export-bookmarks-x-twitter/releases/latest/download/bookmark-x.zip) をダウンロードし、
    移動しないフォルダーへ展開します。
 2. `chrome://extensions` を開き、**デベロッパー モード**を有効にして、
    **パッケージ化されていない拡張機能を読み込む**を選びます。

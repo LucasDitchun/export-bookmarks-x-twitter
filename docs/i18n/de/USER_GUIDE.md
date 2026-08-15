@@ -8,7 +8,7 @@ TXT, Markdown oder JSON-Sicherung exportiert werden.
 
 ## Installieren oder aktualisieren
 
-1. [Laden Sie die fertige ZIP-Datei herunter](../../../download/bookmark-x.zip?raw=1)
+1. [Laden Sie die fertige ZIP-Datei herunter](https://github.com/LucasDitchun/export-bookmarks-x-twitter/releases/latest/download/bookmark-x.zip)
    und entpacken Sie sie in einen dauerhaften Ordner.
 2. Öffnen Sie `chrome://extensions`, aktivieren Sie den **Entwicklermodus** und
    wählen Sie **Entpackte Erweiterung laden**.

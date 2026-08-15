@@ -23,7 +23,7 @@ telemetry.
 
 ## Download the ready-to-install ZIP
 
-[**Download the latest built extension as a ZIP**](download/bookmark-x.zip?raw=1)
+[**Download the latest built extension as a ZIP**](https://github.com/LucasDitchun/export-bookmarks-x-twitter/releases/latest/download/bookmark-x.zip)
 
 This ZIP is already built. You do not need Node.js, pnpm, an API key, or a
 developer account to use it. Google Chrome cannot load the ZIP directly, so

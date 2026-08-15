@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const rootDirectory = resolve(import.meta.dirname, "..");
+const stableReleaseUrl =
+  "https://github.com/LucasDitchun/export-bookmarks-x-twitter/releases/latest/download/bookmark-x.zip";
 
 async function readWorkflow(name) {
   return readFile(resolve(rootDirectory, ".github", "workflows", name), "utf8");
@@ -117,6 +119,32 @@ describe("lean CI and staging policy", () => {
     ]) {
       expect(promotion).not.toContain(expensiveCommand);
     }
+  });
+
+  it("publishes stable and versioned release assets from the same reviewed ZIP", async () => {
+    const promotion = await readWorkflow("promote-release.yml");
+
+    expect(promotion).toContain('archive="$RUNNER_TEMP/bookmark-x-$version.zip"');
+    expect(promotion).toContain('stable_archive="$RUNNER_TEMP/bookmark-x.zip"');
+    expect(promotion).toContain('cp download/bookmark-x.zip "$archive"');
+    expect(promotion).toContain('cp download/bookmark-x.zip "$stable_archive"');
+    expect(promotion).toContain(
+      'echo "stable_archive=$stable_archive" >> "$GITHUB_OUTPUT"',
+    );
+    expect(promotion).toContain("STABLE_RELEASE_ARCHIVE:");
+    expect(promotion).toContain(
+      '"$STABLE_RELEASE_ARCHIVE#Bookmark X latest stable ZIP"',
+    );
+    expect(promotion).toContain(
+      'validate_or_upload_asset "$STABLE_RELEASE_ARCHIVE" "Bookmark X latest stable ZIP"',
+    );
+  });
+
+  it("points the canonical README download at the stable latest-release asset", async () => {
+    const readme = await readFile(resolve(rootDirectory, "README.md"), "utf8");
+
+    expect(readme).toContain(`](${stableReleaseUrl})`);
+    expect(readme).not.toContain("](download/bookmark-x.zip?raw=1)");
   });
 
   it("pins third-party actions and starts every workflow with minimum permissions", async () => {

@@ -7,7 +7,7 @@ Bookmark X 是一款开源 Chrome 扩展，无需使用 X API 即可抓取您的
 
 ## 安装或更新
 
-1. [下载已构建的 ZIP](../../../download/bookmark-x.zip?raw=1)，并解压到一个长期保留的文件夹。
+1. [下载已构建的 ZIP](https://github.com/LucasDitchun/export-bookmarks-x-twitter/releases/latest/download/bookmark-x.zip)，并解压到一个长期保留的文件夹。
 2. 打开 `chrome://extensions`，启用**开发者模式**，然后选择**加载已解压的扩展程序**。
 3. 选择包含 `manifest.json` 的文件夹。
 4. 更新时，用新版本替换文件，然后在扩展卡片上点击**重新加载**。本地数据会保留。

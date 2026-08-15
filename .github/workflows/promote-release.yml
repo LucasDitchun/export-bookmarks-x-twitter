@@ -110,9 +110,12 @@ jobs:
 
           tag="v$version"
           archive="$RUNNER_TEMP/bookmark-x-$version.zip"
+          stable_archive="$RUNNER_TEMP/bookmark-x.zip"
           cp download/bookmark-x.zip "$archive"
+          cp download/bookmark-x.zip "$stable_archive"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          echo "stable_archive=$stable_archive" >> "$GITHUB_OUTPUT"
 
       - name: Create or validate the release tag
         env:
@@ -140,27 +143,38 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_ARCHIVE: ${{ steps.release.outputs.archive }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          STABLE_RELEASE_ARCHIVE: ${{ steps.release.outputs.stable_archive }}
         run: |
-          asset_name="$(basename "$RELEASE_ARCHIVE")"
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             existing="$(mktemp -d)"
-            if gh release download "$RELEASE_TAG" \
-              --repo "$GITHUB_REPOSITORY" \
-              --pattern "$asset_name" \
-              --dir "$existing" >/dev/null 2>&1; then
-              if ! cmp --silent "$RELEASE_ARCHIVE" "$existing/$asset_name"; then
-                echo "::error::Release asset $asset_name differs from the reviewed ZIP."
-                exit 1
+
+            validate_or_upload_asset() {
+              local archive="$1"
+              local label="$2"
+              local asset_name
+              asset_name="$(basename "$archive")"
+              if gh release download "$RELEASE_TAG" \
+                --repo "$GITHUB_REPOSITORY" \
+                --pattern "$asset_name" \
+                --dir "$existing" >/dev/null 2>&1; then
+                if ! cmp --silent "$archive" "$existing/$asset_name"; then
+                  echo "::error::Release asset $asset_name differs from the reviewed ZIP."
+                  exit 1
+                fi
+                echo "Release asset $asset_name matches the reviewed ZIP."
+              else
+                gh release upload "$RELEASE_TAG" \
+                  "$archive#$label" \
+                  --repo "$GITHUB_REPOSITORY"
               fi
-              echo "Release and asset already match the reviewed ZIP."
-            else
-              gh release upload "$RELEASE_TAG" \
-                "$RELEASE_ARCHIVE#Bookmark X $RELEASE_TAG" \
-                --repo "$GITHUB_REPOSITORY"
-            fi
+            }
+
+            validate_or_upload_asset "$RELEASE_ARCHIVE" "Bookmark X $RELEASE_TAG"
+            validate_or_upload_asset "$STABLE_RELEASE_ARCHIVE" "Bookmark X latest stable ZIP"
           else
             gh release create "$RELEASE_TAG" \
               "$RELEASE_ARCHIVE#Bookmark X $RELEASE_TAG" \
+              "$STABLE_RELEASE_ARCHIVE#Bookmark X latest stable ZIP" \
               --repo "$GITHUB_REPOSITORY" \
               --generate-notes \
               --title "Bookmark X $RELEASE_TAG" \
