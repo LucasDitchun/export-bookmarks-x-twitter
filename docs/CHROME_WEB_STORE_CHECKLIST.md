@@ -20,6 +20,8 @@
       German, French, and Italian copy is reviewed.
 - [ ] Screenshots contain synthetic data only and do not imply affiliation with
       X Corp.
+- [ ] Store assets are regenerated with `pnpm assets:chrome-web-store` and the
+      final PNGs live in `docs/chrome-web-store/assets/`.
 
 ## Permissions
 
