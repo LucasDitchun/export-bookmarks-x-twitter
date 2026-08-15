@@ -5,6 +5,7 @@ import {
   DEFAULT_SEMANTIC_STATE,
   type SemanticSearchState,
 } from "../semantic/semantic-state-repository";
+import type { SemanticModelAccess } from "./semantic-model-access";
 
 interface SemanticOptionsClient {
   getState(): Promise<SemanticSearchState>;
@@ -24,6 +25,7 @@ interface StorageEstimate {
 interface SemanticOptionsUiOptions {
   document: Document;
   client: SemanticOptionsClient;
+  modelAccess: SemanticModelAccess;
   translate: Translator;
   estimateStorage?: () => Promise<StorageEstimate>;
 }
@@ -51,7 +53,7 @@ export function createSemanticOptionsUi(options: SemanticOptionsUiOptions): {
   ready: Promise<void>;
   destroy(): void;
 } {
-  const { document, client, translate } = options;
+  const { document, client, modelAccess, translate } = options;
   const enabled = element<HTMLInputElement>(document, "semantic-enabled");
   const install = element<HTMLButtonElement>(document, "semantic-install");
   const cancel = element<HTMLButtonElement>(document, "semantic-cancel");
@@ -63,6 +65,7 @@ export function createSemanticOptionsUi(options: SemanticOptionsUiOptions): {
   const storage = element(document, "semantic-storage");
   let destroyed = false;
   let busy = false;
+  let hasModelAccess = false;
   let renderedState: SemanticSearchState = structuredClone(DEFAULT_SEMANTIC_STATE);
 
   const render = (state: SemanticSearchState): void => {
@@ -142,8 +145,15 @@ export function createSemanticOptionsUi(options: SemanticOptionsUiOptions): {
     }
   };
 
-  const installListener = () =>
-    void run(() => client.installWithConsent(), "semanticInstallError");
+  const installListener = (): void => {
+    if (busy || destroyed) return;
+    const accessRequest = modelAccess.request();
+    void run(async () => {
+      if (!(await accessRequest)) return client.getState();
+      hasModelAccess = true;
+      return client.installWithConsent();
+    }, "semanticInstallError");
+  };
   const reindexListener = () =>
     void run(() => client.reindex(), "semanticReindexError");
   const cancelListener = (): void => {
@@ -154,7 +164,10 @@ export function createSemanticOptionsUi(options: SemanticOptionsUiOptions): {
     busy = true;
     void client
       .remove()
-      .then(() => {
+      .then(async () => {
+        if (hasModelAccess && (await modelAccess.remove())) {
+          hasModelAccess = false;
+        }
         progress.hidden = true;
         progressCopy.textContent = "";
         render(structuredClone(DEFAULT_SEMANTIC_STATE));
@@ -179,11 +192,13 @@ export function createSemanticOptionsUi(options: SemanticOptionsUiOptions): {
 
   const ready = Promise.all([
     client.getState(),
+    modelAccess.contains(),
     (options.estimateStorage ?? (() => navigator.storage.estimate()))().catch(
       () => ({}),
     ),
-  ]).then(([state, estimate]) => {
+  ]).then(([state, containsModelAccess, estimate]) => {
     if (destroyed) return;
+    hasModelAccess = containsModelAccess;
     render(state);
     const storageEstimate = estimate as StorageEstimate;
     storage.textContent = translate("semanticStorageEstimate", [

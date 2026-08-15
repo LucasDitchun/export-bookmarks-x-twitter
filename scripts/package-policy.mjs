@@ -7,6 +7,9 @@ export const EXPECTED_MANIFEST_PERMISSIONS = Object.freeze([
 
 export const EXPECTED_MANIFEST_HOST_PERMISSIONS = Object.freeze([
   "https://api.github.com/*",
+]);
+
+export const EXPECTED_MANIFEST_OPTIONAL_HOST_PERMISSIONS = Object.freeze([
   "https://huggingface.co/*",
   "https://*.cdn.hf.co/*",
 ]);

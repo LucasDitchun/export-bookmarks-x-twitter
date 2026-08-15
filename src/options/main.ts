@@ -10,6 +10,7 @@ import {
 import type { SendMessage } from "../shared/protocol";
 import { getGithubStarCount } from "../github/github-project";
 import { createOptionsApp } from "./app";
+import { createSemanticModelAccess } from "./semantic-model-access";
 import { createSemanticOptionsUi } from "./semantic-options-ui";
 import { SemanticStateRepository } from "../semantic/semantic-state-repository";
 import { SemanticSearchClient } from "../semantic/semantic-search-client";
@@ -70,6 +71,7 @@ async function startOptions(): Promise<void> {
   const semanticUi = createSemanticOptionsUi({
     document,
     client: semanticClient,
+    modelAccess: createSemanticModelAccess(chrome.permissions),
     translate,
   });
   window.addEventListener(

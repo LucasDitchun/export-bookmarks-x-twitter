@@ -327,11 +327,12 @@ async function monitorWorkerTargets(port, stopped, diagnostics) {
   }
 }
 
-async function evaluate(devTools, expression, label) {
+async function evaluate(devTools, expression, label, userGesture = false) {
   const evaluation = await devTools.send("Runtime.evaluate", {
     expression,
     awaitPromise: true,
     returnByValue: true,
+    userGesture: userGesture,
   });
   if (evaluation.exceptionDetails) {
     throw new Error(
@@ -726,6 +727,7 @@ export async function runBrowserGate(options) {
         optionsDevTools,
         installScenario(options.timeoutMs),
         "consent/install/index",
+        true,
       );
     } catch (error) {
       const requests = modelRequests.length

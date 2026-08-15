@@ -17,6 +17,7 @@ import { ZipArchive } from "archiver";
 import {
   EXPECTED_CONTENT_SCRIPT_MATCHES,
   EXPECTED_MANIFEST_HOST_PERMISSIONS,
+  EXPECTED_MANIFEST_OPTIONAL_HOST_PERMISSIONS,
   EXPECTED_MANIFEST_PERMISSIONS,
   EXPECTED_OPTIONS_PAGE,
   EXPECTED_SIDE_PANEL_PATH,
@@ -127,10 +128,14 @@ async function validateBuild(packageVersion) {
     EXPECTED_MANIFEST_HOST_PERMISSIONS,
     "host_permissions",
   );
+  validateExactStringArray(
+    manifest.optional_host_permissions,
+    EXPECTED_MANIFEST_OPTIONAL_HOST_PERMISSIONS,
+    "optional_host_permissions",
+  );
 
   const forbiddenManifestKeys = [
     "externally_connectable",
-    "optional_host_permissions",
     "optional_permissions",
     "web_accessible_resources",
   ];

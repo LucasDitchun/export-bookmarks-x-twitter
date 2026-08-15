@@ -37,3 +37,16 @@ test("keeps the browser model download out of default test and Chrome smoke comm
   assert.doesNotMatch(packageJson.scripts.test, /semantic-browser/u);
   assert.doesNotMatch(packageJson.scripts["smoke:chrome"], /semantic-browser/u);
 });
+
+test("runs the explicit install scenario with a DevTools user gesture", async () => {
+  const source = await readFile(
+    new URL("./semantic-browser-gate.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /userGesture:\s*userGesture/u);
+  assert.match(
+    source,
+    /installScenario\(options\.timeoutMs\),\s*"consent\/install\/index",\s*true/u,
+  );
+});
