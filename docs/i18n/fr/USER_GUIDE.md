@@ -8,7 +8,7 @@ utiliser l’API de X. Les données restent dans le profil Chrome actuel et peuv
 
 ## Installer ou mettre à jour
 
-1. [Téléchargez le ZIP prêt à l’emploi](../../../download/bookmark-x.zip?raw=1)
+1. [Téléchargez le ZIP prêt à l’emploi](https://github.com/LucasDitchun/export-bookmarks-x-twitter/releases/latest/download/bookmark-x.zip)
    et extrayez-le dans un dossier permanent.
 2. Ouvrez `chrome://extensions`, activez le **Mode développeur**, puis choisissez
    **Charger l’extension non empaquetée**.

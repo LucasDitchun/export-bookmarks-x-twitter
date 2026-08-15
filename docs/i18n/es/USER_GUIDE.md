@@ -8,7 +8,7 @@ Chrome y se pueden exportar como TXT, Markdown o copia de seguridad JSON.
 
 ## Instalar o actualizar
 
-1. [Descarga el ZIP preparado](../../../download/bookmark-x.zip?raw=1) y
+1. [Descarga el ZIP preparado](https://github.com/LucasDitchun/export-bookmarks-x-twitter/releases/latest/download/bookmark-x.zip) y
    extráelo en una carpeta permanente.
 2. Abre `chrome://extensions`, activa el **Modo de desarrollador** y selecciona
    **Cargar descomprimida**.

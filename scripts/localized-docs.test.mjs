@@ -4,6 +4,8 @@ import { dirname, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = resolve(import.meta.dirname, "..");
+const stableReleaseUrl =
+  "https://github.com/LucasDitchun/export-bookmarks-x-twitter/releases/latest/download/bookmark-x.zip";
 const guides = [
   "pt-BR/USER_GUIDE.md",
   "ja/USER_GUIDE.md",
@@ -23,7 +25,8 @@ describe("localized user guides", () => {
       expect(content.match(/^## /gmu)).toHaveLength(6);
       expect(content).toContain("https://x.com/i/bookmarks");
       expect(content).toContain("chrome://extensions");
-      expect(content).toContain("../../../download/bookmark-x.zip?raw=1");
+      expect(content).toContain(`](${stableReleaseUrl})`);
+      expect(content).not.toContain("../../../download/bookmark-x.zip?raw=1");
       await access(resolve(dirname(path), "../../../download/bookmark-x.zip"));
     }
   });

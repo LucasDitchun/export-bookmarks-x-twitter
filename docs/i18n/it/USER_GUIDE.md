@@ -8,7 +8,7 @@ possono essere esportati in TXT, Markdown o backup JSON.
 
 ## Installare o aggiornare
 
-1. [Scarica lo ZIP pronto](../../../download/bookmark-x.zip?raw=1) ed estrailo in
+1. [Scarica lo ZIP pronto](https://github.com/LucasDitchun/export-bookmarks-x-twitter/releases/latest/download/bookmark-x.zip) ed estrailo in
    una cartella permanente.
 2. Apri `chrome://extensions`, attiva la **Modalità sviluppatore** e scegli
    **Carica estensione non pacchettizzata**.
