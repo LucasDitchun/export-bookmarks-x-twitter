@@ -32,6 +32,9 @@ describe("lean CI and staging policy", () => {
     expect(dependabot).toMatch(
       /dependency-name: "@types\/node"\n\s+# Keep Node types aligned with the Node 24 runtime used locally and in CI\.[\s\S]*?versions: \[">=25"\]/u,
     );
+    expect(dependabot).toMatch(
+      /dependency-name: onnxruntime-web\n\s+# Transformers 4\.2 pins the compatible ORT prerelease; 1\.27\.x duplicates the WASM runtime\.[\s\S]*?versions: \["1\.27\.x"\]/u,
+    );
   });
 
   it("keeps contribution validation entirely local", async () => {
