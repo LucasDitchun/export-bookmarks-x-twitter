@@ -14,6 +14,14 @@ updates:
     groups:
       development-dependencies:
         dependency-type: development
+    ignore:
+      - dependency-name: typescript
+        # typescript-eslint does not support the TypeScript 7 API yet.
+        # https://github.com/typescript-eslint/typescript-eslint/issues/10940
+        versions: [">=7"]
+      - dependency-name: "@types/node"
+        # Keep Node types aligned with the Node 24 runtime used locally and in CI.
+        versions: [">=25"]
 
   - package-ecosystem: github-actions
     directory: /

@@ -20,6 +20,20 @@ function workflowEvents(workflow) {
 }
 
 describe("lean CI and staging policy", () => {
+  it("constrains dependency updates to supported compiler and runtime versions", async () => {
+    const dependabot = await readFile(
+      resolve(rootDirectory, ".github", "dependabot.yml"),
+      "utf8",
+    );
+
+    expect(dependabot).toMatch(
+      /dependency-name: typescript\n\s+# typescript-eslint does not support the TypeScript 7 API yet\.[\s\S]*?versions: \[">=7"\]/u,
+    );
+    expect(dependabot).toMatch(
+      /dependency-name: "@types\/node"\n\s+# Keep Node types aligned with the Node 24 runtime used locally and in CI\.[\s\S]*?versions: \[">=25"\]/u,
+    );
+  });
+
   it("keeps contribution validation entirely local", async () => {
     const workflowNames = (
       await readdir(resolve(rootDirectory, ".github", "workflows"))
