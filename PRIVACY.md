@@ -1,6 +1,6 @@
 # Bookmark X Privacy Policy
 
-Last updated: August 9, 2026
+Last updated: August 15, 2026
 
 Bookmark X is a local-first Chrome extension that captures bookmarks rendered
 on the X bookmarks page and exports them as TXT or Markdown. It has no backend, analytics,
@@ -29,6 +29,12 @@ The extension does not read or store your X password, cookies, session tokens,
 email address, browsing history, or content from arbitrary pages.
 
 ## Purpose and processing
+
+Before Bookmark X observes, captures, decorates, or otherwise processes posts on
+X, it shows a first-use disclosure explaining the fields it reads, local
+storage, optional model download, and deletion. The extension keeps post
+processing disabled until the user accepts the current disclosure version.
+Acceptance is stored locally and is never transmitted.
 
 Data is used only to build and display your local archive and create the TXT or
 Markdown export you request. Bookmark records are stored in IndexedDB; small capture

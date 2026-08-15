@@ -292,6 +292,24 @@
   "localOnlyNote": {
     "message": "Lokal gespeichert · Bookmark X lädt keine Daten hoch"
   },
+  "firstUseDisclosureEyebrow": { "message": "Deine Daten, deine Entscheidung" },
+  "firstUseDisclosureTitle": { "message": "Bevor Bookmark X Beiträge liest" },
+  "firstUseDisclosureSummary": {
+    "message": "Bookmark X liest Text, Autor, Link, Datum und Medien deiner X-Lesezeichen, um eine private lokale Bibliothek zu erstellen."
+  },
+  "firstUseDisclosureLocal": {
+    "message": "Deine Lesezeichen, Ordner, Tags und Notizen bleiben in diesem Browser."
+  },
+  "firstUseDisclosureNetwork": {
+    "message": "Nichts wird hochgeladen. Die optionale semantische Suche kontaktiert Hugging Face erst nach Download und aktivieren."
+  },
+  "firstUseDisclosureErase": {
+    "message": "Lösche jederzeit alles unter Weitere Optionen, Archiv löschen."
+  },
+  "firstUseDisclosureAccept": { "message": "Verstanden — weiter" },
+  "firstUseDisclosureFailure": {
+    "message": "Deine Auswahl konnte nicht gespeichert werden. Versuche es erneut."
+  },
   "clearArchiveButton": {
     "message": "Archiv löschen"
   },

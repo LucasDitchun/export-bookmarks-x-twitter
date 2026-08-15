@@ -226,6 +226,24 @@
   "localOnlyNote": {
     "message": "Salvo localmente · Nada é enviado pelo Bookmark X"
   },
+  "firstUseDisclosureEyebrow": { "message": "Seus dados, sua escolha" },
+  "firstUseDisclosureTitle": { "message": "Antes de o Bookmark X ler os posts" },
+  "firstUseDisclosureSummary": {
+    "message": "O Bookmark X lê o texto, autor, link, data e mídia exibidos nos seus bookmarks do X para criar uma biblioteca privada local."
+  },
+  "firstUseDisclosureLocal": {
+    "message": "Seus bookmarks, pastas, tags e notas ficam neste navegador."
+  },
+  "firstUseDisclosureNetwork": {
+    "message": "Nada é enviado. A busca semântica opcional acessa o Hugging Face somente depois que você escolher Baixar e ativar."
+  },
+  "firstUseDisclosureErase": {
+    "message": "Apague tudo a qualquer momento em Mais opções, Limpar arquivo."
+  },
+  "firstUseDisclosureAccept": { "message": "Entendi — continuar" },
+  "firstUseDisclosureFailure": {
+    "message": "Não foi possível salvar sua escolha. Tente novamente."
+  },
   "clearArchiveButton": { "message": "Limpar arquivo" },
   "clearDialogTitle": { "message": "Limpar o arquivo local?" },
   "clearDialogDescription": {

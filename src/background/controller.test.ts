@@ -22,7 +22,10 @@ import { BackgroundController, isBookmarksUrl } from "./controller";
 import { metadataRefreshAfterResponse } from "./metadata-refresh";
 
 const EXTENSION_ID = "bookmark-x-extension";
-const POPUP_SENDER = { id: EXTENSION_ID };
+const POPUP_SENDER = {
+  id: EXTENSION_ID,
+  url: `chrome-extension://${EXTENSION_ID}/popup.html`,
+};
 const CONTENT_SENDER = {
   id: EXTENSION_ID,
   tab: { id: 7, url: "https://x.com/i/bookmarks" },
@@ -188,6 +191,10 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
         return currentSettings;
       }),
     },
+    disclosure: {
+      status: vi.fn(async () => ({ accepted: true, version: 1 as const })),
+      accept: vi.fn(async () => ({ accepted: true, version: 1 as const })),
+    },
     locale: {
       get: vi.fn(
         async (): Promise<{
@@ -211,6 +218,7 @@ function createDependencies(activeUrl = "https://x.com/i/bookmarks") {
       sendToTab: vi.fn(async () => ({ accepted: true })),
       configureSurface: vi.fn(async () => undefined),
       openSidePanel: vi.fn(async () => undefined),
+      enablePostProcessing: vi.fn(async () => undefined),
     },
     extensionId: EXTENSION_ID,
     now: () => new Date("2026-07-29T13:14:15.123Z"),
@@ -228,6 +236,61 @@ describe("isBookmarksUrl", () => {
 });
 
 describe("BackgroundController", () => {
+  it("blocks capture and content processing before first-use acceptance", async () => {
+    const dependencies = createDependencies();
+    dependencies.disclosure.status.mockResolvedValue({ accepted: false, version: 1 });
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "START_SCRAPE" }, POPUP_SENDER),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "first_use_disclosure_required" },
+    });
+    await expect(
+      controller.handle(
+        {
+          type: "LIVE_BOOKMARK_PENDING",
+          intentId: "before-disclosure",
+          action: "save",
+          bookmark,
+        },
+        CONTENT_SENDER,
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "first_use_disclosure_required" },
+    });
+    await expect(
+      controller.handle({ type: "GET_SEMANTIC_CORPUS" }, POPUP_SENDER),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "first_use_disclosure_required" },
+    });
+    expect(dependencies.browser.sendToTab).not.toHaveBeenCalled();
+    expect(dependencies.archive.applyLiveBookmark).not.toHaveBeenCalled();
+    expect(dependencies.search.listDocuments).not.toHaveBeenCalled();
+  });
+
+  it("accepts the disclosure only from extension pages and activates X tabs", async () => {
+    const dependencies = createDependencies();
+    dependencies.disclosure.status.mockResolvedValue({ accepted: false, version: 1 });
+    const controller = new BackgroundController(dependencies);
+
+    await expect(
+      controller.handle({ type: "GET_FIRST_USE_DISCLOSURE" }, CONTENT_SENDER),
+    ).resolves.toEqual({ ok: true, data: { accepted: false, version: 1 } });
+    await expect(
+      controller.handle({ type: "ACCEPT_FIRST_USE_DISCLOSURE" }, CONTENT_SENDER),
+    ).resolves.toMatchObject({ ok: false, error: { code: "invalid_sender" } });
+
+    await expect(
+      controller.handle({ type: "ACCEPT_FIRST_USE_DISCLOSURE" }, POPUP_SENDER),
+    ).resolves.toEqual({ ok: true, data: { accepted: true, version: 1 } });
+    expect(dependencies.disclosure.accept).toHaveBeenCalledOnce();
+    expect(dependencies.browser.enablePostProcessing).toHaveBeenCalledOnce();
+  });
+
   it("returns the selected locale with an automatic modal prompt", async () => {
     const dependencies = createDependencies("https://x.com/home");
     dependencies.locale.get.mockResolvedValue({

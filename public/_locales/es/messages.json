@@ -290,6 +290,24 @@
   "localOnlyNote": {
     "message": "Guardado localmente · Bookmark X no sube ningún dato"
   },
+  "firstUseDisclosureEyebrow": { "message": "Tus datos, tu elección" },
+  "firstUseDisclosureTitle": { "message": "Antes de que Bookmark X lea publicaciones" },
+  "firstUseDisclosureSummary": {
+    "message": "Bookmark X lee el texto, autor, enlace, fecha y contenido multimedia que aparecen en tus marcadores de X para crear una biblioteca local privada."
+  },
+  "firstUseDisclosureLocal": {
+    "message": "Tus marcadores, carpetas, etiquetas y notas permanecen en este navegador."
+  },
+  "firstUseDisclosureNetwork": {
+    "message": "No se sube nada. La búsqueda semántica opcional contacta con Hugging Face solo después de elegir Descargar y activar."
+  },
+  "firstUseDisclosureErase": {
+    "message": "Elimina todo cuando quieras desde Más opciones, Borrar archivo."
+  },
+  "firstUseDisclosureAccept": { "message": "Entendido — continuar" },
+  "firstUseDisclosureFailure": {
+    "message": "No se pudo guardar tu elección. Inténtalo de nuevo."
+  },
   "clearArchiveButton": {
     "message": "Borrar archivo"
   },

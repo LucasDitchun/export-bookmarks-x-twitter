@@ -227,6 +227,54 @@ const uiScenario = String.raw`
 })()
 `;
 
+const firstUseDisclosureScenario = String.raw`
+(async () => {
+  const deadline = Date.now() + 5000;
+  let disclosure;
+  while (Date.now() < deadline) {
+    disclosure = document.getElementById("first-use-disclosure");
+    if (disclosure && disclosure.hidden === false) break;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  const shell = document.querySelector(".shell");
+  const before = {
+    visible: disclosure?.hidden === false,
+    blocked: shell?.inert === true,
+    title: document.getElementById("first-use-disclosure-title")?.textContent?.trim(),
+  };
+  document.getElementById("accept-first-use-disclosure")?.click();
+  while (Date.now() < deadline && disclosure?.hidden === false) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  const response = await chrome.runtime.sendMessage({
+    type: "GET_FIRST_USE_DISCLOSURE",
+  });
+  return {
+    before,
+    hiddenAfterAccept: disclosure?.hidden === true,
+    unblockedAfterAccept: shell?.inert === false,
+    accepted: response?.ok === true && response?.data?.accepted === true,
+    response,
+    status: document.getElementById("first-use-disclosure-status")?.textContent,
+  };
+})()
+`;
+
+function assertFirstUseDisclosure(result) {
+  if (
+    !result?.before?.visible ||
+    !result.before.blocked ||
+    !result.before.title ||
+    !result.hiddenAfterAccept ||
+    !result.unblockedAfterAccept ||
+    !result.accepted
+  ) {
+    throw new Error(
+      `The first-use disclosure did not gate post processing: ${JSON.stringify(result)}`,
+    );
+  }
+}
+
 const optionsDefaultsScenario = String.raw`
 (async () => {
   const deadline = Date.now() + 5000;
@@ -1079,6 +1127,18 @@ async function main() {
     popupDevTools = await connectDevTools(popupTarget.webSocketDebuggerUrl);
     await popupDevTools.send("Runtime.enable");
     await navigateToExtensionContext(popupDevTools, popupUrl);
+    const disclosureEvaluation = await popupDevTools.send("Runtime.evaluate", {
+      expression: firstUseDisclosureScenario,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (disclosureEvaluation.exceptionDetails) {
+      throw new Error(
+        disclosureEvaluation.exceptionDetails.exception?.description ??
+          disclosureEvaluation.exceptionDetails.text,
+      );
+    }
+    assertFirstUseDisclosure(disclosureEvaluation.result.value);
 
     const optionsTarget = await openTarget(port, "about:blank");
     optionsDevTools = await connectDevTools(optionsTarget.webSocketDebuggerUrl);

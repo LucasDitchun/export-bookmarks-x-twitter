@@ -296,6 +296,26 @@
   "localOnlyNote": {
     "message": "Stocké localement · Bookmark X ne téléverse aucune donnée"
   },
+  "firstUseDisclosureEyebrow": { "message": "Vos données, votre choix" },
+  "firstUseDisclosureTitle": {
+    "message": "Avant que Bookmark X lise les publications"
+  },
+  "firstUseDisclosureSummary": {
+    "message": "Bookmark X lit le texte, l’auteur, le lien, la date et les médias affichés dans vos favoris X afin de créer une bibliothèque locale privée."
+  },
+  "firstUseDisclosureLocal": {
+    "message": "Vos favoris, dossiers, tags et notes restent dans ce navigateur."
+  },
+  "firstUseDisclosureNetwork": {
+    "message": "Rien n’est envoyé. La recherche sémantique facultative contacte Hugging Face uniquement après Télécharger et activer."
+  },
+  "firstUseDisclosureErase": {
+    "message": "Supprimez tout à tout moment dans Plus d’options, Effacer l’archive."
+  },
+  "firstUseDisclosureAccept": { "message": "J’ai compris — continuer" },
+  "firstUseDisclosureFailure": {
+    "message": "Impossible d’enregistrer votre choix. Réessayez."
+  },
   "clearArchiveButton": {
     "message": "Effacer l’archive"
   },

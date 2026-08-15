@@ -3,6 +3,7 @@ import type {
   BookmarkDecorationItem,
   ContentControlRequest,
   ContentEvent,
+  FirstUseDisclosureResult,
   RuntimeResponse,
   UiRequest,
 } from "../shared/protocol";
@@ -17,6 +18,7 @@ import { startBookmarkMetadataDecorator } from "./bookmark-metadata-decorator";
 import { createBookmarkModal } from "../surfaces/bookmark-modal";
 import { loadBookmarkMetadataDraft, saveBookmarkMetadata } from "./bookmark-metadata";
 import { isSupportedLocale } from "../domain/types";
+import { createPostProcessingConsentGate } from "./post-processing-consent";
 
 let activeCapture: { runId: string; controller: AbortController } | undefined;
 let activeOrganizer: {
@@ -153,6 +155,7 @@ async function capture(
 function isControlRequest(value: unknown): value is ContentControlRequest {
   if (typeof value !== "object" || value === null) return false;
   const request = value as Record<string, unknown>;
+  if (request.type === "ENABLE_POST_PROCESSING") return true;
   if (request.type === "REFRESH_BOOKMARK_LOCALIZATION") {
     const localization = request.localization;
     return (
@@ -191,99 +194,141 @@ function isControlRequest(value: unknown): value is ContentControlRequest {
   );
 }
 
-const metadataDecorator = startBookmarkMetadataDecorator({
-  document,
-  async lookup(ids) {
-    const response: RuntimeResponse<BookmarkDecorationLookupResult> =
-      await chrome.runtime.sendMessage({
-        type: "GET_BOOKMARK_DECORATIONS",
-        payload: { ids },
+function startPostProcessing() {
+  const metadataDecorator = startBookmarkMetadataDecorator({
+    document,
+    async lookup(ids) {
+      const response: RuntimeResponse<BookmarkDecorationLookupResult> =
+        await chrome.runtime.sendMessage({
+          type: "GET_BOOKMARK_DECORATIONS",
+          payload: { ids },
+        });
+      if (!response.ok) throw new Error(response.error.message);
+      return response.data;
+    },
+    onOrganize(item: BookmarkDecorationItem, translate) {
+      activeOrganizer?.destroy();
+      const abort = new AbortController();
+      let currentTranslate = translate;
+      const modal = createBookmarkModal({
+        document,
+        title: currentTranslate("bookmarkPromptTitle"),
+        bookmarkTitle: item.bookmark.text || item.bookmark.url,
+        labels: {
+          close: currentTranslate("bookmarkPromptClose"),
+          description: currentTranslate("bookmarkPromptNote"),
+          folder: currentTranslate("bookmarkPromptFolder"),
+          save: currentTranslate("bookmarkPromptSave"),
+          tags: currentTranslate("bookmarkPromptTags"),
+          tagsHelp: currentTranslate("bookmarkPromptTagsHelp"),
+          pending: currentTranslate("liveBookmarkPending"),
+        },
+        onSave: async (values) => {
+          modal.setState("pending", currentTranslate("liveBookmarkPending"));
+          try {
+            await saveBookmarkMetadata({
+              bookmark: item.bookmark,
+              values,
+              send: (request: UiRequest) => chrome.runtime.sendMessage(request),
+              signal: abort.signal,
+            });
+            modal.setState("ready", currentTranslate("liveBookmarkSaved"));
+            metadataDecorator.refresh(item.bookmark.id);
+            return true;
+          } catch {
+            if (!abort.signal.aborted) {
+              modal.setState("ready", currentTranslate("liveBookmarkFailed"));
+            }
+            return false;
+          }
+        },
+        onClose: () => {
+          abort.abort();
+          modal.destroy();
+          if (activeOrganizer?.abort === abort) activeOrganizer = null;
+        },
       });
-    if (!response.ok) throw new Error(response.error.message);
-    return response.data;
-  },
-  onOrganize(item: BookmarkDecorationItem, translate) {
-    activeOrganizer?.destroy();
-    const abort = new AbortController();
-    let currentTranslate = translate;
-    const modal = createBookmarkModal({
-      document,
-      title: currentTranslate("bookmarkPromptTitle"),
-      bookmarkTitle: item.bookmark.text || item.bookmark.url,
-      labels: {
-        close: currentTranslate("bookmarkPromptClose"),
-        description: currentTranslate("bookmarkPromptNote"),
-        folder: currentTranslate("bookmarkPromptFolder"),
-        save: currentTranslate("bookmarkPromptSave"),
-        tags: currentTranslate("bookmarkPromptTags"),
-        tagsHelp: currentTranslate("bookmarkPromptTagsHelp"),
-        pending: currentTranslate("liveBookmarkPending"),
-      },
-      onSave: async (values) => {
-        modal.setState("pending", currentTranslate("liveBookmarkPending"));
-        try {
-          await saveBookmarkMetadata({
-            bookmark: item.bookmark,
-            values,
-            send: (request: UiRequest) => chrome.runtime.sendMessage(request),
-            signal: abort.signal,
+      activeOrganizer = {
+        abort,
+        setLocalization(messages) {
+          currentTranslate = (key) => messages[key] ?? key;
+          modal.setLabels({
+            title: currentTranslate("bookmarkPromptTitle"),
+            labels: {
+              close: currentTranslate("bookmarkPromptClose"),
+              description: currentTranslate("bookmarkPromptNote"),
+              folder: currentTranslate("bookmarkPromptFolder"),
+              save: currentTranslate("bookmarkPromptSave"),
+              tags: currentTranslate("bookmarkPromptTags"),
+              tagsHelp: currentTranslate("bookmarkPromptTagsHelp"),
+              pending: currentTranslate("liveBookmarkPending"),
+            },
           });
-          modal.setState("ready", currentTranslate("liveBookmarkSaved"));
-          metadataDecorator.refresh(item.bookmark.id);
-          return true;
-        } catch {
+        },
+        destroy() {
+          abort.abort();
+          modal.destroy();
+        },
+      };
+      modal.open();
+      void loadBookmarkMetadataDraft({
+        bookmark: item.bookmark,
+        send: (request: UiRequest) => chrome.runtime.sendMessage(request),
+        signal: abort.signal,
+      }).then(
+        ({ values, choices }) => {
+          if (abort.signal.aborted) return;
+          modal.setValues(values);
+          modal.setChoices(choices);
+          modal.setState("ready", "");
+        },
+        () => {
           if (!abort.signal.aborted) {
             modal.setState("ready", currentTranslate("liveBookmarkFailed"));
           }
-          return false;
-        }
-      },
-      onClose: () => {
-        abort.abort();
-        modal.destroy();
-        if (activeOrganizer?.abort === abort) activeOrganizer = null;
-      },
-    });
-    activeOrganizer = {
-      abort,
-      setLocalization(messages) {
-        currentTranslate = (key) => messages[key] ?? key;
-        modal.setLabels({
-          title: currentTranslate("bookmarkPromptTitle"),
-          labels: {
-            close: currentTranslate("bookmarkPromptClose"),
-            description: currentTranslate("bookmarkPromptNote"),
-            folder: currentTranslate("bookmarkPromptFolder"),
-            save: currentTranslate("bookmarkPromptSave"),
-            tags: currentTranslate("bookmarkPromptTags"),
-            tagsHelp: currentTranslate("bookmarkPromptTagsHelp"),
-            pending: currentTranslate("liveBookmarkPending"),
-          },
-        });
-      },
-      destroy() {
-        abort.abort();
-        modal.destroy();
+        },
+      );
+    },
+  });
+
+  const liveBookmarkObserver = startLiveBookmarkObserver({
+    document,
+    send: (event) => chrome.runtime.sendMessage(event),
+    translate: (key) => chrome.i18n.getMessage(key) || key,
+    onPending: (article, bookmarkId) => {
+      void metadataDecorator.setPending(article, bookmarkId);
+    },
+    onChanged: (bookmarkId) => {
+      void metadataDecorator.refresh(bookmarkId);
+    },
+  });
+
+  return {
+    metadataDecorator,
+    liveBookmarkObserver,
+    stop() {
+      liveBookmarkObserver.stop();
+      metadataDecorator.stop();
+    },
+  };
+}
+
+let postProcessing: ReturnType<typeof startPostProcessing> | null = null;
+const consentGate = createPostProcessingConsentGate({
+  async loadAccepted() {
+    const response: RuntimeResponse<FirstUseDisclosureResult> =
+      await chrome.runtime.sendMessage({ type: "GET_FIRST_USE_DISCLOSURE" });
+    return response.ok && response.data.accepted;
+  },
+  start() {
+    const runtime = startPostProcessing();
+    postProcessing = runtime;
+    return {
+      stop() {
+        runtime.stop();
+        if (postProcessing === runtime) postProcessing = null;
       },
     };
-    modal.open();
-    void loadBookmarkMetadataDraft({
-      bookmark: item.bookmark,
-      send: (request: UiRequest) => chrome.runtime.sendMessage(request),
-      signal: abort.signal,
-    }).then(
-      ({ values, choices }) => {
-        if (abort.signal.aborted) return;
-        modal.setValues(values);
-        modal.setChoices(choices);
-        modal.setState("ready", "");
-      },
-      () => {
-        if (!abort.signal.aborted) {
-          modal.setState("ready", currentTranslate("liveBookmarkFailed"));
-        }
-      },
-    );
   },
 });
 
@@ -293,16 +338,27 @@ chrome.runtime.onMessage.addListener((request: unknown, sender, sendResponse) =>
     return false;
   }
 
+  if (request.type === "ENABLE_POST_PROCESSING") {
+    consentGate.enable();
+    sendResponse({ accepted: true });
+    return false;
+  }
+
+  if (!postProcessing) {
+    sendResponse({ accepted: false, reason: "first_use_disclosure_required" });
+    return false;
+  }
+
   if (request.type === "REFRESH_BOOKMARK_METADATA") {
-    metadataDecorator.refresh(request.bookmarkIds);
+    postProcessing.metadataDecorator.refresh(request.bookmarkIds);
     sendResponse({ accepted: true });
     return false;
   }
 
   if (request.type === "REFRESH_BOOKMARK_LOCALIZATION") {
-    liveBookmarkObserver.setLocalization(request.localization);
+    postProcessing.liveBookmarkObserver.setLocalization(request.localization);
     activeOrganizer?.setLocalization(request.localization.messages);
-    metadataDecorator.setLocalization(request.localization);
+    postProcessing.metadataDecorator.setLocalization(request.localization);
     sendResponse({ accepted: true });
     return false;
   }
@@ -332,25 +388,14 @@ chrome.runtime.onMessage.addListener((request: unknown, sender, sendResponse) =>
   return false;
 });
 
-const liveBookmarkObserver = startLiveBookmarkObserver({
-  document,
-  send: (event) => chrome.runtime.sendMessage(event),
-  translate: (key) => chrome.i18n.getMessage(key) || key,
-  onPending: (article, bookmarkId) => {
-    void metadataDecorator.setPending(article, bookmarkId);
-  },
-  onChanged: (bookmarkId) => {
-    void metadataDecorator.refresh(bookmarkId);
-  },
-});
+void consentGate.initialize().catch(() => undefined);
 
 window.addEventListener(
   "pagehide",
   () => {
     activeCapture?.controller.abort();
     activeOrganizer?.destroy();
-    liveBookmarkObserver.stop();
-    metadataDecorator.stop();
+    consentGate.stop();
   },
   { once: true },
 );
