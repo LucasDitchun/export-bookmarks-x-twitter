@@ -1,10 +1,6 @@
 # Chrome Web Store Assets
 
-Run `pnpm assets:chrome-web-store` to rebuild the local submission assets from the
-current `dist` bundle, a deterministic synthetic backup restored through the
-extension runtime, and a final dimension/name validator.
-
-The generated files live in [`docs/chrome-web-store/assets`](./assets/):
+The submission assets live in [`docs/chrome-web-store/assets`](./assets/):
 
 - `icon-128.png`
 - `screenshot-01-search-library.png`
@@ -15,15 +11,34 @@ The generated files live in [`docs/chrome-web-store/assets`](./assets/):
 - `small-promo-tile.png`
 - `marquee-promo-tile.png`
 
-The product-led storyboard uses a deterministic local library with twelve safe
-synthetic bookmarks, five tags, and three folders. In listing order, the five
-screenshots show search, folder/tag organization, bookmark context, recent capture,
-and local export. The real extension UI remains the dominant visual at a readable
-scale; the surrounding black, off-white, and lime frame adds only a short stage
-label and a three-to-four-word benefit.
+## Curated screenshots
 
-The promotional tiles deliberately avoid collages of unreadable interface
-miniatures. The small tile focuses on the product mark and promise, while the
-marquee uses one enlarged search state as product proof.
+The five 1280×800 listing images are curated marketing assets created from real
+Bookmark X interface references. They communicate the product flows for search,
+folder and tag organization, bookmark context, recent capture, and local export.
+Because their composition may be refined with image-generation tools, they are
+not presented as literal, untouched browser screenshots.
 
-Run `pnpm assets:chrome-web-store:validate` to verify only the existing files.
+Treat these five files as source assets. The asset command must never overwrite
+them. When replacing one, preserve its exact filename, PNG format, and 1280×800
+dimensions, and review it for an accurate representation of the current product.
+
+## Local commands
+
+Run `pnpm assets:chrome-web-store` to preserve and validate the five curated
+screenshots, refresh the extension icon, and generate the small and marquee
+promotional tiles. The marquee uses the first curated screenshot as its product
+reference. This command no longer builds the extension or captures synthetic UI
+states.
+
+Run `pnpm assets:chrome-web-store:validate` to perform a read-only check of the
+complete asset set. Validation enforces the exact five screenshot names, PNG
+headers, and required dimensions locally:
+
+- icon: 128×128
+- screenshots: 1280×800
+- small promotional tile: 440×280
+- marquee promotional tile: 1400×560
+
+Before publishing, visually inspect every image in addition to running the local
+validator.

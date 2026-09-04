@@ -38,7 +38,7 @@
     "semantic-browser:gate:dry-run": "node scripts/semantic-browser-gate.mjs",
     "semantic-browser:gate:test": "node --test scripts/semantic-browser-gate.node-test.mjs",
     "smoke:chrome": "node scripts/chrome-smoke.mjs",
-    "assets:chrome-web-store": "pnpm build && node scripts/chrome-web-store-assets.mjs",
+    "assets:chrome-web-store": "node scripts/chrome-web-store-assets.mjs",
     "assets:chrome-web-store:validate": "node scripts/chrome-web-store-assets.mjs --validate-only",
     "package": "node scripts/package.mjs",
     "verify:archive": "node scripts/archive-integrity.mjs compare",
