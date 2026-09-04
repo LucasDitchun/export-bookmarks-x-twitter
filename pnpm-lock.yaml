@@ -24,8 +24,8 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.8.1)
       "@types/chrome":
-        specifier: ^0.2.5
-        version: 0.2.5
+        specifier: ^0.2.8
+        version: 0.2.8
       "@types/node":
         specifier: ^24.10.1
         version: 24.13.3
@@ -1013,10 +1013,10 @@ packages:
         integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==,
       }
 
-  "@types/chrome@0.2.5":
+  "@types/chrome@0.2.8":
     resolution:
       {
-        integrity: sha512-DwLFgwj3D0zjxRBhQ3610RBso2g+yI1cakq/JdIGopZ9Bc5UhQluyfcLGZwivFE4t2h4b2QZYZhPV7KylExSbA==,
+        integrity: sha512-dznDYMiJUyuc7b+78PxnWhaGOonmbX/OmcWu7NE42sg/yTLJMYnJ7Uah40SLPNFiCh8reqcthk7vOva2+MSvzw==,
       }
 
   "@types/deep-eql@4.0.2":
@@ -3186,7 +3186,7 @@ snapshots:
       "@types/deep-eql": 4.0.2
       assertion-error: 2.0.1
 
-  "@types/chrome@0.2.5":
+  "@types/chrome@0.2.8":
     dependencies:
       "@types/filesystem": 0.0.36
       "@types/har-format": 1.2.16
