@@ -24,7 +24,9 @@ import {
   REQUIRED_LEGAL_RELEASE_FILES,
   validateExactStringArray,
   validateManifestEntrypoints,
+  validateOnnxRuntimeMetadata,
   validateReleaseLegalFiles,
+  validateSemanticRuntimeAssets,
 } from "./package-policy.mjs";
 
 const rootDirectory = resolve(import.meta.dirname, "..");
@@ -32,6 +34,8 @@ const distDirectory = resolve(rootDirectory, "dist");
 const releaseDirectory = resolve(rootDirectory, "release");
 const downloadDirectory = resolve(rootDirectory, "download");
 const packageJsonPath = resolve(rootDirectory, "package.json");
+const lockfilePath = resolve(rootDirectory, "pnpm-lock.yaml");
+const noticesPath = resolve(rootDirectory, "THIRD_PARTY_NOTICES.md");
 const supportedLocales = ["en", "pt_BR", "ja", "es", "zh_CN", "de", "fr", "it"];
 
 function fail(message) {
@@ -185,15 +189,7 @@ async function validateBuild(packageVersion) {
   const files = await listFiles(distDirectory);
   const filePaths = new Set(files.map((file) => file.relativePath));
   validateReleaseLegalFiles(filePaths);
-  for (const pattern of [
-    /^assets\/ort-wasm-simd-threaded\.asyncify-[A-Za-z0-9_-]+\.mjs$/u,
-    /^assets\/ort-wasm-simd-threaded\.asyncify-[A-Za-z0-9_-]+\.wasm$/u,
-    /^assets\/semantic-worker-[A-Za-z0-9_-]+\.js$/u,
-  ]) {
-    if (![...filePaths].some((filePath) => pattern.test(filePath))) {
-      fail(`Packaged semantic search asset is missing: ${String(pattern)}`);
-    }
-  }
+  validateSemanticRuntimeAssets([...filePaths]);
   const forbiddenExtensions = new Set([".map", ".pem", ".key"]);
   const forbiddenNames = new Set([".env", ".env.local"]);
   const referencedManifestFiles = [
@@ -267,6 +263,11 @@ async function createArchive(outputPath) {
 
 async function main() {
   const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  const [lockfile, notices] = await Promise.all([
+    readFile(lockfilePath, "utf8"),
+    readFile(noticesPath, "utf8"),
+  ]);
+  validateOnnxRuntimeMetadata({ packageJson, lockfile, notices });
   const fileCount = await validateBuild(packageJson.version);
   const outputPath = resolve(
     releaseDirectory,

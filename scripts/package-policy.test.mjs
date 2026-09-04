@@ -12,9 +12,12 @@ import {
   EXPECTED_OPTIONS_PAGE,
   EXPECTED_SIDE_PANEL_PATH,
   REQUIRED_LEGAL_RELEASE_FILES,
+  SEMANTIC_RUNTIME_ASSETS,
   validateExactStringArray,
   validateManifestEntrypoints,
+  validateOnnxRuntimeMetadata,
   validateReleaseLegalFiles,
+  validateSemanticRuntimeAssets,
 } from "./package-policy.mjs";
 
 describe("third-party release notices", () => {
@@ -44,15 +47,42 @@ describe("third-party release notices", () => {
     },
   );
 
-  it("ships an auditable notice index for all three browser dependencies", async () => {
-    const notices = await readFile(
-      resolve(projectRoot, "THIRD_PARTY_NOTICES.md"),
-      "utf8",
-    );
+  it("keeps the direct ONNX Runtime version aligned across metadata", async () => {
+    const [packageJsonText, lockfile, notices] = await Promise.all([
+      readFile(resolve(projectRoot, "package.json"), "utf8"),
+      readFile(resolve(projectRoot, "pnpm-lock.yaml"), "utf8"),
+      readFile(resolve(projectRoot, "THIRD_PARTY_NOTICES.md"), "utf8"),
+    ]);
+    const packageJson = JSON.parse(packageJsonText);
+
+    expect(() =>
+      validateOnnxRuntimeMetadata({ packageJson, lockfile, notices }),
+    ).not.toThrow();
     expect(notices).toContain("@huggingface/transformers 4.2.0");
-    expect(notices).toContain("onnxruntime-web 1.26.0-dev.20260416-b7804b056c");
     expect(notices).toContain("Xenova/multilingual-e5-small");
     expect(notices).toContain("sharp and libvips are Node-only build dependencies");
+  });
+
+  it("rejects an ONNX Runtime notice for a different direct version", () => {
+    expect(() =>
+      validateOnnxRuntimeMetadata({
+        packageJson: { dependencies: { "onnxruntime-web": "1.26.0" } },
+        lockfile: "packages:\n  onnxruntime-web@1.26.0:\n",
+        notices: "## onnxruntime-web 1.29.0\n",
+      }),
+    ).toThrow("THIRD_PARTY_NOTICES.md must name onnxruntime-web 1.26.0 exactly once.");
+  });
+
+  it("rejects multiple ONNX Runtime Web versions in the lockfile", () => {
+    expect(() =>
+      validateOnnxRuntimeMetadata({
+        packageJson: { dependencies: { "onnxruntime-web": "1.26.0" } },
+        lockfile: "packages:\n  onnxruntime-web@1.26.0:\n  onnxruntime-web@1.29.0:\n",
+        notices: "## onnxruntime-web 1.26.0\n",
+      }),
+    ).toThrow(
+      "pnpm-lock.yaml must resolve exactly onnxruntime-web 1.26.0; found 1.26.0, 1.29.0.",
+    );
   });
 
   it.each([
@@ -82,6 +112,47 @@ describe("third-party release notices", () => {
     expect(text).toContain(license.heading);
     expect(text.trimEnd().endsWith(license.ending)).toBe(true);
     expect(text.split("\n").length).toBeGreaterThanOrEqual(license.minimumLines);
+  });
+});
+
+describe("semantic runtime package policy", () => {
+  const validFiles = [
+    "assets/ort-wasm-simd-threaded.asyncify-loader.mjs",
+    "assets/ort-wasm-simd-threaded.asyncify-runtime.wasm",
+    "assets/semantic-worker-runtime.js",
+  ];
+
+  it("requires exactly one loader, WASM binary, and semantic worker", () => {
+    expect(SEMANTIC_RUNTIME_ASSETS).toHaveLength(3);
+    expect(() => validateSemanticRuntimeAssets(validFiles)).not.toThrow();
+  });
+
+  it.each([
+    [
+      "loader",
+      "assets/ort-wasm-simd-threaded.asyncify-second.mjs",
+      "Packaged semantic search must contain exactly one ONNX Runtime loader; found 2.",
+    ],
+    [
+      "WASM binary",
+      "assets/ort-wasm-simd-threaded.asyncify-second.wasm",
+      "Packaged semantic search must contain exactly one ONNX Runtime WASM binary; found 2.",
+    ],
+    [
+      "semantic worker",
+      "assets/semantic-worker-second.js",
+      "Packaged semantic search must contain exactly one semantic worker; found 2.",
+    ],
+  ])("rejects a duplicate %s", (_label, duplicate, message) => {
+    expect(() => validateSemanticRuntimeAssets([...validFiles, duplicate])).toThrow(
+      message,
+    );
+  });
+
+  it("rejects a missing runtime asset", () => {
+    expect(() => validateSemanticRuntimeAssets(validFiles.slice(1))).toThrow(
+      "Packaged semantic search must contain exactly one ONNX Runtime loader; found 0.",
+    );
   });
 });
 
