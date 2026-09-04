@@ -20,6 +20,17 @@ function workflowEvents(workflow) {
 }
 
 describe("lean CI and staging policy", () => {
+  it("declares only Node.js lines supported by the locked toolchain", async () => {
+    const [packageJsonText, nodeVersion] = await Promise.all([
+      readFile(resolve(rootDirectory, "package.json"), "utf8"),
+      readFile(resolve(rootDirectory, ".node-version"), "utf8"),
+    ]);
+    const packageJson = JSON.parse(packageJsonText);
+
+    expect(packageJson.engines?.node).toBe("^22.22.2 || ^24.15.0 || >=26.0.0");
+    expect(nodeVersion.trim()).toBe("24");
+  });
+
   it("constrains dependency updates to supported compiler and runtime versions", async () => {
     const dependabot = await readFile(
       resolve(rootDirectory, ".github", "dependabot.yml"),
