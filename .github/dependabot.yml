@@ -23,10 +23,10 @@ updates:
         # Keep Node types aligned with the Node 24 runtime used locally and in CI.
         versions: [">=25"]
       - dependency-name: onnxruntime-web
-        # Transformers 4.2 pins the compatible ORT prerelease; 1.27.x duplicates the WASM runtime.
-        # The duplicate bundle adds one WASM file and cannot pass the real semantic browser gate.
-        # https://github.com/LucasDitchun/export-bookmarks-x-twitter/pull/45
-        versions: ["1.27.x"]
+        # Keep the direct runtime aligned with the version bundled by Transformers 4.2.
+        # Isolated updates duplicate the browser runtime and more than double the release ZIP.
+        # Update both together only after validating one packaged loader and WASM binary.
+        # https://github.com/LucasDitchun/export-bookmarks-x-twitter/pull/113
 
   - package-ecosystem: github-actions
     directory: /

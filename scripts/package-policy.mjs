@@ -30,6 +30,67 @@ export const REQUIRED_LEGAL_RELEASE_FILES = Object.freeze([
   "THIRD_PARTY_LICENSES/multilingual-e5-small-MIT.txt",
 ]);
 
+export const SEMANTIC_RUNTIME_ASSETS = Object.freeze([
+  Object.freeze({
+    label: "ONNX Runtime loader",
+    pattern: /^assets\/ort-wasm-simd-threaded\.asyncify-[A-Za-z0-9_-]+\.mjs$/u,
+  }),
+  Object.freeze({
+    label: "ONNX Runtime WASM binary",
+    pattern: /^assets\/ort-wasm-simd-threaded\.asyncify-[A-Za-z0-9_-]+\.wasm$/u,
+  }),
+  Object.freeze({
+    label: "semantic worker",
+    pattern: /^assets\/semantic-worker-[A-Za-z0-9_-]+\.js$/u,
+  }),
+]);
+
+export function validateSemanticRuntimeAssets(filePaths) {
+  for (const { label, pattern } of SEMANTIC_RUNTIME_ASSETS) {
+    const matchingFiles = filePaths.filter((filePath) => pattern.test(filePath));
+    if (matchingFiles.length !== 1) {
+      throw new Error(
+        `Packaged semantic search must contain exactly one ${label}; found ${matchingFiles.length}.`,
+      );
+    }
+  }
+}
+
+export function validateOnnxRuntimeMetadata({ packageJson, lockfile, notices }) {
+  const expectedVersion = packageJson?.dependencies?.["onnxruntime-web"];
+  if (
+    typeof expectedVersion !== "string" ||
+    !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(expectedVersion)
+  ) {
+    throw new Error(
+      "package.json must pin onnxruntime-web to one exact semantic version.",
+    );
+  }
+
+  const noticeVersions = [...notices.matchAll(/^## onnxruntime-web ([^\n]+)$/gmu)].map(
+    ([, version]) => version.trim(),
+  );
+  if (noticeVersions.length !== 1 || noticeVersions[0] !== expectedVersion) {
+    throw new Error(
+      `THIRD_PARTY_NOTICES.md must name onnxruntime-web ${expectedVersion} exactly once.`,
+    );
+  }
+
+  const lockedVersions = [
+    ...new Set(
+      [...lockfile.matchAll(/^  "?onnxruntime-web@([^":\n]+)"?:/gmu)].map(
+        ([, version]) => version,
+      ),
+    ),
+  ].sort();
+  if (lockedVersions.length !== 1 || lockedVersions[0] !== expectedVersion) {
+    const found = lockedVersions.length > 0 ? lockedVersions.join(", ") : "none";
+    throw new Error(
+      `pnpm-lock.yaml must resolve exactly onnxruntime-web ${expectedVersion}; found ${found}.`,
+    );
+  }
+}
+
 export function validateReleaseLegalFiles(filePaths) {
   const releaseFiles = new Set(filePaths);
   for (const requiredFile of REQUIRED_LEGAL_RELEASE_FILES) {
